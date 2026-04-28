@@ -40,8 +40,8 @@ gpu = ["jax[cuda12]"]
 benchmark = ["fire", "matplotlib", "pandas"]
 
 [project.urls]
-Homepage = "https://github.com/utiasDSL/crazyflow"
-Repository = "https://github.com/utiasDSL/crazyflow"
+Homepage = "https://github.com/learnsyslab/crazyflow"
+Repository = "https://github.com/learnsyslab/crazyflow"
 
 [tool.setuptools.packages]
 find = {include = ["crazyflow*"]}

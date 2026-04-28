@@ -1,4 +1,4 @@
-![Crazyflow Logo](https://github.com/utiasDSL/crazyflow/raw/main/docs/img/logo.png)
+![Crazyflow Logo](https://github.com/learnsyslab/crazyflow/raw/main/docs/img/logo.png)
 
 --------------------------------------------------------------------------------
 
@@ -9,17 +9,17 @@ Fast, parallelizable simulations of drones with JAX.
 [Python Version]: https://img.shields.io/badge/python-3.11+-blue.svg
 [Python Version URL]: https://www.python.org
 
-[Ruff Check]: https://github.com/utiasDSL/crazyflow/actions/workflows/ruff.yml/badge.svg?style=flat-square
-[Ruff Check URL]: https://github.com/utiasDSL/crazyflow/actions/workflows/ruff.yml
+[Ruff Check]: https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml/badge.svg?style=flat-square
+[Ruff Check URL]: https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml
 
-[Documentation Status]: https://github.com/utiasDSL/crazyflow/actions/workflows/docs.yml/badge.svg
-[Documentation Status URL]: https://utiasdsl.github.io/crazyflow
+[Documentation Status]: https://github.com/learnsyslab/crazyflow/actions/workflows/docs.yml/badge.svg
+[Documentation Status URL]: https://learnsyslab.github.io/crazyflow
 
-[Tests]: https://github.com/utiasDSL/crazyflow/actions/workflows/testing.yml/badge.svg
-[Tests URL]: https://github.com/utiasDSL/crazyflow/actions/workflows/testing.yml
+[Tests]: https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml/badge.svg
+[Tests URL]: https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml
 
 ## Quick Start
-For a more detailed guide, check out our [documentation](https://utiasdsl.github.io/crazyflow/).
+For a more detailed guide, check out our [documentation](https://learnsyslab.github.io/crazyflow/).
 
 ### Normal installation
 The regular way to use Crazyflow is to install it from PyPI with your favourite package manager, e.g., with pip:
@@ -30,7 +30,7 @@ pip install crazyflow
 ### Developer installation
 If you plan to develop with and around Crazyflow, you can use the existing [pixi](https://pixi.sh/) environment.
 ``` bash
-git clone --recurse-submodules git@github.com:utiasDSL/crazyflow.git
+git clone --recurse-submodules git@github.com:learnsyslab/crazyflow.git
 cd crazyflow
 pixi shell
 ```

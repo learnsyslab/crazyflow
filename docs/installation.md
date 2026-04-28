@@ -19,7 +19,7 @@ Use [pixi](https://pixi.sh/) to create a reproducible development environment th
 
 1. Clone the repo (with submodules)
 ```bash
-git clone --recurse-submodules git@github.com:utiasDSL/crazyflow.git
+git clone --recurse-submodules git@github.com:learnsyslab/crazyflow.git
 cd crazyflow
 ```
 

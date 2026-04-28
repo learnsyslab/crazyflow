@@ -18,7 +18,7 @@ All models (first‑principles and data‑driven) are also exposed as symbolic m
 The repository includes reference controller implementations and integration points for common research workflows:
 
 - Geometric controllers (Mellinger style) for standard tracking.
-- Interfaces for MPC / MPCC workflows (note: MPC example controllers and advanced control code are available in the repo for our [drone racing course](https://github.com/utiasDSL/lsy_drone_racing/tree/main/lsy_drone_racing/control)).
+- Interfaces for MPC / MPCC workflows (note: MPC example controllers and advanced control code are available in the repo for our [drone racing course](https://github.com/learnsyslab/lsy_drone_racing/tree/main/lsy_drone_racing/control)).
 - Reinforcement learning: we provide environments suitable for training and deploying RL agents and include example setups for PPO and SHAC agents.
 
 ### Performance & evaluation
