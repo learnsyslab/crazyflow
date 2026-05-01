@@ -14,7 +14,6 @@ from drone_controllers.mellinger import (
     force_torque2rotor_vel,
     state2attitude,
 )
-from einops import rearrange
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 
@@ -74,6 +73,7 @@ class Sim:
         device: str = "cpu",
         xml_path: Path | None = None,
         rng_key: int = 0,
+        fused_mjx_model: bool = False,
     ):
         assert Physics(physics) in Physics, f"Physics mode {physics} not implemented"
         assert Control(control) in Control, f"Control mode {control} not implemented"
@@ -94,7 +94,8 @@ class Sim:
 
         # Initialize MuJoCo world and data
         self._xml_path = xml_path or Path(__file__).parents[1] / "scene.xml"
-        self.drone_path = Path(drone_models.__file__).parent / "data" / f"{drone_model}.xml"
+        model_file_name = f"{drone_model}{'_fused' if fused_mjx_model else ''}.xml"
+        self.drone_path = Path(drone_models.__file__).parent / "data" / model_file_name
         self.spec = self.build_mjx_spec()
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
@@ -216,10 +217,18 @@ class Sim:
         frame = spec.worldbody.add_frame(name="world")
         if (drone_body := drone_spec.body("drone")) is None:
             raise ValueError("Drone body not found in drone spec")
-        # Add drones and their actuators
+        # Mocap bodies avoid the nv^2 cost of qM/qLD/efc_J. A single dummy slide joint keeps nv=1 so
+        # mjx.kinematics doesn't error on a zero-DOF model.
+        dummy = spec.worldbody.add_body()
+        dummy.name = "_dummy"
+        dummy.mass = 1e-6
+        dummy.inertia = jnp.full(3, 1e-9)
+        dummy_joint = dummy.add_joint()
+        dummy_joint.name = "_dummy_joint"
+        dummy_joint.type = mujoco.mjtJoint.mjJNT_SLIDE
+        drone_body.mocap = True
         for i in range(self.n_drones):
-            drone = frame.attach_body(drone_body, "", f":{i}")
-            drone.add_freejoint()
+            frame.attach_body(drone_body, "", f":{i}")
         return spec
 
     def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Any, Model, Data]:
@@ -341,7 +350,9 @@ class Sim:
         self, state_freq: int, attitude_freq: int, force_torque_freq: int, rng_key: Array
     ) -> SimData:
         """Initialize the simulation data."""
-        drone_ids = [self.mj_model.body(f"drone:{i}").id for i in range(self.n_drones)]
+        drone_mocap_ids = [
+            self.mj_model.body(f"drone:{i}").mocapid.item() for i in range(self.n_drones)
+        ]
         N, D = self.n_worlds, self.n_drones
         data = SimData(
             states=SimState.create(N, D, self.device),
@@ -357,7 +368,7 @@ class Sim:
                 self.device,
             ),
             params=SimParams.create(N, D, self.physics, self.drone_model, self.device),
-            core=SimCore.create(self.freq, N, D, drone_ids, rng_key, self.device),
+            core=SimCore.create(self.freq, N, D, drone_mocap_ids, rng_key, self.device),
         )
         if D > 1:  # If multiple drones, arrange them in a grid
             grid = grid_2d(D)
@@ -497,12 +508,12 @@ def contacts(geom_start: int, geom_count: int, data: Data) -> Array:
 @jax.jit
 def sync_sim2mjx(data: SimData, mjx_data: Data, mjx_model: Model) -> tuple[SimData, Data]:
     """Synchronize the simulation data with the MuJoCo model."""
-    states = data.states
-    pos, quat, vel, ang_vel = states.pos, states.quat, states.vel, states.ang_vel
-    quat = jnp.roll(quat, 1, axis=-1)  # MuJoCo quat is [w, x, y, z], ours is [x, y, z, w]
-    qpos = rearrange(jnp.concat([pos, quat], axis=-1), "w d qpos -> w (d qpos)")
-    qvel = rearrange(jnp.concat([vel, ang_vel], axis=-1), "w d qvel -> w (d qvel)")
-    mjx_data = mjx_data.replace(qpos=qpos, qvel=qvel)
+    pos, quat = data.states.pos, data.states.quat
+    quat_mjx = jnp.roll(quat, 1, axis=-1)  # MuJoCo quat is [w, x, y, z], ours is [x, y, z, w]
+    ids = data.core.drone_mocap_ids
+    mocap_pos = mjx_data.mocap_pos.at[:, ids, :].set(pos)
+    mocap_quat = mjx_data.mocap_quat.at[:, ids, :].set(quat_mjx)
+    mjx_data = mjx_data.replace(mocap_pos=mocap_pos, mocap_quat=mocap_quat)
     mjx_data = jax.vmap(mjx.kinematics, in_axes=(None, 0))(mjx_model, mjx_data)
     # Required for rendering w. ray casting
     mjx_data = jax.vmap(mjx.camlight, in_axes=(None, 0))(mjx_model, mjx_data)
