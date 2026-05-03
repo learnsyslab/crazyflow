@@ -26,3 +26,40 @@
   height: 2rem;
   width: auto;
 }
+
+/* Video grid for home page showcase */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.video-card {
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--md-code-bg-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.video-card video {
+  width: 100%;
+  display: block;
+}
+
+.video-card p {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--md-typeset-color);
+}
+
+/* Drone model grid */
+.drone-grid table {
+  margin: 0 auto;
+}
+
+.drone-grid td {
+  vertical-align: middle;
+  text-align: center;
+}
