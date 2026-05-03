@@ -1,5 +1,5 @@
-site_name: Crazyflow Documentation
-site_description: Fast, parallelizable simulations of Crazyflies with JAX and MuJoCo
+site_name: Crazyflow
+site_description: Fast, parallelizable simulations of Crazyflie drones with JAX and MuJoCo
 site_url: https://learnsyslab.github.io/crazyflow/
 repo_name: learnsyslab/crazyflow
 repo_url: https://github.com/learnsyslab/crazyflow
@@ -11,14 +11,18 @@ theme:
   logo: img/logo_white.svg
   favicon: img/logo.svg
   features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.highlight
-    - search.share
     - content.code.copy
+    - content.code.select
     - content.code.annotate
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
+    - toc.follow
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -37,26 +41,45 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Usage: usage.md
-  - "Features & Architecture": features.md
-  - Examples: examples.md
-  - API:
-      - Overview: api/index.md
+  - Get Started:
+    - Installation: get-started/installation.md
+    - Quick Start: get-started/quick-start.md
+  - User Guide:
+    - user-guide/index.md
+    - Simulator Overview: user-guide/sim-overview.md
+    - Object-Oriented API: user-guide/oo-api.md
+    - Functional API: user-guide/functional-api.md
+    - Physics Models: user-guide/physics-models.md
+    - Control Modes: user-guide/control-modes.md
+    - Pipelines: user-guide/pipelines.md
+    - Visualization: user-guide/visualization.md
+    - MuJoCo Integration: user-guide/mujoco.md
+    - Gymnasium Environments: user-guide/gymnasium-envs.md
+  - Examples: examples/index.md
+  - API Reference: api/
+  - Cite: cite.md
 
 plugins:
   - search
   - autorefs
+  - charts
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
   - mkdocstrings:
       handlers:
         python:
-          paths: ["../crazyflow"]
+          paths: ["."]
           options:
             docstring_style: google
             show_source: true
             show_root_heading: true
             show_category_heading: true
             merge_init_into_class: true
+            show_submodules: false
 
 markdown_extensions:
   - admonition
@@ -66,6 +89,9 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+        - name: vegalite
+          class: vegalite
+          format: !!python/name:mkdocs_charts_plugin.fences.fence_vegalite
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
@@ -74,11 +100,22 @@ markdown_extensions:
   - pymdownx.snippets
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
   - attr_list
   - md_in_html
   - tables
   - footnotes
   - def_list
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/npm/vega@5
+  - https://cdn.jsdelivr.net/npm/vega-lite@5
+  - https://cdn.jsdelivr.net/npm/vega-embed@6
 
 extra_css:
   - stylesheets/extra.css
@@ -87,3 +124,7 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/learnsyslab/crazyflow
+
+watch:
+  - crazyflow/
+  - examples/
