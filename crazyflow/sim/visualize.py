@@ -57,6 +57,9 @@ def draw_points(sim: Sim, points: NDArray, rgba: NDArray | None = None, size: fl
         return
     if sim.max_visual_geom < points.shape[0]:
         raise RuntimeError("Attempted to draw too many points. Try to increase Sim.max_visual_geom")
+    points = np.atleast_2d(points)
+    assert points.ndim == 2, f"Expected array of [N, 3] points, got Array of shape {points.shape}"
+    assert points.shape[-1] == 3, f"Points must be 3D, are {points.shape[-1]}"
     viewer = sim.viewer.viewer
     if rgba is None:
         rgba = np.array([1.0, 0, 0, 1])

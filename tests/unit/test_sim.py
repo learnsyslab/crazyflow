@@ -424,6 +424,9 @@ def test_data_committed(control: Control, device: str):
                 assert_committed(item0, f"{path}[{i}]")
         elif isinstance(obj0, type(sim.data.core.device)):  # Device objects
             pass  # Devices themselves don't have committed attribute
+        elif isinstance(obj0, dict):
+            for key, value0 in obj0.items():
+                assert_committed(value0, f"{path}[{key}]")
         else:
             raise TypeError(f"Could not handle type {type(obj0)} at {path}")
 

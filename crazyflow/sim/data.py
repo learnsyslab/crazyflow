@@ -262,3 +262,5 @@ class SimData:
     """Drone parameters."""
     core: SimCore
     """Core parameters of the simulation."""
+    plugins: dict[str, Array] = field(default_factory=dict)
+    """Arbitrary data for plugins to store state in the simulation."""
