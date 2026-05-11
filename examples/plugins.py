@@ -1,6 +1,6 @@
 """Example of how to extend the simulation data with custom plugins.
 
-Here, we implement an action delay of 0.5 seconds on state control.
+Here, we implement an action delay of 0.03s in the attitude control loop.
 """
 
 from __future__ import annotations
@@ -28,9 +28,11 @@ def action_delay(data: SimData) -> SimData:
     queued_actions = data.plugins["queued_actions"]
     next_action = queued_actions[0]
     queued_actions = jnp.roll(queued_actions, shift=-1, axis=0)
-    queued_actions = queued_actions.at[-1].set(data.controls.state.staged_cmd)
+    queued_actions = queued_actions.at[-1].set(data.controls.attitude.staged_cmd)
     data = data.replace(
-        controls=data.controls.replace(state=data.controls.state.replace(staged_cmd=next_action)),
+        controls=data.controls.replace(
+            attitude=data.controls.attitude.replace(staged_cmd=next_action)
+        ),
         plugins=data.plugins | {"queued_actions": queued_actions},
     )
     return data
@@ -39,23 +41,24 @@ def action_delay(data: SimData) -> SimData:
 def main():
     sim = Sim(control="state")
     states = []
-    for i in range(200):
+    steps = 500
+    for i in range(steps):
         cmd = control(i / sim.control_freq)
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
-        sim.render()
+        sim.render(camera="track_cam:0")
         states.append(sim.data.states.pos[0, 0])
 
     # Delay settings
-    delay: float = 0.5  # seconds
-    delay_steps = int(delay * sim.control_freq)
+    delay: float = 0.03  # seconds
+    delay_steps = int(delay * sim.data.controls.attitude.freq)
     sim.reset()
 
     # Now we add our action delay into the simulation. We first insert the data we need into the
     # plugins dict, then add our plugin function into the step pipeline, and finally rebuild the sim
     # default data and step function to make sure our plugin is included and data persists across
     # resets.
-    custom_data = {"queued_actions": jnp.zeros((delay_steps, 1, 1, 13))}
+    custom_data = {"queued_actions": jnp.zeros((delay_steps, 1, 1, 4))}
     sim.data = sim.data.replace(plugins=sim.data.plugins | custom_data)
     sim.step_pipeline = (action_delay,) + sim.step_pipeline
     sim.build_default_data()
@@ -63,7 +66,7 @@ def main():
 
     # Run the simulation again, this time with an action delay. The states should be different
     delayed_states = []
-    for i in range(200):
+    for i in range(steps):
         cmd = control(i / sim.control_freq)
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
