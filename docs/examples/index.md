@@ -62,6 +62,10 @@ Inserting a random external force and torque into the step pipeline. The disturb
 
 Offscreen rendering returns RGB and depth images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.
 
+<figure class="example-media">
+  <img src="../img/examples/cameras.gif" alt="RGB and depth camera outputs from a Crazyflow drone simulation">
+</figure>
+
 ```{ .python notest }
 --8<-- "examples/cameras.py"
 ```
@@ -76,6 +80,10 @@ python examples/cameras.py
 
 `change_material` updates the RGBA colour and emission of any named material on any subset of drones at runtime.
 
+<figure class="example-media example-media--compact">
+  <img src="../img/examples/led_decks.png" alt="Crazyflow drones with runtime-controlled LED deck materials">
+</figure>
+
 ```{ .python notest }
 --8<-- "examples/led_deck.py"
 ```
@@ -89,6 +97,15 @@ python examples/led_deck.py
 ## Contact queries
 
 The default collision geometry is a sphere around the drone frame. `use_box_collision` replaces it with a tighter oriented box, useful for narrow-gap flight and accurate contact debugging.
+
+<div class="example-media-grid example-media-grid--contacts">
+  <figure>
+    <img src="../img/examples/contact_sphere.png" alt="Contact query visualization using the default sphere collision geometry">
+  </figure>
+  <figure>
+    <img src="../img/examples/contact_box.png" alt="Contact query visualization using the oriented box collision geometry">
+  </figure>
+</div>
 
 ```{ .python notest }
 --8<-- "examples/contacts.py"
