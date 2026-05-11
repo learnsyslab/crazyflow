@@ -12,50 +12,66 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 
 ## Showcase
 
-<!-- VIDEO SLIDER: uncomment and replace src paths once videos are ready.
-     Suggested layout mirrors crisp_controllers: a row of 3–4 thumbnail cards
-     with autoplay-on-hover, each linking to a full-size video.
-
-<div class="video-grid">
-
-  <div class="video-card">
-    <video autoplay loop muted playsinline>
-      <source src="videos/hover_demo.mp4" type="video/mp4">
-    </video>
-    <p>Hover — state control with Mellinger</p>
+<!-- Replace duplicate placeholder IDs with final showcase video IDs as clips become available. -->
+<div class="carousel-container">
+  <div class="carousel">
+    <div class="carousel-slide active">
+      <iframe
+        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Crazyflow hover control showcase"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">Hover - state control with Mellinger.</div>
+    </div>
+    <div class="carousel-slide">
+      <iframe
+        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Crazyflow swarm showcase"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">Swarm - many drones across parallel worlds.</div>
+    </div>
+    <div class="carousel-slide">
+      <iframe
+        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Crazyflow drone racing showcase"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">Drone racing - Blender render.</div>
+    </div>
+    <div class="carousel-slide">
+      <iframe
+        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Crazyflow MPPI navigation showcase"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">MPPI forest navigation - large batched rollout worlds.</div>
+    </div>
+    <div class="carousel-slide">
+      <iframe
+        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Crazyflow BPTT training showcase"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">BPTT training - loss curves and rendered policy trajectory.</div>
+    </div>
   </div>
 
-  <div class="video-card">
-    <video autoplay loop muted playsinline>
-      <source src="videos/swarm.mp4" type="video/mp4">
-    </video>
-    <p>Swarm — 64 drones, 16 parallel worlds</p>
-  </div>
+  <button class="carousel-btn carousel-btn-prev" type="button" aria-label="Previous slide">&lt;</button>
+  <button class="carousel-btn carousel-btn-next" type="button" aria-label="Next slide">&gt;</button>
 
-  <div class="video-card">
-    <video autoplay loop muted playsinline>
-      <source src="videos/racing_blender.mp4" type="video/mp4">
-    </video>
-    <p>Drone racing — Blender render</p>
-  </div>
-
-  <div class="video-card">
-    <video autoplay loop muted playsinline>
-      <source src="videos/mppi_blender.mp4" type="video/mp4">
-    </video>
-    <p>MPPI forest navigation — 500K rollout worlds, Blender render</p>
-  </div>
-
+  <div class="carousel-indicators"></div>
 </div>
--->
-
-<!-- VIDEO: BPTT training — loss curves + rendered trajectory from policy trained end-to-end -->
-<!-- Suggested: embed as a plain <video> tag below once the clip is ready:
-
-<video width="100%" autoplay loop muted playsinline>
-  <source src="videos/bptt_training.mp4" type="video/mp4">
-</video>
--->
 
 ---
 
@@ -75,7 +91,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 -->
 
 <!-- Placeholder until drone renders are available: -->
-All models come from the [drone-models](https://learnsyslab.github.io/drone-models/) library. Available configurations: `cf2x_L250`, `cf2x_T350`, `cf21B_500`, and any model returned by `drone_models.available_drones()`.
+All models come from the [drone-models](https://learnsyslab.github.io/drone-models/) library. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any model returned by `drone_models.available_drones()`.
 
 ---
 
