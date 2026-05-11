@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-from drone_controllers.mellinger.params import AttitudeParams, ForceTorqueParams, StateParams
+from drone_controllers.core import load_params
+from drone_controllers.mellinger import (
+    attitude2force_torque,
+    force_torque2rotor_vel,
+    state2attitude,
+)
 from flax.struct import dataclass, field
 from jax import Array, Device
-
-from crazyflow.utils import named_tuple2device
 
 
 @dataclass
@@ -25,7 +28,7 @@ class MellingerStateData:
     pos_err_i: Array  # (N, M, 3)
     """Integral errors of the state control command."""
     # Parameters for the state controller
-    params: StateParams
+    params: dict[str, Array]
 
     @staticmethod
     def create(
@@ -35,7 +38,7 @@ class MellingerStateData:
         cmd = jnp.zeros((n_worlds, n_drones, 13), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         pos_err_i = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        params = named_tuple2device(StateParams.load(drone_model), device)
+        params = load_params(state2attitude, drone_model, xp=jnp, device=device)
         return MellingerStateData(
             cmd=cmd, staged_cmd=cmd, steps=steps, freq=freq, pos_err_i=pos_err_i, params=params
         )
@@ -59,7 +62,7 @@ class MellingerAttitudeData:
     last_ang_vel: Array  # (N, M, 3)
     """Last angular velocity of the drone."""
     # Parameters for the attitude controller
-    params: AttitudeParams
+    params: dict[str, Array]
 
     @staticmethod
     def create(
@@ -69,7 +72,7 @@ class MellingerAttitudeData:
         cmd = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        params = named_tuple2device(AttitudeParams.load(drone_model), device)
+        params = load_params(attitude2force_torque, drone_model, xp=jnp, device=device)
         return MellingerAttitudeData(
             cmd=cmd,
             staged_cmd=cmd,
@@ -95,7 +98,7 @@ class MellingerForceTorqueData:
     freq: int = field(pytree_node=False)
     """Frequency of the force and torque control command."""
     # Parameters for the force and torque controller
-    params: ForceTorqueParams
+    params: dict[str, Array]
 
     @staticmethod
     def create(
@@ -103,7 +106,7 @@ class MellingerForceTorqueData:
     ) -> MellingerForceTorqueData:
         zero_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = named_tuple2device(ForceTorqueParams.load(drone_model), device)
+        params = load_params(force_torque2rotor_vel, drone_model, xp=jnp, device=device)
         return MellingerForceTorqueData(
             cmd=zero_4d, staged_cmd=zero_4d, steps=steps, freq=freq, params=params
         )

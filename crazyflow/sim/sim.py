@@ -533,11 +533,10 @@ def step_state_controller(data: SimData) -> SimData:
         states.pos,
         states.quat,
         states.vel,
-        states.ang_vel,
         state_ctrl.cmd,
         ctrl_errors=(state_ctrl.pos_err_i,),
         ctrl_freq=state_ctrl.freq,
-        **state_ctrl.params._asdict(),
+        **state_ctrl.params,
     )
     state_ctrl = leaf_replace(state_ctrl, mask, steps=data.core.steps, pos_err_i=pos_err_i)
     attitude_ctrl = leaf_replace(data.controls.attitude, mask, staged_cmd=rpyt)
@@ -552,15 +551,13 @@ def step_attitude_controller(data: SimData) -> SimData:
     mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
     attitude_ctrl = leaf_replace(attitude_ctrl, mask, cmd=attitude_ctrl.staged_cmd)
     force, torque, r_int_error = attitude2force_torque(
-        states.pos,
         states.quat,
-        states.vel,
         states.ang_vel,
         attitude_ctrl.cmd,
         ctrl_errors=(attitude_ctrl.r_int_error,),
         ctrl_freq=attitude_ctrl.freq,
         prev_ang_vel=attitude_ctrl.last_ang_vel,
-        **attitude_ctrl.params._asdict(),
+        **attitude_ctrl.params,
     )
     attitude_ctrl = leaf_replace(
         attitude_ctrl,
@@ -592,7 +589,7 @@ def step_force_torque_controller(data: SimData) -> SimData:
     mask = controllable(data.core.steps, data.core.freq, ft_ctrl.steps, ft_ctrl.freq)
     ft_ctrl = leaf_replace(ft_ctrl, mask, cmd=ft_ctrl.staged_cmd)
     rotor_vel = force_torque2rotor_vel(
-        ft_ctrl.cmd[..., [0]], ft_ctrl.cmd[..., 1:], **ft_ctrl.params._asdict()
+        ft_ctrl.cmd[..., [0]], ft_ctrl.cmd[..., 1:], **ft_ctrl.params
     )
     ft_ctrl = leaf_replace(ft_ctrl, mask, steps=data.core.steps)
     return data.replace(controls=data.controls.replace(rotor_vel=rotor_vel, force_torque=ft_ctrl))

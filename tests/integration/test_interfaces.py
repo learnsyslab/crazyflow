@@ -44,7 +44,7 @@ def test_attitude_interface(physics: Physics):
 
     for _ in range(int(2 * sim.control_freq)):  # Run simulation for 2 seconds
         pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
-        rpyt, i_error = jit_state2attitude(pos, quat, vel, None, cmd, (i_error,), ctrl_freq=100)
+        rpyt, i_error = jit_state2attitude(pos, quat, vel, cmd, (i_error,), ctrl_freq=100)
         sim.attitude_control(rpyt)
         sim.step(sim.freq // sim.control_freq)
 

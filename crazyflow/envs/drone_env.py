@@ -5,7 +5,8 @@ from typing import Callable, Literal
 import jax
 import jax.numpy as jnp
 import numpy as np
-from drone_controllers.mellinger.params import ForceTorqueParams
+from drone_controllers.core import load_params
+from drone_controllers.mellinger import force_torque2rotor_vel
 from gymnasium import spaces
 from gymnasium.vector import AutoresetMode, VectorEnv
 from gymnasium.vector.utils import batch_space
@@ -31,8 +32,8 @@ def action_space(control_type: Control, drone_model: str) -> spaces.Box:
     """
     match control_type:
         case Control.attitude:
-            params = ForceTorqueParams.load(drone_model)
-            thrust_min, thrust_max = params.thrust_min * 4, params.thrust_max * 4
+            params = load_params(force_torque2rotor_vel, drone_model)
+            thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),
                 np.array([np.pi / 2, np.pi / 2, np.pi / 2, thrust_max], dtype=np.float32),

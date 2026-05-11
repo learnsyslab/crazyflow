@@ -31,7 +31,7 @@ dependencies = [
     "ml_collections",
     "casadi",
     "drone-models==0.1.0",             # from PyPI (regular install) or submodules folder (pixi install)
-    "drone-controllers==0.1.0",        # from PyPI (regular install) or submodules folder (pixi install)
+    "drone-controllers==0.2.0",        # from PyPI (regular install) or submodules folder (pixi install)
 ]
 requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 

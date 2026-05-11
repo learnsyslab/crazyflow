@@ -441,6 +441,7 @@ def test_compile(physics: Physics, device: str):
     sim.step(1)
     sim.step(1)
     assert sim._step._cache_size() == 1, "Step function should not be recompiled"
+    sim.close()
 
 
 @pytest.mark.unit
@@ -522,3 +523,12 @@ def test_build_data(control: Control):
     assert isinstance(data, SimData), "build_data() must return a SimData instance"
     default_data = sim.build_default_data()
     assert isinstance(default_data, SimData), "build_default_data() must return a SimData instance"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("drone_model", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
+def test_fused_model(device: str, drone_model: str):
+    sim = Sim(drone_model=drone_model, fused_mjx_model=True, device=device)
+    sim.reset()
+    sim.step(1)
+    sim.close()

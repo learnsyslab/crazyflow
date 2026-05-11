@@ -97,7 +97,7 @@ class ControlData(typing.Protocol):
     freq: int
     """Frequency of the state control command."""
     # Parameters for the controller
-    params: tuple[typing.Any, ...]
+    params: dict[str, Array]
 
 
 @dataclass
