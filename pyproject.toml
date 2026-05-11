@@ -160,7 +160,7 @@ test-docs = { cmd = "pytest -v --markdown-docs --markdown-docs-syntax=superfence
 
 [tool.pixi.feature.docs.dependencies]
 python = ">=3.10"
-mkdocs = ">=1.5.0"
+properdocs = ">=1.5.0"
 mkdocs-material = ">=9.0.0"
 
 [tool.pixi.feature.docs.pypi-dependencies]
@@ -172,8 +172,8 @@ mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
 
 [tool.pixi.feature.docs.tasks]
-docs-build = { cmd = "mkdocs build", description = "Build docs" }
-docs-serve = { cmd = "mkdocs serve --livereload", description = "Serve docs locally" }
+docs-build = { cmd = "properdocs build", description = "Build docs" }
+docs-serve = { cmd = "properdocs serve --livereload", description = "Serve docs locally" }
 
 [tool.pixi.feature.dist.pypi-dependencies]
 build = "*"
