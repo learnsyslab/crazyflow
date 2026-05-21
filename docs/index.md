@@ -17,53 +17,53 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
   <div class="carousel">
     <div class="carousel-slide active">
       <iframe
-        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
-        title="Crazyflow hover control showcase"
+        src="https://www.youtube.com/embed/684uZqaAmuU?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=684uZqaAmuU&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Extremely Fast Training in Crazyflow"
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
         allowfullscreen
         loading="lazy"
       ></iframe>
-      <div class="carousel-caption">Hover - state control with Mellinger.</div>
+      <div class="carousel-caption">Training a rotor-level policy in 0.38s in Crazyflow.</div>
     </div>
     <div class="carousel-slide">
       <iframe
-        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
-        title="Crazyflow swarm showcase"
+        src="https://www.youtube.com/embed/aMqMMVWMIuw?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=aMqMMVWMIuw&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="MPPI with zero simplifications in Crazyflow"
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
         allowfullscreen
         loading="lazy"
       ></iframe>
-      <div class="carousel-caption">Swarm - many drones across parallel worlds.</div>
+      <div class="carousel-caption">Obstacle avoidance with MPPI using Crazyflow for rollouts.</div>
     </div>
     <div class="carousel-slide">
       <iframe
-        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
-        title="Crazyflow drone racing showcase"
+        src="https://www.youtube.com/embed/iabmLwW8SWQ?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=iabmLwW8SWQ&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Swarm choreographies in Crazyflow"
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
         allowfullscreen
         loading="lazy"
       ></iframe>
-      <div class="carousel-caption">Drone racing - Blender render.</div>
+      <div class="carousel-caption">SwarmGPT choreography in Crazyflow with 20 drones.</div>
     </div>
     <div class="carousel-slide">
       <iframe
-        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
-        title="Crazyflow MPPI navigation showcase"
+        src="https://www.youtube.com/embed/C4c8QEGulXQ?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=C4c8QEGulXQ&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Autonomous drone racing in Crazyflow"
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
         allowfullscreen
         loading="lazy"
       ></iframe>
-      <div class="carousel-caption">MPPI forest navigation - large batched rollout worlds.</div>
+      <div class="carousel-caption">Racing controller testing and sim-to-real transfer.</div>
     </div>
     <div class="carousel-slide">
       <iframe
-        src="https://www.youtube.com/embed/ievlXLLaY2c?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=ievlXLLaY2c&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
-        title="Crazyflow BPTT training showcase"
+        src="https://www.youtube.com/embed/isHuQqZSapo?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=isHuQqZSapo&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="Trajectory tracking performance from Crazyflow to real."
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
         allowfullscreen
         loading="lazy"
       ></iframe>
-      <div class="carousel-caption">BPTT training - loss curves and rendered policy trajectory.</div>
+      <div class="carousel-caption">Transfer learned policies and models from Crazyflow to real hardware.</div>
     </div>
   </div>
 

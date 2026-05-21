@@ -21,7 +21,7 @@ benchmark/data
 .pixi
 *.egg-info
 
-# MkDocs build output
+# ProperDocs build output
 site/
 # Temporary files
 .DS_Store
