@@ -73,6 +73,14 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
   <div class="carousel-indicators"></div>
 </div>
 
+<div align="center" markdown>
+
+<b>Watch the full narrated supplementary video:</b>
+
+[YouTube](https://www.youtube.com/watch?v=2ffWvhSSEAE){ .md-button .md-button--primary target="_blank" rel="noopener" }
+
+</div>
+
 ---
 
 ## Supported drones
