@@ -28,6 +28,16 @@ Commanding roll, pitch, yaw, and collective thrust directly. This level bypasses
 
 ---
 
+## Sampling-based MPC
+
+A sampling-based model predictive controller tracks a Lissajous curve while avoiding a grid of obstacles. It rolls out thousands of candidate control sequences in parallel using a reduced dynamics model, then applies the first action from a cost-weighted update of the best samples. The controller automatically uses a GPU when one is available and lowers the sample count on CPU.
+
+```bash
+python examples/control/sampling.py
+```
+
+---
+
 ## Gradient descent through dynamics
 
 Because the simulator is built entirely from JAX operations, `jax.grad` can differentiate through it. Starting the drone above the target height keeps it away from the floor, so the floor-clipping stage never fires and gradients flow freely through the entire trajectory.
