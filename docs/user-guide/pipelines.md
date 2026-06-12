@@ -21,7 +21,7 @@ print(sim.step_pipeline)
 
 ## The reset pipeline
 
-`sim.reset_pipeline` is empty by default. When `sim.reset()` is called, it first restores `SimData` to the default state, then runs every function in the reset pipeline in order. The reset function signature is `(data: SimData, default_data: SimData, mask: Array | None) -> SimData`.
+`sim.reset_pipeline` is empty by default. When `sim.reset()` is called, it first restores `SimData` to the default state, then runs every function in the reset pipeline in order. Each reset stage has the signature `(data: SimData, mask: Array | None) -> SimData`.
 
 Populate `sim.reset_pipeline` to add episode-level randomization without modifying the default state.
 
@@ -36,35 +36,50 @@ To see how to modify the step pipeline with a stochastic disturbance, see the [D
 
 ## Modifying the reset pipeline
 
-Add a function to the reset pipeline to vary initial conditions between episodes. The function receives the freshly-restored `data`, the `default_data` it was restored from, and an optional `mask` of worlds that were reset.
+The [domain randomization example](../examples/index.md#domain-randomization) defines two reset stages that randomize mass and inertia. Each function receives the freshly restored `data` and an optional `mask` of worlds that were reset:
 
 ```{ .python notest }
 import jax
-from crazyflow.sim import Sim
-from crazyflow.sim.data import SimData
+import jax.numpy as jnp
+import numpy as np
 from jax import Array
 
-def randomize_initial_pos(data: SimData, default_data: SimData, mask: Array | None) -> SimData:
-    key, subkey = jax.random.split(data.core.rng_key)
-    noise = jax.random.normal(subkey, data.states.pos.shape) * 0.1  # ±10 cm
-    return data.replace(
-        states=data.states.replace(pos=default_data.states.pos + noise),
-        core=data.core.replace(rng_key=key),
+from crazyflow.control import Control
+from crazyflow.sim import Sim
+from crazyflow.sim.data import SimData
+from crazyflow.utils import leaf_replace
+
+
+@jax.jit
+def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
+    key, mass_key = jax.random.split(data.core.rng_key)
+    data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
+    mass = (
+        data.params.mass
+        + jax.random.normal(mass_key, (data.core.n_worlds, data.core.n_drones, 1)) * 2e-3
     )
+    return data.replace(params=leaf_replace(data.params, mask, mass=mass))
 
-sim = Sim(n_worlds=16)
-sim.reset_pipeline = (randomize_initial_pos,)
-sim.build_reset_fn()  # recompile
-sim.reset()
-# Each of the 16 worlds now starts at a slightly different position
-```
 
-Multiple stages can be chained; the output of each function is passed as input to the next:
+@jax.jit
+def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
+    key, inertia_key = jax.random.split(data.core.rng_key)
+    data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
+    J = (
+        data.params.J
+        + jax.random.normal(inertia_key, (data.core.n_worlds, data.core.n_drones, 3, 3)) * 1e-8
+    )
+    return data.replace(params=leaf_replace(data.params, mask, J=J, J_inv=jnp.linalg.inv(J)))
 
-```{ .python notest }
-sim.reset_pipeline = (randomize_initial_pos, randomize_mass_fn, log_reset_fn)
+sim = Sim(n_worlds=3, n_drones=4, control=Control.state)
+sim.reset_pipeline = (randomize_mass, randomize_inertia)
 sim.build_reset_fn()
+
+mask = np.array([True, False, False])  # Only randomize the first world
+sim.reset(mask=mask)  # The mask is optional; omit it to reset and randomize all worlds
 ```
+
+Reset stages run in tuple order, with each stage receiving the output of the previous one. The mask ensures that parameter updates apply only to worlds selected by `sim.reset()`.
 
 ## Removing a stage
 
@@ -80,7 +95,7 @@ sim.build_step_fn()
 
 ## Writing a custom stage
 
-A step pipeline function must have the signature `(SimData) -> SimData`. A reset pipeline function must have the signature `(SimData, SimData, Array | None) -> SimData`. Both must be pure JAX functions with no Python-level side effects, so they can be traced and compiled.
+A step pipeline function must have the signature `(SimData) -> SimData`. A reset pipeline function must have the signature `(SimData, Array | None) -> SimData`. Both must be pure JAX functions with no Python-level side effects, so they can be traced and compiled.
 
 ```{ .python notest }
 from crazyflow.sim.data import SimData

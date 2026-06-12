@@ -16,7 +16,6 @@ This section is auto-generated from the Crazyflow source code using [mkdocstring
 | `crazyflow.control` | `Control` enum |
 | `crazyflow.control.mellinger` | Mellinger controller data and parameters |
 | `crazyflow.envs` | Gymnasium vectorized environments |
-| `crazyflow.randomize` | Domain randomization helpers |
 | `crazyflow.utils` | Grid utilities and pytree helpers |
 
 Navigate the full generated reference using the sidebar.

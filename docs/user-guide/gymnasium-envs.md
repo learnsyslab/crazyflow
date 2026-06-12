@@ -41,7 +41,7 @@ All environments accept these common arguments:
 | `drone_model` | `"cf2x_L250"` | Drone configuration |
 | `freq` | 500 | Physics frequency, Hz |
 | `device` | `"cpu"` | `"cpu"` or `"gpu"` |
-| `reset_randomization` | `None` | Optional `SimData → SimData` function applied at reset |
+| `reset_randomization` | `None` | Optional `(SimData, mask) → SimData` function applied at reset |
 
 ## Action normalization
 
@@ -60,18 +60,20 @@ env.close()
 
 ## Reset randomization
 
-Pass a `reset_randomization` callable to vary initial conditions between episodes. The function receives `SimData` and a JAX random key and must return updated `SimData`:
+Pass a `reset_randomization` callable to vary initial conditions between episodes. The function receives `SimData` and a boolean mask selecting the environments being reset, and must return updated `SimData`:
 
 ```{ .python notest }
 import jax
-import jax.numpy as jnp
 from crazyflow.envs import ReachPosEnv
 from crazyflow.sim.data import SimData
+from crazyflow.utils import leaf_replace
 
-def randomize(data: SimData, key: jax.Array) -> SimData:
-    key, subkey = jax.random.split(key)
+def randomize(data: SimData, mask: jax.Array | None) -> SimData:
+    key, subkey = jax.random.split(data.core.rng_key)
+    data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
     noise = jax.random.normal(subkey, data.states.pos.shape) * 0.05
-    return data.replace(states=data.states.replace(pos=data.states.pos + noise))
+    states = leaf_replace(data.states, mask, pos=data.states.pos + noise)
+    return data.replace(states=states)
 
 env = ReachPosEnv(num_envs=64, reset_randomization=randomize)
 ```
