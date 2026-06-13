@@ -28,25 +28,25 @@ UWB_BASE_STATIONS = jnp.array(
     ]
 )
 HOVER_POSITION = jnp.array([0.0, 0.0, 1.0])
-TRAJECTORY_DURATION = 20.0
+TRAJ_DURATION = 20.0
+TRAJ_SIZE = np.array([1.0, 0.75, 0.0])
 RANGE_STD = 0.03
 RANGE_BIAS_MAX = 0.08
-# The constant-velocity model has no acceleration input, so it needs enough process noise to turn.
-PROCESS_ACCEL_STD = 30.0
+# Standard deviation of the unknown acceleration driving the constant-velocity process model.
+PROCESS_NOISE_ACCEL_STD = 30.0
 MIN_ESTIMATOR_RANGE_STD = 1e-6
 
 
 def trajectory(t: float) -> np.ndarray:
     """Return a slow figure-eight state command."""
-    omega = 2 * np.pi / TRAJECTORY_DURATION
+    omega = 2 * np.pi / TRAJ_DURATION
     cmd = np.zeros((1, 1, 13))
-    cmd[..., 0] = np.sin(omega * t)
-    cmd[..., 1] = 0.75 * np.sin(2 * omega * t)
-    cmd[..., 2] = 1.0
-    cmd[..., 3] = omega * np.cos(omega * t)
-    cmd[..., 4] = 1.5 * omega * np.cos(2 * omega * t)
-    cmd[..., 6] = -(omega**2) * np.sin(omega * t)
-    cmd[..., 7] = -3 * omega**2 * np.sin(2 * omega * t)
+    pos = HOVER_POSITION + TRAJ_SIZE * np.array([np.sin(omega * t), np.sin(2 * omega * t), 0.0])
+    vel = TRAJ_SIZE * omega * np.array([np.cos(omega * t), 2 * np.cos(2 * omega * t), 0.0])
+    acc = TRAJ_SIZE * omega**2 * np.array([-np.sin(omega * t), -4 * np.sin(2 * omega * t), 0.0])
+    cmd[..., 0:3] = pos
+    cmd[..., 3:6] = vel
+    cmd[..., 6:9] = acc
     return cmd
 
 
@@ -63,46 +63,60 @@ def simulate_uwb(data: SimData) -> SimData:
 def estimate_state(data: SimData) -> SimData:
     """Run a constant-velocity EKF update using the UWB ranges."""
     dt = 1.0 / data.core.freq
-    estimate = data.plugins["estimate"]
+
+    # Predict: x_prior = F x, P_prior = F P F^T + Q
+    state = data.plugins["estimate"]
     covariance = data.plugins["covariance"]
-
+    # Constant velocity: p_next = p + v * dt and v_next = v.
     transition = jnp.eye(6).at[:3, 3:].set(jnp.eye(3) * dt)
-    accel_map = jnp.concat((jnp.eye(3) * (0.5 * dt**2), jnp.eye(3) * dt), axis=0)
-    process_covariance = PROCESS_ACCEL_STD**2 * accel_map @ accel_map.T
-
-    predicted = estimate @ transition.T
+    # Model unknown acceleration a as process noise:
+    # x_next = F x + acceleration_to_state * a, where delta_p = 0.5*a*dt^2 and delta_v = a*dt.
+    acceleration_to_state = jnp.concat((jnp.eye(3) * (0.5 * dt**2), jnp.eye(3) * dt), axis=0)
+    process_covariance = (
+        PROCESS_NOISE_ACCEL_STD**2 * acceleration_to_state @ acceleration_to_state.T
+    )
+    predicted_state = state @ transition.T
     predicted_covariance = transition @ covariance @ transition.T + process_covariance
 
-    difference = predicted[..., None, :3] - UWB_BASE_STATIONS
-    predicted_ranges = jnp.linalg.norm(difference, axis=-1)
-    range_directions = difference / jnp.maximum(predicted_ranges[..., None], 1e-6)
+    # Linearize ranges: z_prior = h(x_prior), H = dh/dx at x_prior
+    anchor_offsets = predicted_state[..., None, :3] - UWB_BASE_STATIONS
+    predicted_ranges = jnp.linalg.norm(anchor_offsets, axis=-1)
+    range_directions = anchor_offsets / jnp.maximum(predicted_ranges[..., None], 1e-6)
     n_ranges = UWB_BASE_STATIONS.shape[0]
-    measurement_jacobian = jnp.zeros((*predicted.shape[:-1], n_ranges, 6))
+    measurement_jacobian = jnp.zeros((*predicted_state.shape[:-1], n_ranges, 6))
     measurement_jacobian = measurement_jacobian.at[..., :, :3].set(range_directions)
     range_std = jnp.maximum(data.plugins["range_std"], MIN_ESTIMATOR_RANGE_STD)
-    measurement_variance = range_std**2
-    measurement_covariance = jnp.eye(n_ranges) * measurement_variance
+    measurement_covariance = jnp.eye(n_ranges) * range_std**2
+    measurement_jacobian_transpose = jnp.swapaxes(measurement_jacobian, -1, -2)
 
+    # Innovation and gain: y = z - z_prior, S = H P_prior H^T + R, K = P_prior H^T S^-1
+    innovation = data.plugins["uwb_ranges"] - predicted_ranges
     innovation_covariance = (
-        measurement_jacobian @ predicted_covariance @ jnp.swapaxes(measurement_jacobian, -1, -2)
+        measurement_jacobian @ predicted_covariance @ measurement_jacobian_transpose
         + measurement_covariance
     )
-    covariance_times_jacobian = predicted_covariance @ jnp.swapaxes(measurement_jacobian, -1, -2)
-    gain = jnp.swapaxes(
+    covariance_times_jacobian = predicted_covariance @ measurement_jacobian_transpose
+    # K = P_prior H^T S^-1. Solve S K^T = (P_prior H^T)^T instead of forming S^-1;
+    # a linear solve is more numerically stable and directly computes the same result.
+    kalman_gain = jnp.swapaxes(
         jnp.linalg.solve(innovation_covariance, jnp.swapaxes(covariance_times_jacobian, -1, -2)),
         -1,
         -2,
     )
-    innovation = data.plugins["uwb_ranges"] - predicted_ranges
-    estimate = predicted + jnp.einsum("...ij,...j->...i", gain, innovation)
 
+    # Correct: x = x_prior + K y
+    corrected_state = predicted_state + (kalman_gain @ innovation[..., None])[..., 0]
+
+    # Joseph form: P = (I - K H) P_prior (I - K H)^T + K R K^T
     identity = jnp.eye(6)
-    residual_map = identity - gain @ measurement_jacobian
-    covariance = residual_map @ predicted_covariance @ jnp.swapaxes(residual_map, -1, -2)
-    covariance += gain @ measurement_covariance @ jnp.swapaxes(gain, -1, -2)
-    covariance = 0.5 * (covariance + jnp.swapaxes(covariance, -1, -2))
+    residual_map = identity - kalman_gain @ measurement_jacobian
+    corrected_covariance = residual_map @ predicted_covariance @ jnp.swapaxes(
+        residual_map, -1, -2
+    ) + kalman_gain @ measurement_covariance @ jnp.swapaxes(kalman_gain, -1, -2)
+    corrected_covariance = 0.5 * (corrected_covariance + jnp.swapaxes(corrected_covariance, -1, -2))
 
-    return data.replace(plugins=data.plugins | {"estimate": estimate, "covariance": covariance})
+    plugins = data.plugins | {"estimate": corrected_state, "covariance": corrected_covariance}
+    return data.replace(plugins=plugins)
 
 
 def use_estimate_for_control(data: SimData) -> SimData:
@@ -170,7 +184,7 @@ def main(noisy: bool = False, render: bool = True) -> None:
     sim.build_default_data()
     sim.build_step_fn()
 
-    duration = TRAJECTORY_DURATION
+    duration = TRAJ_DURATION
     reference_times = np.linspace(0.0, duration, 200)
     reference = np.array([trajectory(t)[0, 0, :3] for t in reference_times])
     estimation_errors = []
