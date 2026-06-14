@@ -12,7 +12,7 @@ from crazyflow.sim.data import SimData
 def main():
     sim = Sim(control=Control.attitude, physics=Physics.first_principles, attitude_freq=50)
     # Remove clipping floor function which kills gradients
-    sim.step_pipeline = sim.step_pipeline[:-1]
+    sim.step_pipeline.remove("clip_floor_pos")
     sim_step = sim.build_step_fn()
 
     def step(cmd: NDArray, data: SimData) -> jax.Array:

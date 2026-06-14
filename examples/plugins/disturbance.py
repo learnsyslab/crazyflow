@@ -42,9 +42,9 @@ def main(plot: bool = False):
 
     # Second run
     # We insert the disturbance function into the step pipeline before the integration step. You can
-    # inspect the step pipeline with
+    # inspect the step pipeline stages with
     # print(sim.step_pipeline)
-    sim.step_pipeline = sim.step_pipeline[:2] + (disturbance_fn,) + sim.step_pipeline[2:]
+    sim.step_pipeline.insert_before("integration", disturbance_fn)
     sim.build_step_fn()
     pos_disturbed, quat_disturbed = [], []
     sim.reset()

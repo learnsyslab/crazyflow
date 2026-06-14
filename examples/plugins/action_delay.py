@@ -60,7 +60,7 @@ def main():
     # resets.
     custom_data = {"queued_actions": jnp.zeros((delay_steps, 1, 1, 4))}
     sim.data = sim.data.replace(plugins=sim.data.plugins | custom_data)
-    sim.step_pipeline = (action_delay,) + sim.step_pipeline
+    sim.step_pipeline.prepend(action_delay)
     sim.build_default_data()
     sim.build_step_fn()
 

@@ -1,22 +1,22 @@
 # Pipelines
 
-Crazyflow has two pipelines, one for stepping and one for resetting, each a tuple of pure JAX functions that transform `SimData`. Both are constructed at `Sim` initialisation and compiled into a single `jax.jit`-cached function by `build_step_fn()` / `build_reset_fn()`. You can modify either pipeline by editing the tuple and calling the corresponding build function.
+Crazyflow has two pipelines, one for stepping and one for resetting, each an ordered collection of named, pure JAX functions that transform `SimData`. Both are constructed at `Sim` initialisation and compiled into a single `jax.jit`-cached function by `build_step_fn()` / `build_reset_fn()`. You can modify either pipeline through its named stages and recompile with the corresponding build function.
 
 ## The step pipeline
 
 `sim.step_pipeline` contains four stages by default:
 
 1. **Control functions** — convert the staged command through the control hierarchy (state → attitude → force/torque → rotor velocities, depending on the selected mode)
-2. **Integrator** — advance the ODE one physics step (Euler, RK4, or symplectic Euler)
-3. **Step counter** — increment `data.core.steps`
-4. **Floor clip** — prevent drones from passing through the floor
+2. **Integrator** (`integration`) — advance the ODE one physics step (Euler, RK4, or symplectic Euler)
+3. **Step counter** (`increment_steps`) — increment `data.core.steps`
+4. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
 
 ```python
 from crazyflow.sim import Sim
 
 sim = Sim()
 print(sim.step_pipeline)
-# (<function ...>, <function rk4...>, <function increment_steps...>, <function clip_floor_pos...>)
+# Pipeline(step_state_controller -> step_attitude_controller -> integration -> increment_steps -> clip_floor_pos)
 ```
 
 ## The reset pipeline
@@ -27,7 +27,17 @@ Populate `sim.reset_pipeline` to add episode-level randomization without modifyi
 
 ## Modifying the step pipeline
 
-Insert or remove stages by slicing and concatenating the tuple.
+Stages are addressed by name. Use `insert_before` / `insert_after` to place a function relative to an existing stage, `append` / `prepend` to add it at either end, `replace` to swap a stage's implementation, and `remove` to drop it. New stages are named after the function's `__name__` unless an explicit name is given; names must be unique within a pipeline.
+
+```
+sim = Sim()
+
+def disturbance_fn(data: SimData) -> SimData:
+    return data.replace(states=data.states.replace(vel=data.states.vel + 1e-5))
+
+sim.step_pipeline.insert_before("integration", disturbance_fn)
+sim.build_step_fn()  # recompile
+```
 
 !!! warning
     Always call `sim.build_step_fn()` after modifying `sim.step_pipeline`. Without it, `sim.step()` still runs the previously compiled kernel and silently ignores your changes.
@@ -36,7 +46,7 @@ To see how to modify the step pipeline with a stochastic disturbance, see the [D
 
 ## Modifying the reset pipeline
 
-The [domain randomization example](../examples/index.md#domain-randomization) defines two reset stages that randomize mass and inertia. Each function receives the freshly restored `data` and an optional `mask` of worlds that were reset:
+Add a function to the reset pipeline to vary initial conditions between episodes. The function receives the freshly-restored `data` and an optional `mask` of worlds that were reset.
 
 ```{ .python notest }
 import jax
@@ -44,22 +54,21 @@ import jax.numpy as jnp
 import numpy as np
 from jax import Array
 
-from crazyflow.control import Control
-from crazyflow.sim import Sim
-from crazyflow.sim.data import SimData
-from crazyflow.utils import leaf_replace
-
-
-@jax.jit
-def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
-    key, mass_key = jax.random.split(data.core.rng_key)
-    data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
-    mass = (
-        data.params.mass
-        + jax.random.normal(mass_key, (data.core.n_worlds, data.core.n_drones, 1)) * 2e-3
+def randomize_initial_pos(data: SimData, mask: Array | None) -> SimData:
+    key, subkey = jax.random.split(data.core.rng_key)
+    noise = jax.random.normal(subkey, data.states.pos.shape) * 0.1  # ±10 cm
+    return data.replace(
+        states=data.states.replace(pos=data.states.pos + noise),
+        core=data.core.replace(rng_key=key),
     )
     return data.replace(params=leaf_replace(data.params, mask, mass=mass))
 
+sim = Sim(n_worlds=16)
+sim.reset_pipeline += randomize_initial_pos
+sim.build_reset_fn()  # recompile
+sim.reset()
+# Each of the 16 worlds now starts at a slightly different position
+```
 
 @jax.jit
 def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
@@ -71,8 +80,9 @@ def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
     )
     return data.replace(params=leaf_replace(data.params, mask, J=J, J_inv=jnp.linalg.inv(J)))
 
-sim = Sim(n_worlds=3, n_drones=4, control=Control.state)
-sim.reset_pipeline = (randomize_mass, randomize_inertia)
+```{ .python notest }
+for fn in (randomize_initial_pos, randomize_mass_fn, log_reset_fn):
+    sim.reset_pipeline += fn
 sim.build_reset_fn()
 
 mask = np.array([True, False, False])  # Only randomize the first world
@@ -83,13 +93,13 @@ Reset stages run in tuple order, with each stage receiving the output of the pre
 
 ## Removing a stage
 
-Remove any stage by excluding it from the tuple. A common case is removing the floor clip when computing gradients through a trajectory that starts high above the ground:
+Remove any stage by name. A common case is removing the floor clip when computing gradients through a trajectory that starts high above the ground:
 
 ```{ .python notest }
 from crazyflow.sim import Sim
 
 sim = Sim()
-sim.step_pipeline = sim.step_pipeline[:-1]  # drop clip_floor_pos
+sim.step_pipeline.remove("clip_floor_pos")
 sim.build_step_fn()
 ```
 
