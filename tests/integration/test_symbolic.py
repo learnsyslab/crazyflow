@@ -22,7 +22,7 @@ def test_attitude_symbolic(physics: Physics, freq: int):
         pytest.skip(f"Physics mode {physics} not yet implemented")
 
     sim = Sim(physics=physics, freq=freq)
-    sim.step_pipeline = sim.step_pipeline[:-1]  # Remove clip floor from step pipeline
+    sim.step_pipeline.remove("clip_floor_pos")  # Remove clip floor from step pipeline
     X_dot, X, U, Y = symbolic_from_sim(sim)
     fd = cs.integrator("fd", "cvodes", {"x": X, "p": U, "ode": X_dot}, 0, 1 / freq)
 
