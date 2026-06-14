@@ -101,7 +101,7 @@ class DroneEnv(VectorEnv):
         # Compile our domain randomization on reset into the sim pipeline
         if reset_randomization is None:
             reset_randomization = self._reset_randomization
-        self.sim.reset_pipeline += reset_randomization
+        self.sim.reset_pipeline.append(reset_randomization, name="reset_randomization")
         self.sim.build_reset_fn()
 
         self.n_substeps = self.sim.freq // self.freq
