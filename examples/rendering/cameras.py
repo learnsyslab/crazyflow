@@ -1,3 +1,5 @@
+"""Example showing how to change the used camera and how to extract the pixel information."""
+
 import time
 
 import matplotlib.pyplot as plt
@@ -71,8 +73,8 @@ def main(show_plot: bool = False, save_plot: bool = False):
     pos = sim.data.states.pos.at[...].set([-1, 0, 0])
     states = sim.data.states.replace(pos=pos)
     sim.data = sim.data.replace(states=states)
-    duration = 8
-    fps = 25
+    duration = 5
+    fps = 50
     timings = []
 
     # Set up matplotlib rendering
@@ -95,6 +97,12 @@ def main(show_plot: bool = False, save_plot: bool = False):
         sim.step(sim.freq // fps)
 
         t1 = time.perf_counter()
+        # mode: Either "human" for the regular window, "rgb_array" for an RGB array,
+        #       "depth_array" for a depth array, or "rgbd_tuple" for both at the same time.
+        # camera: The name or id of the camera. The names are specified in the corresponding
+        #         xml file in drone_models. For example, "fpv_cam:0" is the first-person view camera
+        #         of the first drone, "track_cam:0" is the tracking camera of the first drone.
+        #         Id -1 is the global camera.
         rgbd = sim.render(
             width=resolution[0], height=resolution[1], mode="rgbd_tuple", camera="fpv_cam:0"
         )
@@ -108,16 +116,19 @@ def main(show_plot: bool = False, save_plot: bool = False):
         im2.set_clim(np.nanmin(depth), np.nanmax(depth))
         return im1, im2
 
-    anim = animation.FuncAnimation(fig, update_frame, frames=int(duration * fps), blit=True)
+    anim = animation.FuncAnimation(
+        fig, update_frame, frames=int(duration * fps), interval=1000 / fps, blit=True, repeat=False
+    )
     if show_plot:
-        plt.show()  # this is slow
+        plt.show()
     if save_plot:
         anim.save("cameras.gif", writer="pillow", fps=fps)
 
     sim.close()
 
     t_mean = np.mean(timings)
-    print(f"Average render time {t_mean * 1000}ms, eqivalent to {1 / t_mean}fps")
+    print(f"Average render time {t_mean * 1000:.2f}ms, eqivalent to {1 / t_mean:.2f}fps")
+    print("For more optimized depth rendering, check out the raycasting.py example.")
 
 
 if __name__ == "__main__":

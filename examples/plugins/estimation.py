@@ -27,23 +27,19 @@ UWB_BASE_STATIONS = jnp.array(
         [2.5, 2.5, 3.0],
     ]
 )
-HOVER_POSITION = jnp.array([0.0, 0.0, 1.0])
-TRAJ_DURATION = 20.0
-TRAJ_SIZE = np.array([1.0, 0.75, 0.0])
-RANGE_STD = 0.03
-RANGE_BIAS_MAX = 0.08
-# Standard deviation of the unknown acceleration driving the constant-velocity process model.
-PROCESS_NOISE_ACCEL_STD = 30.0
-MIN_ESTIMATOR_RANGE_STD = 1e-6
+RANGE_STD = 0.03  # measurement std dev [m]
+RANGE_BIAS_MAX = 0.08  # measurement bias, uniformly distributed in [0, RANGE_BIAS_MAX] [m]
 
 
-def trajectory(t: float) -> np.ndarray:
+def trajectory(t: float, t_total: float = 20.0) -> np.ndarray:
     """Return a slow figure-eight state command."""
-    omega = 2 * np.pi / TRAJ_DURATION
+    center = np.array([0.0, 0.0, 1.0])
+    size = np.array([1.0, 0.75, 0.0])
+    omega = 2 * np.pi / t_total
     cmd = np.zeros((1, 1, 13))
-    pos = HOVER_POSITION + TRAJ_SIZE * np.array([np.sin(omega * t), np.sin(2 * omega * t), 0.0])
-    vel = TRAJ_SIZE * omega * np.array([np.cos(omega * t), 2 * np.cos(2 * omega * t), 0.0])
-    acc = TRAJ_SIZE * omega**2 * np.array([-np.sin(omega * t), -4 * np.sin(2 * omega * t), 0.0])
+    pos = center + size * np.array([np.sin(omega * t), np.sin(2 * omega * t), 0.0])
+    vel = size * omega * np.array([np.cos(omega * t), 2 * np.cos(2 * omega * t), 0.0])
+    acc = size * omega**2 * np.array([-np.sin(omega * t), -4 * np.sin(2 * omega * t), 0.0])
     cmd[..., 0:3] = pos
     cmd[..., 3:6] = vel
     cmd[..., 6:9] = acc
@@ -72,9 +68,8 @@ def estimate_state(data: SimData) -> SimData:
     # Model unknown acceleration a as process noise:
     # x_next = F x + acceleration_to_state * a, where delta_p = 0.5*a*dt^2 and delta_v = a*dt.
     acceleration_to_state = jnp.concat((jnp.eye(3) * (0.5 * dt**2), jnp.eye(3) * dt), axis=0)
-    process_covariance = (
-        PROCESS_NOISE_ACCEL_STD**2 * acceleration_to_state @ acceleration_to_state.T
-    )
+    process_covariance = 30.0**2 * acceleration_to_state @ acceleration_to_state.T
+    # Standard deviation of 30 of the unknown acceleration driving the constant-velocity process.
     predicted_state = state @ transition.T
     predicted_covariance = transition @ covariance @ transition.T + process_covariance
 
@@ -85,8 +80,7 @@ def estimate_state(data: SimData) -> SimData:
     n_ranges = UWB_BASE_STATIONS.shape[0]
     measurement_jacobian = jnp.zeros((*predicted_state.shape[:-1], n_ranges, 6))
     measurement_jacobian = measurement_jacobian.at[..., :, :3].set(range_directions)
-    range_std = jnp.maximum(data.plugins["range_std"], MIN_ESTIMATOR_RANGE_STD)
-    measurement_covariance = jnp.eye(n_ranges) * range_std**2
+    measurement_covariance = jnp.eye(n_ranges) * data.plugins["range_std"] ** 2
     measurement_jacobian_transpose = jnp.swapaxes(measurement_jacobian, -1, -2)
 
     # Innovation and gain: y = z - z_prior, S = H P_prior H^T + R, K = P_prior H^T S^-1
@@ -138,25 +132,23 @@ def main(noisy: bool = False, render: bool = True) -> None:
     print(f"Running with {name}")
 
     sim = Sim(control="state", integrator="rk4", rng_key=42)
-    sim.max_visual_geom = 1000
-
     hover_force = sim.data.params.mass * -sim.data.params.gravity_vec[2] / 4
     motor_forces = jnp.broadcast_to(hover_force, sim.data.states.rotor_vel.shape)
     hover_rotor_vel = motor_force2rotor_vel(motor_forces, sim.data.params.rpm2thrust)
-
-    states = sim.data.states.replace(
-        pos=trajectory(0.0)[..., :3], vel=trajectory(0.0)[..., 3:6], rotor_vel=hover_rotor_vel
+    sim.data = sim.data.replace(
+        states=sim.data.states.replace(
+            pos=trajectory(0.0)[..., :3], vel=trajectory(0.0)[..., 3:6], rotor_vel=hover_rotor_vel
+        )
     )
-    sim.data = sim.data.replace(states=states)
 
     key, bias_key = jax.random.split(sim.data.core.rng_key)
     bias_shape = (sim.n_worlds, sim.n_drones, len(UWB_BASE_STATIONS))
     bias = (
-        RANGE_BIAS_MAX * jax.random.uniform(bias_key, bias_shape)
+        jax.random.uniform(bias_key, bias_shape, minval=0.0, maxval=RANGE_BIAS_MAX)
         if noisy
         else jnp.zeros(bias_shape)
     )
-    range_std = RANGE_STD if noisy else 0.0
+    range_std = RANGE_STD if noisy else 1e-6  # Nonzero for numerical stability
     estimate = jnp.concat((sim.data.states.pos, sim.data.states.vel), axis=-1)
     covariance = jnp.broadcast_to(jnp.eye(6) * 0.1, (sim.n_worlds, sim.n_drones, 6, 6))
     plugins = {
@@ -184,16 +176,16 @@ def main(noisy: bool = False, render: bool = True) -> None:
     sim.build_default_data()
     sim.build_step_fn()
 
-    duration = TRAJ_DURATION
+    duration = 20.0
     reference_times = np.linspace(0.0, duration, 200)
-    reference = np.array([trajectory(t)[0, 0, :3] for t in reference_times])
+    reference = np.array([trajectory(t, t_total=duration)[0, 0, :3] for t in reference_times])
     estimation_errors = []
     tracking_errors = []
     fps = 60
 
     for i in range(int(duration * sim.control_freq)):
         t = i / sim.control_freq
-        cmd = trajectory(t)
+        cmd = trajectory(t, t_total=duration)
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
 
@@ -205,12 +197,11 @@ def main(noisy: bool = False, render: bool = True) -> None:
         if render and ((i * fps) % sim.control_freq) < fps:
             truth = np.asarray(sim.data.states.pos[0, 0])
             estimate = np.asarray(sim.data.plugins["estimate"][0, 0, :3])
-            anchors = np.asarray(UWB_BASE_STATIONS)
 
             draw_line(
                 sim, reference, rgba=np.array([0.4, 0.4, 0.4, 0.5]), start_size=0.5, end_size=0.5
             )
-            for anchor in anchors:
+            for anchor in UWB_BASE_STATIONS:
                 draw_line(
                     sim,
                     np.stack((truth, anchor)),
@@ -218,10 +209,16 @@ def main(noisy: bool = False, render: bool = True) -> None:
                     start_size=0.3,
                     end_size=0.3,
                 )
-            draw_points(sim, anchors, rgba=np.array([0.1, 0.4, 1.0, 1.0]), size=0.05)
+            draw_points(sim, UWB_BASE_STATIONS, rgba=np.array([0.1, 0.4, 1.0, 1.0]), size=0.05)
             draw_points(sim, cmd[0, 0, :3], rgba=np.array([0.1, 0.8, 0.2, 1.0]), size=0.04)
             draw_points(sim, estimate, rgba=np.array([1.0, 0.2, 0.1, 1.0]), size=0.04)
-            sim.render()
+            cam_config = {
+                "distance": 3.0,
+                "elevation": -45.0,
+                "azimuth": 90.0,
+                "lookat": [0.0, 0.0, 1.0],
+            }
+            sim.render(cam_config=cam_config)
 
     sim.close()
     estimation_rms = np.sqrt(np.mean(np.asarray(estimation_errors) ** 2))
