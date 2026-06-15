@@ -83,13 +83,15 @@ def test_missing_stage():
 def test_sums():
     pipeline = Pipeline((fn_a,))
     pipeline = pipeline + fn_b
-    pipeline += ("fn_c_named", fn_c)
+    pipeline.append(fn_c, "fn_c_named")
     assert pipeline.names == ("fn_a", "fn_b", "fn_c_named")
     pipeline = Pipeline((fn_a,))
     pipeline += fn_b
     assert pipeline.names == ("fn_a", "fn_b")
     pipeline = (fn_c,) + Pipeline((fn_a,))
     assert pipeline.names == ("fn_c", "fn_a")
+    with pytest.raises(ValueError, match="no __name__"):
+        Pipeline((fn_a,)) + ("fn_b_named", fn_b)  # ``+`` only appends named functions
 
 
 @pytest.mark.unit
