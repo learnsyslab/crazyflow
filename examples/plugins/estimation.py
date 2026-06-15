@@ -212,13 +212,14 @@ def main(noisy: bool = False, render: bool = True) -> None:
             draw_points(sim, UWB_BASE_STATIONS, rgba=np.array([0.1, 0.4, 1.0, 1.0]), size=0.05)
             draw_points(sim, cmd[0, 0, :3], rgba=np.array([0.1, 0.8, 0.2, 1.0]), size=0.04)
             draw_points(sim, estimate, rgba=np.array([1.0, 0.2, 0.1, 1.0]), size=0.04)
-            cam_config = {
-                "distance": 3.0,
-                "elevation": -45.0,
-                "azimuth": 90.0,
-                "lookat": [0.0, 0.0, 1.0],
-            }
-            sim.render(cam_config=cam_config)
+            sim.render(
+                cam_config={
+                    "distance": 3.0,
+                    "elevation": -45.0,
+                    "azimuth": 90.0,
+                    "lookat": [0.0, 0.0, 1.0],
+                }
+            )
 
     sim.close()
     estimation_rms = np.sqrt(np.mean(np.asarray(estimation_errors) ** 2))

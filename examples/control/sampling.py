@@ -338,7 +338,14 @@ def main() -> None:
             for pole in obstacles:
                 pole_top = pole + np.array([0.0, 0.0, OBSTACLE_HEIGHT])
                 draw_capsule(sim, pole, pole_top, radius=OBSTACLE_RADIUS, rgba=col_pole)
-            sim.render()
+            sim.render(
+                cam_config={
+                    "distance": 3.0,
+                    "elevation": -45.0,
+                    "azimuth": 90.0,
+                    "lookat": [0.0, 0.0, 1.0],
+                }
+            )
 
     sim.close()
     rollout_simulator.close()
