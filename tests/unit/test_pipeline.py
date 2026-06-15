@@ -91,7 +91,7 @@ def test_sums():
     pipeline = (fn_c,) + Pipeline((fn_a,))
     assert pipeline.names == ("fn_c", "fn_a")
     with pytest.raises(ValueError, match="no __name__"):
-        Pipeline((fn_a,)) + ("fn_b_named", fn_b)  # ``+`` only appends named functions
+        Pipeline((fn_a,)) + partial(fn_b)  # ``+`` only appends named functions
 
 
 @pytest.mark.unit
