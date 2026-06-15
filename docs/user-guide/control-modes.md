@@ -60,10 +60,10 @@ sim.step(sim.freq // sim.control_freq)
 ## Attitude control
 
 ```python
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(control=Control.attitude, physics=Physics.so_rpy, attitude_freq=500)
+sim = Sim(control=Control.attitude, dynamics=Dynamics.so_rpy, attitude_freq=500)
 sim.reset()
 ```
 
@@ -80,10 +80,10 @@ For a hover command, set thrust to `mass × g`:
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(control=Control.attitude, physics=Physics.so_rpy)
+sim = Sim(control=Control.attitude, dynamics=Dynamics.so_rpy)
 sim.reset()
 
 mass = float(sim.data.params.mass[0, 0, 0])
@@ -96,7 +96,7 @@ sim.step(sim.freq // sim.control_freq)
 
 ## Force-torque control
 
-Direct force and torque input. Requires `Physics.first_principles`.
+Direct force and torque input. Requires `Dynamics.first_principles`.
 
 Command shape: `(n_worlds, n_drones, 4)`
 
@@ -109,10 +109,10 @@ Command shape: `(n_worlds, n_drones, 4)`
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(control=Control.force_torque, physics=Physics.first_principles)
+sim = Sim(control=Control.force_torque, dynamics=Dynamics.first_principles)
 sim.reset()
 
 mass = float(sim.data.params.mass[0, 0, 0])
@@ -125,7 +125,7 @@ sim.step(1)
 
 ## Rotor velocity control
 
-Direct motor commands. Requires `Physics.first_principles`.
+Direct motor commands. Requires `Dynamics.first_principles`.
 
 Command shape: `(n_worlds, n_drones, 4)`
 
@@ -137,10 +137,10 @@ The hover RPM for `cf2x_L250` is approximately 15 000 RPM, but the exact value d
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(control=Control.rotor_vel, physics=Physics.first_principles)
+sim = Sim(control=Control.rotor_vel, dynamics=Dynamics.first_principles)
 sim.reset()
 
 cmd = np.full((1, 1, 4), 15_000.0, dtype=np.float32)
@@ -151,18 +151,18 @@ sim.step(1)
 
 ## Control frequency
 
-Each control mode has its own update rate. The physics tick (`freq`) is always the fastest.
+Each control mode has its own update rate. The dynamics tick (`freq`) is always the fastest.
 
 | Mode | Rate argument | Default |
 |---|---|---|
 | `state` | `state_freq` | 100 Hz |
 | `attitude` | `attitude_freq` | 500 Hz |
 | `force_torque` | `force_torque_freq` | 500 Hz |
-| `rotor_vel` | — | every physics step |
+| `rotor_vel` | — | every dynamics step |
 
-The simulator applies a new command only when the control tick fires. Between ticks, the previous command is held. The number of physics steps per control tick is `freq // control_freq`.
+The simulator applies a new command only when the control tick fires. Between ticks, the previous command is held. The number of dynamics steps per control tick is `freq // control_freq`.
 
 ## Next steps
 
 - [Functional API](functional-api.md) — running control inside JIT with `F.controllable`
-- [Physics Models](physics-models.md) — compatibility between physics and control modes
+- [Dynamics Models](dynamics-models.md) — compatibility between dynamics and control modes

@@ -1,14 +1,14 @@
 import numpy as np
 
 from crazyflow.control import Control
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 
 
 def main():
     sim = Sim(
         n_worlds=1,
         n_drones=1,
-        physics=Physics.first_principles,
+        dynamics=Dynamics.first_principles,
         control=Control.state,
         freq=500,
         attitude_freq=500,

@@ -13,14 +13,14 @@ import numpy as np
 from jax.scipy.spatial.transform import Rotation as R  # noqa: F401
 from scipy.optimize import least_squares
 
-from crazyflow.models.so_rpy_rotor_drag import dynamics as dynamics_so_rpy_rotor_drag
-from crazyflow.models.utils.rotation import (  # noqa: F401
+from crazyflow.dynamics.so_rpy_rotor_drag import dynamics as dynamics_so_rpy_rotor_drag
+from crazyflow.dynamics.utils.rotation import (  # noqa: F401
     ang_vel_deriv2rpy_rates_deriv,
     rpy_rates2ang_vel,
 )
 
 if TYPE_CHECKING:
-    from crazyflow.models._typing import Array  # To be changed to array_api_typing later
+    from crazyflow._typing import Array  # To be changed to array_api_typing later
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

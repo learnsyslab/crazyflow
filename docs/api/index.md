@@ -6,11 +6,11 @@ This section is auto-generated from the Crazyflow source code using [mkdocstring
 
 | Module | Description |
 |---|---|
-| `crazyflow.sim` | Core `Sim` class and physics pipeline |
+| `crazyflow.sim` | Core `Sim` class and simulation pipeline |
 | `crazyflow.sim.pipeline` | `OrderedDict`-based pipeline helpers (`append_fn`, `insert_fn_before`, `replace_fn`, etc.) |
 | `crazyflow.sim.data` | `SimData`, `SimState`, `SimControls`, `SimParams`, `SimCore` pytrees |
 | `crazyflow.sim.functional` | Pure functional control API for use inside `jax.jit` |
-| `crazyflow.sim.physics` | `Physics` enum and physics model implementations |
+| `crazyflow.dynamics` | `Dynamics` enum and dynamics model implementations |
 | `crazyflow.sim.integration` | `Integrator` enum, Euler, RK4, and symplectic Euler |
 | `crazyflow.sim.sensors` | Raycasting and sensor extraction utilities |
 | `crazyflow.sim.symbolic` | CasADi symbolic model API |

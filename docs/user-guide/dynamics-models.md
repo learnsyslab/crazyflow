@@ -1,35 +1,35 @@
-# Physics Models
+# Dynamics Models
 
-Crazyflow supports four physics models, selectable via the `Physics` enum. All models share the same state representation and control interface, so you can swap them at construction time without changing any other code.
+Crazyflow supports four dynamics models, selectable via the `Dynamics` enum. All models share the same state representation and control interface, so you can swap them at construction time without changing any other code.
 
 ```python
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 
-sim = Sim(physics=Physics.first_principles)
+sim = Sim(dynamics=Dynamics.first_principles)
 ```
 
 ## Available models
 
 | Model | Enum value | Command input | Description |
 |---|---|---|---|
-| First principles | `Physics.first_principles` | Rotor RPM | Full analytical model with identified parameters |
-| SO(3) + RPY | `Physics.so_rpy` | Roll/pitch/yaw + thrust | Simplified fitted model |
-| SO(3) + RPY + rotor | `Physics.so_rpy_rotor` | Roll/pitch/yaw + thrust | Adds first-order rotor dynamics |
-| SO(3) + RPY + rotor + drag | `Physics.so_rpy_rotor_drag` | Roll/pitch/yaw + thrust | Adds translational and rotational drag |
+| First principles | `Dynamics.first_principles` | Rotor RPM | Full analytical model with identified parameters |
+| SO(3) + RPY | `Dynamics.so_rpy` | Roll/pitch/yaw + thrust | Simplified fitted model |
+| SO(3) + RPY + rotor | `Dynamics.so_rpy_rotor` | Roll/pitch/yaw + thrust | Adds first-order rotor dynamics |
+| SO(3) + RPY + rotor + drag | `Dynamics.so_rpy_rotor_drag` | Roll/pitch/yaw + thrust | Adds translational and rotational drag |
 
-`Physics.default` resolves to `Physics.first_principles`.
+`Dynamics.default` resolves to `Dynamics.first_principles`.
 
 ## First-principles model
 
 The first-principles model derives forces and torques analytically from motor speeds using identified physical parameters: mass, arm length, propeller constants, and the full inertia tensor. It operates at the rotor-velocity level and is the most accurate model for sim-to-real transfer.
 
 ```python
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
 # Force-torque and rotor_vel control modes require first_principles
 sim = Sim(
-    physics=Physics.first_principles,
+    dynamics=Dynamics.first_principles,
     control=Control.rotor_vel,
 )
 sim.reset()
@@ -58,11 +58,11 @@ These models are a good choice when:
 - You do not need rotor-level detail
 
 ```python
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
 sim = Sim(
-    physics=Physics.so_rpy_rotor_drag,  # most accurate of the fitted family
+    dynamics=Dynamics.so_rpy_rotor_drag,  # most accurate of the fitted family
     control=Control.attitude,
 )
 sim.reset()
@@ -72,7 +72,7 @@ The `so_rpy_rotor_drag` variant includes translational drag, which captures the 
 
 ## Control mode compatibility
 
-| Physics model | `Control.state` | `Control.attitude` | `Control.force_torque` | `Control.rotor_vel` |
+| Dynamics model | `Control.state` | `Control.attitude` | `Control.force_torque` | `Control.rotor_vel` |
 |---|---|---|---|---|
 | `first_principles` | ✓ | ✓ | ✓ | ✓ |
 | `so_rpy` | ✓ | ✓ | ✗ | ✗ |

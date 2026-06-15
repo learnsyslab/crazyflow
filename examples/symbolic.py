@@ -8,7 +8,7 @@ from crazyflow.sim.symbolic import symbolic_from_sim
 def main():
     # We can create a symbolic model directly from the simulation. Note that this will use the
     # nominal parameters of the simulation and choose the control type based on the simulation.
-    sim = Sim(physics="so_rpy", freq=500)
+    sim = Sim(dynamics="so_rpy", freq=500)
     X_dot, X, U, Y = symbolic_from_sim(sim)
     assert X_dot.shape == (13, 1)
     assert X.shape == (13, 1)

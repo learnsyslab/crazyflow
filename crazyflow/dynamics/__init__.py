@@ -1,12 +1,12 @@
-"""drone-models: quadrotor dynamics models for estimation, control, and simulation.
+"""crazyflow.dynamics: quadrotor dynamics models for estimation, control, and simulation.
 
 This package provides numeric and symbolic quadrotor dynamics models at multiple
-fidelity levels. Models are pure functions compatible with any Array API backend
+fidelity levels. The models are pure functions compatible with any Array API backend
 (NumPy, JAX, PyTorch, etc.) and with CasADi for symbolic computation.
 
-Use [parametrize][crazyflow.models.parametrize] to bind a dynamics function to a named drone
-configuration, and [available_models][crazyflow.models.available_models] to enumerate all registered
-models.
+Use [parametrize][crazyflow.dynamics.parametrize] to bind a dynamics function to a named drone
+configuration, and [available_dynamics][crazyflow.dynamics.available_dynamics] to enumerate all
+registered dynamics models.
 """
 
 import os
@@ -28,16 +28,16 @@ if "scipy" in sys.modules and os.environ.get("SCIPY_ARRAY_API") != "1":
 os.environ["SCIPY_ARRAY_API"] = "1"
 import scipy  # noqa: F401, ensure scipy uses array API features
 
-from crazyflow.models.core import parametrize
-from crazyflow.models.first_principles import dynamics as _first_principles_dynamics
-from crazyflow.models.so_rpy import dynamics as _so_rpy_dynamics
-from crazyflow.models.so_rpy_rotor import dynamics as _so_rpy_rotor_dynamics
-from crazyflow.models.so_rpy_rotor_drag import dynamics as _so_rpy_rotor_drag_dynamics
+from crazyflow.dynamics.core import Dynamics, parametrize
+from crazyflow.dynamics.first_principles import dynamics as _first_principles_dynamics
+from crazyflow.dynamics.so_rpy import dynamics as _so_rpy_dynamics
+from crazyflow.dynamics.so_rpy_rotor import dynamics as _so_rpy_rotor_dynamics
+from crazyflow.dynamics.so_rpy_rotor_drag import dynamics as _so_rpy_rotor_drag_dynamics
 
-__all__ = ["parametrize", "available_models", "model_features"]
+__all__ = ["parametrize", "available_dynamics", "dynamics_features", "Dynamics"]
 
 
-available_models: dict[str, Callable] = {
+available_dynamics: dict[str, Callable] = {
     "first_principles": _first_principles_dynamics,
     "so_rpy": _so_rpy_dynamics,
     "so_rpy_rotor": _so_rpy_rotor_dynamics,
@@ -45,15 +45,15 @@ available_models: dict[str, Callable] = {
 }
 
 
-def model_features(model: Callable) -> dict[str, bool]:
+def dynamics_features(dynamics: Callable) -> dict[str, bool]:
     """Return the feature flags declared by a dynamics function.
 
-    Feature flags are set by the [supports][crazyflow.models.core.supports] decorator on each
-    dynamics function and describe which optional inputs the model accepts.
+    Feature flags are set by the [supports][crazyflow.dynamics.core.supports] decorator on each
+    dynamics function and describe which optional inputs the dynamics model accepts.
 
     Args:
-        model: A dynamics function, or a ``functools.partial`` wrapping one (as
-            returned by [parametrize][crazyflow.models.parametrize]).
+        dynamics: A dynamics function, or a ``functools.partial`` wrapping one (as
+            returned by [parametrize][crazyflow.dynamics.parametrize]).
 
     Returns:
         A dict of feature names to booleans. Currently contains:
@@ -63,12 +63,12 @@ def model_features(model: Callable) -> dict[str, bool]:
 
     Example:
         ```python
-        from crazyflow.models import model_features
-        from crazyflow.models.first_principles import dynamics
+        from crazyflow.dynamics import dynamics_features
+        from crazyflow.dynamics.first_principles import dynamics
 
-        model_features(dynamics)  # {'rotor_dynamics': True}
+        dynamics_features(dynamics)  # {'rotor_dynamics': True}
         ```
     """
-    if hasattr(model, "func"):  # Is a partial function
-        return model_features(model.func)
-    return getattr(model, "__drone_model_features__")
+    if hasattr(dynamics, "func"):  # Is a partial function
+        return dynamics_features(dynamics.func)
+    return getattr(dynamics, "__dynamics_features__")

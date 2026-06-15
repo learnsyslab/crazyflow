@@ -28,6 +28,12 @@ The coefficients \(c_{\psi}\), \(c_{\dot{\psi}}\), \(c_u\) are identified from
 flight data.
 """
 
-from crazyflow.models.so_rpy.model import dynamics, symbolic_dynamics, symbolic_dynamics_euler
+from crazyflow.dynamics.so_rpy.model import (
+    Params,
+    dynamics,
+    sim_dynamics,
+    symbolic_dynamics,
+    symbolic_dynamics_euler,
+)
 
-__all__ = ["dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]
+__all__ = ["Params", "dynamics", "sim_dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]

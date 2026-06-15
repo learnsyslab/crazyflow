@@ -1,4 +1,4 @@
-"""First-principles physics-based quadrotor dynamics model.
+"""First-principles dynamics-based quadrotor dynamics model.
 
 This module implements full rigid-body dynamics for a quadrotor based on
 Newton-Euler equations.  The model is parameterised with physical constants
@@ -7,9 +7,9 @@ and requires no data fitting.  Propeller gyroscopic effects are included.
 
 The command interface is four motor angular velocities in RPM.
 
-Both a numeric implementation ([dynamics][crazyflow.models.first_principles.dynamics]) and a
+Both a numeric implementation ([dynamics][crazyflow.dynamics.first_principles.dynamics]) and a
 symbolic CasADi implementation
-([symbolic_dynamics][crazyflow.models.first_principles.symbolic_dynamics]) are provided.
+([symbolic_dynamics][crazyflow.dynamics.first_principles.symbolic_dynamics]) are provided.
 """
 
 from __future__ import annotations
@@ -17,15 +17,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import casadi as cs
+import jax
+import jax.numpy as jnp
 from array_api_compat import array_namespace, device
+from flax.struct import dataclass
 from scipy.spatial.transform import Rotation as R
 
-import crazyflow.models.symbols as symbols
-from crazyflow.models.core import supports
-from crazyflow.models.utils import rotation, to_xp
+import crazyflow.dynamics.symbols as symbols
+from crazyflow.dynamics.core import load_params, supports
+from crazyflow.dynamics.utils import rotation, to_xp
 
 if TYPE_CHECKING:
-    from crazyflow.models._typing import Array  # To be changed to array_api_typing later
+    from jax import Device
+
+    from crazyflow._typing import Array  # To be changed to array_api_typing later
+    from crazyflow.sim.data import SimData
 
 
 @supports(rotor_dynamics=True)
@@ -85,8 +91,8 @@ def dynamics(
 
 
     Warning:
-        Do not use quat_dot directly for integration! Only usage of ang_vel is mathematically correct.
-        If you still decide to use quat_dot to integrate, ensure unit length!
+        Do not use quat_dot directly for integration! Only usage of ang_vel is mathematically
+        correct. If you still decide to use quat_dot to integrate, ensure unit length!
         More information: <https://ahrs.readthedocs.io/en/latest/filters/angular.html>
     """
     xp = array_namespace(pos)
@@ -175,7 +181,7 @@ def symbolic_dynamics(
 ) -> tuple[cs.MX, cs.MX, cs.MX, cs.MX]:
     """Return CasADi symbolic expressions for the first-principles model.
 
-    Implements the same dynamics as [dynamics][crazyflow.models.first_principles.dynamics] using
+    Implements the same dynamics as [dynamics][crazyflow.dynamics.first_principles.dynamics] using
     CasADi ``MX`` symbolic expressions, validated to be numerically equivalent.
 
     Args:
@@ -286,3 +292,68 @@ def symbolic_dynamics(
     if not model_rotor_vel:
         symbols.rotor_vel = _saved_rotor_vel
     return X_dot, X, U, Y
+
+
+@dataclass
+class Params:
+    mass: Array  # (N, M, 1)
+    """Mass of the drone."""
+    L: Array  # (N, M, 1)
+    """Arm length of the drone."""
+    prop_inertia: Array  # (N, M, 1)
+    """Inertia of the propeller."""
+    gravity_vec: Array  # (N, M, 3)
+    """Gravity vector of the drone."""
+    J: Array  # (N, M, 3, 3)
+    """Inertia matrix of the drone."""
+    J_inv: Array  # (N, M, 3, 3)
+    """Inverse of the inertia matrix of the drone."""
+    rpm2thrust: Array  # (N, M, 1)
+    """Force constant of the drone."""
+    rpm2torque: Array  # (N, M, 1)
+    """Torque constant of the drone."""
+    mixing_matrix: Array  # (N, M, 3, 4)
+    """Mixing matrix of the drone."""
+    drag_matrix: Array  # (N, M, 3, 3)
+    """Drag matrix of the drone."""
+    rotor_dyn_coef: Array  # (N, M, 4)
+    """Rotor speed dynamics time constant of the drone."""
+
+    @staticmethod
+    def create(n_worlds: int, n_drones: int, drone: str, device: Device) -> Params:
+        """Create a default set of parameters for the simulation."""
+        p = load_params("first_principles", drone)
+        J = jax.device_put(jnp.tile(p["J"][None, None, :, :], (n_worlds, n_drones, 1, 1)), device)
+        return Params(
+            mass=jnp.full((n_worlds, n_drones, 1), p["mass"], device=device),
+            L=jnp.asarray(p["L"], device=device),
+            prop_inertia=jnp.asarray(p["prop_inertia"], device=device),
+            gravity_vec=jnp.asarray(p["gravity_vec"], device=device),
+            J=J,
+            J_inv=jnp.linalg.inv(J),
+            rpm2thrust=jnp.asarray(p["rpm2thrust"], device=device),
+            rpm2torque=jnp.asarray(p["rpm2torque"], device=device),
+            mixing_matrix=jnp.asarray(p["mixing_matrix"], device=device),
+            drag_matrix=jnp.asarray(p["drag_matrix"], device=device),
+            rotor_dyn_coef=jnp.asarray(p["rotor_dyn_coef"], device=device),
+        )
+
+
+def sim_dynamics(data: SimData) -> SimData:
+    """Compute the forces and torques from the first principle dynamics model."""
+    params: Params = data.params
+    vel, _, acc, ang_acc, rotor_acc = dynamics(
+        pos=data.states.pos,
+        quat=data.states.quat,
+        vel=data.states.vel,
+        ang_vel=data.states.ang_vel,
+        cmd=data.controls.rotor_vel,
+        rotor_vel=data.states.rotor_vel,
+        dist_f=data.states.force,
+        dist_t=data.states.torque,
+        **params.__dict__,
+    )
+    states_deriv = data.states_deriv.replace(
+        vel=vel, ang_vel=data.states.ang_vel, acc=acc, ang_acc=ang_acc, rotor_acc=rotor_acc
+    )
+    return data.replace(states_deriv=states_deriv)

@@ -1,4 +1,4 @@
-"""This file is to be remove later as soon as a proper typing is available by the official array-api."""
+"""This file is to be removed as soon as a proper typing is available by the official array-api."""
 
 from typing import Any, TypeAlias
 

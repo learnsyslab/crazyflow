@@ -1,4 +1,4 @@
-r"""Full rigid-body physics model for a quadrotor.
+r"""Full rigid-body dynamics model for a quadrotor.
 
 This package implements Newton-Euler dynamics based on physical constants —
 mass, inertia, motor thrust and torque curves, arm length, and drag
@@ -83,6 +83,11 @@ where \(D_b\) is the body-frame drag matrix, \(l\) is the motor arm length,
 matrix, and \(\mathbf{m}_z\) is its last row.
 """
 
-from crazyflow.models.first_principles.model import dynamics, symbolic_dynamics
+from crazyflow.dynamics.first_principles.model import (
+    Params,
+    dynamics,
+    sim_dynamics,
+    symbolic_dynamics,
+)
 
-__all__ = ["dynamics", "symbolic_dynamics"]
+__all__ = ["dynamics", "symbolic_dynamics", "sim_dynamics", "Params"]

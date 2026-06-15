@@ -5,12 +5,12 @@ import jax.numpy as jnp
 from numpy.typing import NDArray
 
 from crazyflow.control import Control
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 
 
 def main():
-    sim = Sim(control=Control.attitude, physics=Physics.first_principles, attitude_freq=50)
+    sim = Sim(control=Control.attitude, dynamics=Dynamics.first_principles, attitude_freq=50)
     # Remove clipping floor function which kills gradients
     sim_step = sim.build_step_fn()
     # If the drone starts on the floor, the gradient gets killed by the floor clipping function. We

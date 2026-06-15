@@ -11,10 +11,10 @@ from scipy.interpolate import interp1d
 from scipy.signal import bilinear, butter, filtfilt, lfilter, lfiltic
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.models.utils.rotation import rpy_rates2ang_vel
+from crazyflow.dynamics.utils.rotation import rpy_rates2ang_vel
 
 if TYPE_CHECKING:
-    from crazyflow.models._typing import Array  # To be changed to array_api_typing later
+    from crazyflow._typing import Array  # To be changed to array_api_typing later
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ def derivatives_svf(data: dict[str, Array]) -> dict[str, Array]:
     ``"SVF_"``.
 
     Args:
-        data: Dict produced by [preprocessing][crazyflow.models.utils.data_utils.preprocessing].
+        data: Dict produced by [preprocessing][crazyflow.dynamics.utils.data_utils.preprocessing].
             Must contain ``"pos"``, ``"rpy"``, ``"time"``, ``"cmd_f"``, and ``"cmd_rpy"``.
 
     Returns:
@@ -170,7 +170,7 @@ def state_variable_filter(y: Array, t: Array, f_c: float = 1, N_deriv: int = 2) 
         N_deriv: Number of derivatives to be computed. Defaults to 2.
 
     Returns:
-        Array: The filtered signal and its derivatives. Shape (batch_size, N_deriv+1, signal_length).
+        Array: The filtered signal and its derivatives. Shape (batch_size, N_deriv+1, signal_length)
     """
     if y.ndim == 1:
         y = y[None, :]  # Add batch dimension if single signal

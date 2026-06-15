@@ -19,16 +19,14 @@ from jax import Array, Device
 
 import crazyflow.sim.functional as F
 from crazyflow.control.control import Control, controllable
+from crazyflow.dynamics import Dynamics
+from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
+from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
+from crazyflow.dynamics.so_rpy_rotor import sim_dynamics as so_rpy_rotor_dynamics
+from crazyflow.dynamics.so_rpy_rotor_drag import sim_dynamics as so_rpy_rotor_drag_dynamics
 from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
-from crazyflow.sim.physics import (
-    Physics,
-    first_principles_physics,
-    so_rpy_physics,
-    so_rpy_rotor_drag_physics,
-    so_rpy_rotor_physics,
-)
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import grid_2d, leaf_replace, pytree_replace
 
@@ -63,8 +61,8 @@ class Sim:
         self,
         n_worlds: int = 1,
         n_drones: int = 1,
-        drone_model: str = "cf2x_L250",
-        physics: Physics = Physics.default,
+        drone: str = "cf2x_L250",
+        dynamics: Dynamics = Dynamics.default,
         control: Control = Control.default,
         integrator: Integrator = Integrator.default,
         freq: int = 500,
@@ -76,16 +74,16 @@ class Sim:
         rng_key: int = 0,
         fused_mjx_model: bool = False,
     ):
-        assert Physics(physics) in Physics, f"Physics mode {physics} not implemented"
+        assert Dynamics(dynamics) in Dynamics, f"Dynamics mode {dynamics} not implemented"
         assert Control(control) in Control, f"Control mode {control} not implemented"
-        if physics != Physics.first_principles:
+        if dynamics != Dynamics.first_principles:
             if control in (Control.force_torque, Control.rotor_vel):
-                raise ConfigError(f"Control mode {control} requires first principles physics")
+                raise ConfigError(f"Control mode {control} requires first principles dynamics")
         if freq > 10_000 and not jax.config.jax_enable_x64:
             raise ConfigError("High frequency simulations require double precision mode")
-        self.physics = physics
+        self.dynamics = dynamics
         self.control = control
-        self.drone_model = drone_model
+        self.drone = drone
         self.integrator = integrator
         self.device = jax.devices(device)[0]
         self.n_worlds = n_worlds
@@ -95,8 +93,8 @@ class Sim:
 
         # Initialize MuJoCo world and data
         self._xml_path = xml_path or Path(__file__).parents[1] / "scene.xml"
-        model_file_name = f"{drone_model}{'_fused' if fused_mjx_model else ''}.xml"
-        self.drone_path = Path(__file__).parents[1] / "models/data" / model_file_name
+        model_file_name = f"{drone}{'_fused' if fused_mjx_model else ''}.xml"
+        self.drone_path = Path(__file__).parents[1] / "drones" / model_file_name
         self.spec = self.build_mjx_spec()
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
@@ -114,9 +112,9 @@ class Sim:
         # The ``select_xxx_fn`` methods return functions, not the results of calling those
         # functions. They act as factories that produce building blocks for the construction of our
         # simulation pipeline.
-        for fn in build_control_fns(self.control, self.physics):
+        for fn in build_control_fns(self.control, self.dynamics):
             append_fn(self.step_pipeline, fn)
-        integrate_fn = select_integrate_fn(self.integrator, select_physics_fn(self.physics))
+        integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
         append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
@@ -372,13 +370,13 @@ class Sim:
                 N,
                 D,
                 self.control,
-                self.drone_model,
+                self.drone,
                 state_freq,
                 attitude_freq,
                 force_torque_freq,
                 self.device,
             ),
-            params=SimParams.create(N, D, self.physics, self.drone_model, self.device),
+            params=SimParams.create(N, D, self.dynamics, self.drone, self.device),
             core=SimCore.create(self.freq, N, D, drone_mocap_ids, rng_key, self.device),
         )
         if D > 1:  # If multiple drones, arrange them in a grid
@@ -439,7 +437,7 @@ class Sim:
 
 
 def build_control_fns(
-    control: Control, physics: Physics
+    control: Control, dynamics: Dynamics
 ) -> tuple[Callable[[SimData], SimData], ...]:
     """Select the control functions for the given control mode.
 
@@ -450,15 +448,15 @@ def build_control_fns(
     match control:
         case Control.state:
             control_pipeline = (step_state_controller, step_attitude_controller)
-            if physics == Physics.first_principles:
+            if dynamics == Dynamics.first_principles:
                 control_pipeline = control_pipeline + (step_force_torque_controller,)
         case Control.attitude:
-            if physics == Physics.first_principles:
+            if dynamics == Dynamics.first_principles:
                 control_pipeline = (step_attitude_controller, step_force_torque_controller)
-            elif physics in (Physics.so_rpy, Physics.so_rpy_rotor, Physics.so_rpy_rotor_drag):
+            elif dynamics in (Dynamics.so_rpy, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag):
                 control_pipeline = (commit_attitude_controller,)
             else:
-                raise NotImplementedError(f"Control mode {control} not implemented for {physics}")
+                raise NotImplementedError(f"Control mode {control} not implemented for {dynamics}")
         case Control.force_torque:
             control_pipeline = (step_force_torque_controller,)
         case Control.rotor_vel:
@@ -469,25 +467,25 @@ def build_control_fns(
     return control_pipeline
 
 
-def select_physics_fn(physics: Physics) -> Callable[[SimData], SimData]:
-    """Select the physics function for the given physics mode."""
-    match physics:
-        case Physics.first_principles:
-            return first_principles_physics
-        case Physics.so_rpy:
-            return so_rpy_physics
-        case Physics.so_rpy_rotor:
-            return so_rpy_rotor_physics
-        case Physics.so_rpy_rotor_drag:
-            return so_rpy_rotor_drag_physics
+def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
+    """Select the dynamics function for the given dynamics mode."""
+    match dynamics:
+        case Dynamics.first_principles:
+            return first_principles_dynamics
+        case Dynamics.so_rpy:
+            return so_rpy_dynamics
+        case Dynamics.so_rpy_rotor:
+            return so_rpy_rotor_dynamics
+        case Dynamics.so_rpy_rotor_drag:
+            return so_rpy_rotor_drag_dynamics
         case _:
-            raise NotImplementedError(f"Physics mode {physics} not implemented")
+            raise NotImplementedError(f"Dynamics mode {dynamics} not implemented")
 
 
 def select_integrate_fn(
-    integrator: Integrator, physics_fn: Callable[[SimData], SimData]
+    integrator: Integrator, dynamics_fn: Callable[[SimData], SimData]
 ) -> Callable[[SimData], SimData]:
-    """Select the integration function for the given physics and integrator mode."""
+    """Select the integration function for the given dynamics and integrator mode."""
     match integrator:
         case Integrator.euler:
             integrate_fn = euler
@@ -498,7 +496,7 @@ def select_integrate_fn(
         case _:
             raise NotImplementedError(f"Integrator {integrator} not implemented")
 
-    return partial(integrate_fn, deriv_fn=physics_fn)
+    return partial(integrate_fn, deriv_fn=dynamics_fn)
 
 
 def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:

@@ -8,9 +8,9 @@ import numpy as np
 from matplotlib import animation
 
 from crazyflow.control import Control
+from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.integration import Integrator
-from crazyflow.sim.physics import Physics
 
 
 def control(t: float, t_tot: float) -> np.ndarray:
@@ -65,8 +65,8 @@ def main(show_plot: bool = False, save_plot: bool = False):
         n_drones=1,
         control=Control.state,
         integrator=Integrator.rk4,
-        physics=Physics.first_principles,
-        drone_model="cf2x_T350",
+        dynamics=Dynamics.first_principles,
+        drone="cf2x_T350",
     )
     add_smiley(sim)
     sim.reset()

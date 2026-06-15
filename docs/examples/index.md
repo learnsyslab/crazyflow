@@ -64,7 +64,7 @@ python examples/plugins/randomize.py
 
 ## Disturbance injection
 
-Inserting a random external force and torque into the step pipeline. The disturbance fires on every physics tick, so the drone fights wind-like perturbations.
+Inserting a random external force and torque into the step pipeline. The disturbance fires on every dynamics tick, so the drone fights wind-like perturbations.
 
 ```{ .python notest }
 --8<-- "examples/plugins/disturbance.py"

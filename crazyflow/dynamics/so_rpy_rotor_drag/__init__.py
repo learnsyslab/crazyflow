@@ -29,10 +29,12 @@ are roll/pitch/yaw angles extracted from \(\mathbf{q}\),
 frame, and \(D_b\) is the diagonal body-frame aerodynamic drag matrix.
 """
 
-from crazyflow.models.so_rpy_rotor_drag.model import (
+from crazyflow.dynamics.so_rpy_rotor_drag.model import (
+    Params,
     dynamics,
+    sim_dynamics,
     symbolic_dynamics,
     symbolic_dynamics_euler,
 )
 
-__all__ = ["dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]
+__all__ = ["Params", "dynamics", "sim_dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]

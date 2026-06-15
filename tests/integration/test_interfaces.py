@@ -6,15 +6,15 @@ from drone_controllers.mellinger import state2attitude
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control.control import Control
-from crazyflow.models.core import load_params
-from crazyflow.models.transform import motor_force2rotor_vel
-from crazyflow.sim import Physics, Sim
+from crazyflow.dynamics.core import load_params
+from crazyflow.dynamics.transform import motor_force2rotor_vel
+from crazyflow.sim import Dynamics, Sim
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_state_interface(physics: Physics):
-    sim = Sim(physics=physics, control=Control.state)
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_state_interface(dynamics: Dynamics):
+    sim = Sim(dynamics=dynamics, control=Control.state)
 
     # Simple P controller for attitude to reach target height
     cmd = np.zeros((1, 1, 13), dtype=np.float32)
@@ -28,14 +28,15 @@ def test_state_interface(physics: Physics):
 
     # Check if drone reached target position
     distance = np.linalg.norm(sim.data.states.pos[0, 0] - np.array([0.0, 0.0, 1.0]))
-    assert distance < 0.1, f"Failed to reach target height with {physics} physics"
+    assert distance < 0.1, f"Failed to reach target height with {dynamics} dynamics"
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_attitude_interface(physics: Physics):
-    sim = Sim(physics=physics, control=Control.attitude)
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_attitude_interface(dynamics: Dynamics):
+    sim = Sim(dynamics=dynamics, control=Control.attitude)
     target_pos = np.array([0.0, 0.0, 1.0])
+    # `parametrize` is from the external drone_controllers package, which still uses `drone_model`.
     jit_state2attitude = jax.jit(parametrize(state2attitude, drone_model="cf2x_L250"))
 
     i_error = np.zeros((1, 1, 3))
@@ -51,12 +52,12 @@ def test_attitude_interface(physics: Physics):
     # Check if drone maintained hover position
     dpos = sim.data.states.pos[0, 0] - target_pos
     distance = np.linalg.norm(dpos)
-    assert distance < 0.05, f"Failed to maintain hover with {physics} ({dpos})"
+    assert distance < 0.05, f"Failed to maintain hover with {dynamics} ({dpos})"
 
 
 @pytest.mark.integration
 def test_rotor_vel_interface():
-    sim = Sim(physics=Physics.first_principles, control=Control.rotor_vel)
+    sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
     params = load_params("first_principles", "cf2x_L250")
     max_rpm = motor_force2rotor_vel(np.array([params["thrust_max"]]), params["rpm2thrust"])[0]
 
@@ -73,10 +74,10 @@ def test_rotor_vel_interface():
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_swarm_control(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_swarm_control(dynamics: Dynamics):
     n_worlds, n_drones = 2, 3
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=physics, control=Control.state)
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, control=Control.state)
     target_pos = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
 
     cmd = np.zeros((n_worlds, n_drones, 13))
@@ -89,13 +90,13 @@ def test_swarm_control(physics: Physics):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_yaw_rotation(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_yaw_rotation(dynamics: Dynamics):
     # TODO: Enable yaw rotations once the models are better calibrated
-    if physics != Physics.first_principles:
-        pytest.skip(f"Physics mode {physics} currently does not support yaw rotation")
+    if dynamics != Dynamics.first_principles:
+        pytest.skip(f"Dynamics mode {dynamics} currently does not support yaw rotation")
 
-    sim = Sim(physics=physics, control=Control.state, state_freq=100)
+    sim = Sim(dynamics=dynamics, control=Control.state, state_freq=100)
     sim.reset()
 
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))

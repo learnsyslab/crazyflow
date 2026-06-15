@@ -1,6 +1,6 @@
 # MuJoCo Integration
 
-Crazyflow focuses on drone physics and controllers. However, we still want to provide rendering and collision checking, and to do that we leverage [MuJoCo](https://mujoco.org/) and its JAX port [MJX](https://mujoco.readthedocs.io/en/stable/mjx.html). We keep an MJX representation of the scene in sync with Crazyflow's physics state and invoke MJX functions where needed: collision queries, forward kinematics, and sensor rendering. GUI rendering uses the CPU-side MuJoCo renderer directly.
+Crazyflow focuses on drone dynamics and controllers. However, we still want to provide rendering and collision checking, and to do that we leverage [MuJoCo](https://mujoco.org/) and its JAX port [MJX](https://mujoco.readthedocs.io/en/stable/mjx.html). We keep an MJX representation of the scene in sync with Crazyflow's dynamics state and invoke MJX functions where needed: collision queries, forward kinematics, and sensor rendering. GUI rendering uses the CPU-side MuJoCo renderer directly.
 
 ## MuJoCo and MJX objects
 
@@ -13,14 +13,14 @@ Crazyflow maintains two parallel representations at all times:
 | `sim.mjx_model` | `mjx.Model` | JAX pytree of the model (static, shared across worlds) |
 | `sim.mjx_data` | `mjx.Data` | JAX pytree of the scene state, batched over `n_worlds` |
 
-`mjx_data` does not hold the physics state. It holds the scene geometry state (body transforms, contact distances, camera positions), derived from `sim.data` through an explicit sync step whenever rendering or collision queries are needed.
+`mjx_data` does not hold the dynamics state. It holds the scene geometry state (body transforms, contact distances, camera positions), derived from `sim.data` through an explicit sync step whenever rendering or collision queries are needed.
 
 ## MJCF and scene construction
 
 The scene is built programmatically from MJCF (MuJoCo's XML format) at `Sim` construction time using the `MjSpec` API. The process is:
 
 1. Load the base scene from `crazyflow/scene.xml` (floor, lighting, and sky).
-2. Load the drone MJCF from the `drone-models` package.
+2. Load the drone MJCF bundled with `crazyflow.drones` (under `crazyflow/drones`).
 3. Mark the drone body as mocap. Mocap bodies are kinematically driven by external position and quaternion updates rather than joints, which avoids the O(nv²) cost of computing constraint matrices and saves memory.
 4. Attach one copy per drone to a frame in the world body.
 5. Compile the spec into `mj_model`, then convert to `mjx_model` and `mjx_data` via `mjx.put_model` and `mjx.put_data`. Vmap `mjx_data` across `n_worlds`.
@@ -76,7 +76,7 @@ If you mark an attached body as mocap (`attached.mocap = True`), its position ca
 
 ## Synchronization
 
-The JAX physics pipeline writes to `sim.data` but never touches `sim.mjx_data`. `mjx_data` is only needed for collision queries and rendering, which require current body transforms. To avoid computing those on every physics step, Crazyflow tracks a `mjx_synced` flag in `sim.data.core`.
+The JAX dynamics pipeline writes to `sim.data` but never touches `sim.mjx_data`. `mjx_data` is only needed for collision queries and rendering, which require current body transforms. To avoid computing those on every dynamics step, Crazyflow tracks a `mjx_synced` flag in `sim.data.core`.
 
 After `sim.step()` or `sim.reset()`, `mjx_synced` is set to `False`. The `sim.render()` and `sim.contacts()` methods check the flag; if stale, they call `sync_sim2mjx()` once and set it back to `True`.
 
@@ -86,18 +86,18 @@ After `sim.step()` or `sim.reset()`, `mjx_synced` is set to `False`. The `sim.re
 2. `jax.vmap(mjx.kinematics)` to propagate body transforms through the kinematic tree.
 3. `jax.vmap(mjx.camlight)` and `jax.vmap(mjx.collision)` for rendering and contact detection respectively.
 
-These run only once per render or contact call, regardless of how many physics steps were taken since the last sync.
+These run only once per render or contact call, regardless of how many dynamics steps were taken since the last sync.
 
 ```{ .python notest }
 for i in range(10):
-    sim.step(5)          # JAX physics only, mjx_synced = False
+    sim.step(5)          # JAX dynamics only, mjx_synced = False
     if i % 5 == 0:
         sim.render()     # syncs once: kinematics + camlight + collision
 ```
 
 ## Advanced: the sync flag and avoiding redundant MJX calls
 
-`sync_sim2mjx` runs kinematics, collision detection, and camera transforms in one shot. The `mjx_synced` flag ensures this happens at most once between physics steps: once the flag is set, any further calls to `sim.render()` or `sim.contacts()` within the same tick skip the sync entirely and operate on the already-computed MJX state. The flag is only cleared when `sim.data` actually changes, so if the physics state has not advanced, the expensive MJX operations are not repeated.
+`sync_sim2mjx` runs kinematics, collision detection, and camera transforms in one shot. The `mjx_synced` flag ensures this happens at most once between dynamics steps: once the flag is set, any further calls to `sim.render()` or `sim.contacts()` within the same tick skip the sync entirely and operate on the already-computed MJX state. The flag is only cleared when `sim.data` actually changes, so if the dynamics state has not advanced, the expensive MJX operations are not repeated.
 
 This means the order of calls matters. Grouping all rendering and contact queries together after a step lets them share a single sync:
 

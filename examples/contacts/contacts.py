@@ -1,13 +1,13 @@
 import numpy as np
 
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.sim import use_box_collision
 
 
 def main():
     """Spawn multiple drones in multiple worlds and check for contacts."""
     n_worlds, n_drones = 2, 3
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=Physics.so_rpy, device="cpu")
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=Dynamics.so_rpy, device="cpu")
     use_box_collision(sim, enable=True)  # Enable box collision for all drones
     fps = 60
 

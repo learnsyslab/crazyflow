@@ -5,7 +5,7 @@ compilation is expensive but only needs to happen once. Subsequent calls reuse t
 However, the cache is not persistent between Python sessions.
 
 The Sim class uses many jitted functions internally, particularly in the step() method which
-compiles a chain of physics and control functions. On the first step() call, the entire chain is
+compiles a chain of dynamics and control functions. On the first step() call, the entire chain is
 compiled.
 
 After the Python session ends, the cached functions get lost. However, we can enable a persistent

@@ -1,6 +1,6 @@
 # Visualization
 
-Crazyflow supports onscreen interactive rendering and offscreen RGB/depth capture through MuJoCo's renderer. Rendering is fully decoupled from the physics step: call `sim.render()` at any frequency independently of how fast the simulation runs.
+Crazyflow supports onscreen interactive rendering and offscreen RGB/depth capture through MuJoCo's renderer. Rendering is fully decoupled from the dynamics step: call `sim.render()` at any frequency independently of how fast the simulation runs.
 
 <!-- IMAGE: MuJoCo viewer showing a single drone hovering -->
 
@@ -84,7 +84,7 @@ sim.render(world=3)   # render world 3
 
 ## Sync and performance
 
-Rendering triggers an implicit synchronization between the JAX physics state (`sim.data`) and the MuJoCo render buffers (`sim.mjx_data`). This sync computes full forward kinematics, camera transforms, and collision geometry — it is the most expensive operation per render call. See [MuJoCo Integration](mujoco.md#synchronization) for details on how to avoid redundant syncs.
+Rendering triggers an implicit synchronization between the JAX dynamics state (`sim.data`) and the MuJoCo render buffers (`sim.mjx_data`). This sync computes full forward kinematics, camera transforms, and collision geometry — it is the most expensive operation per render call. See [MuJoCo Integration](mujoco.md#synchronization) for details on how to avoid redundant syncs.
 
 ## Next steps
 

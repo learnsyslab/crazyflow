@@ -3,9 +3,9 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimState
-from crazyflow.sim.physics import Physics
 from crazyflow.sim.pipeline import remove_fn
 from crazyflow.sim.symbolic import symbolic_from_sim
 
@@ -16,13 +16,13 @@ def sim_state2symbolic_state(state: SimState) -> NDArray[np.float32]:
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.parametrize("freq", [500, 1000])
-def test_attitude_symbolic(physics: Physics, freq: int):
-    if physics in (Physics.so_rpy_rotor, Physics.so_rpy_rotor_drag):
-        pytest.skip(f"Physics mode {physics} not yet implemented")
+def test_attitude_symbolic(dynamics: Dynamics, freq: int):
+    if dynamics in (Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag):
+        pytest.skip(f"Dynamics mode {dynamics} not yet implemented")
 
-    sim = Sim(physics=physics, freq=freq)
+    sim = Sim(dynamics=dynamics, freq=freq)
     remove_fn(sim.step_pipeline, "clip_floor_pos")  # Remove clip floor from step pipeline
     X_dot, X, U, Y = symbolic_from_sim(sim)
     fd = cs.integrator("fd", "cvodes", {"x": X, "p": U, "ode": X_dot}, 0, 1 / freq)

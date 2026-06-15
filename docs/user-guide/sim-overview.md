@@ -4,8 +4,8 @@
 
 Crazyflow organises simulation state into a two-dimensional batch: **worlds × drones**.
 
-- **`n_worlds`** — number of independent simulation environments. Each world has its own physics state and evolves independently. Use this to run domain randomisation, parallel RL rollouts, or MPPI sampling.
-- **`n_drones`** — number of drones per world. All drones in a world share the same physics tick but have independent states.
+- **`n_worlds`** — number of independent simulation environments. Each world has its own dynamics state and evolves independently. Use this to run domain randomisation, parallel RL rollouts, or MPPI sampling.
+- **`n_drones`** — number of drones per world. All drones in a world share the same dynamics tick but have independent states.
 
 Every state array has shape `(n_worlds, n_drones, feature_dim)`. To read the position of drone 0 in world 2:
 
@@ -25,7 +25,7 @@ All simulation state is stored in `sim.data`, a `SimData` pytree. The main sub-t
 | Field | Type | Description |
 |---|---|---|
 | `states` | `SimState` | Current kinematic state of every drone |
-| `states_deriv` | `SimStateDeriv` | Time derivatives computed by the physics model |
+| `states_deriv` | `SimStateDeriv` | Time derivatives computed by the dynamics model |
 | `controls` | `SimControls` | Staged commands and controller state |
 | `params` | `SimParams` | Physical parameters (mass, inertia, motor constants, …) |
 | `core` | `SimCore` | Metadata: step count, frequency, RNG key, device |
@@ -63,9 +63,9 @@ sim.data = sim.data.replace(states=sim.data.states.replace(pos=new_pos))
 
 ## Simulation frequency and the control stack
 
-`freq` sets the physics update rate in Hz. The control stack is executed as part of each physics step, but controllers fire at their own sub-frequency rather than every tick. For example, with `freq=500` and `state_freq=100`, the state (Mellinger) controller runs every 5 physics steps, and the attitude controller runs at `attitude_freq`.
+`freq` sets the dynamics update rate in Hz. The control stack is executed as part of each dynamics step, but controllers fire at their own sub-frequency rather than every tick. For example, with `freq=500` and `state_freq=100`, the state (Mellinger) controller runs every 5 dynamics steps, and the attitude controller runs at `attitude_freq`.
 
-This means you can advance multiple physics steps in a single `sim.step(n_steps)` call and the control stack will execute at the correct rate automatically, with no manual sub-stepping required. This is also what makes fusing many steps into a single compiled call efficient.
+This means you can advance multiple dynamics steps in a single `sim.step(n_steps)` call and the control stack will execute at the correct rate automatically, with no manual sub-stepping required. This is also what makes fusing many steps into a single compiled call efficient.
 
 ```python
 import numpy as np
@@ -76,7 +76,7 @@ sim = Sim(freq=500, control=Control.state)
 sim.reset()
 cmd = np.zeros((1, 1, 13), dtype=np.float32)
 sim.state_control(cmd)
-sim.step(sim.freq // sim.control_freq)  # 500 // 100 = 5 physics steps, controller fires once
+sim.step(sim.freq // sim.control_freq)  # 500 // 100 = 5 dynamics steps, controller fires once
 ```
 
 ## The step and reset pipelines

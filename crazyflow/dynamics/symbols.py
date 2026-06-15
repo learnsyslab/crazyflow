@@ -2,7 +2,7 @@
 
 import casadi as cs
 
-from crazyflow.models.utils import rotation
+from crazyflow.dynamics.utils import rotation
 
 # States
 px, py, pz = cs.MX.sym("px"), cs.MX.sym("py"), cs.MX.sym("pz")

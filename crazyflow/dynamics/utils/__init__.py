@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from crazyflow.models._typing import Array  # To be changed to array_api_typing later
+    from crazyflow._typing import Array  # To be changed to array_api_typing later
 
 
 def to_xp(*args: Any, xp: ModuleType, device: Any) -> tuple[Array, ...] | Array:

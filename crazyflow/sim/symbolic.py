@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from crazyflow.models import parametrize
-from crazyflow.models.first_principles import (
+from crazyflow.dynamics import Dynamics, parametrize
+from crazyflow.dynamics.first_principles import (
     symbolic_dynamics as first_principles_symbolic_dynamics,
 )
-from crazyflow.models.so_rpy import symbolic_dynamics as so_rpy_symbolic_dynamics
+from crazyflow.dynamics.so_rpy import symbolic_dynamics as so_rpy_symbolic_dynamics
 from crazyflow.sim.data import Control
-from crazyflow.sim.physics import Physics
 
 if TYPE_CHECKING:
     import casadi as cs
@@ -32,18 +31,18 @@ def symbolic_from_sim(
     """
     if sim.control != Control.attitude:
         raise ValueError("Symbolic model dynamics only support attitude control")
-    match sim.physics:
-        case Physics.first_principles:
-            return parametrize(first_principles_symbolic_dynamics, sim.drone_model)(
+    match sim.dynamics:
+        case Dynamics.first_principles:
+            return parametrize(first_principles_symbolic_dynamics, sim.drone)(
                 model_rotor_vel=model_rotor_vel,
                 model_dist_f=model_dist_f,
                 model_dist_t=model_dist_t,
             )
-        case Physics.so_rpy:
-            return parametrize(so_rpy_symbolic_dynamics, sim.drone_model)(
+        case Dynamics.so_rpy:
+            return parametrize(so_rpy_symbolic_dynamics, sim.drone)(
                 model_rotor_vel=model_rotor_vel,
                 model_dist_f=model_dist_f,
                 model_dist_t=model_dist_t,
             )
         case _:
-            raise ValueError(f"Physics mode {sim.physics} not supported")
+            raise ValueError(f"Dynamics mode {sim.dynamics} not supported")

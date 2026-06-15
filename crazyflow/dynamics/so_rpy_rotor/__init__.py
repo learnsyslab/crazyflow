@@ -27,6 +27,12 @@ are roll/pitch/yaw angles extracted from \(\mathbf{q}\), and
 \(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world frame.
 """
 
-from crazyflow.models.so_rpy_rotor.model import dynamics, symbolic_dynamics, symbolic_dynamics_euler
+from crazyflow.dynamics.so_rpy_rotor.model import (
+    Params,
+    dynamics,
+    sim_dynamics,
+    symbolic_dynamics,
+    symbolic_dynamics_euler,
+)
 
-__all__ = ["dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]
+__all__ = ["Params", "dynamics", "sim_dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]

@@ -86,7 +86,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 ## Supported drones
 
 <!-- DRONE GRID: replace the placeholder image paths once renders are available.
-     The list of available models comes from crazyflow.models.available_drones.
+     The list of available drones comes from crazyflow.available_drones.
 
 <div class="drone-grid" markdown>
 
@@ -98,7 +98,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 </div>
 -->
 
-All models come from the [drone-models](https://learnsyslab.github.io/drone-models/) library. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any model returned by `crazyflow.models.available_drones()`.
+All drone configurations are bundled with `crazyflow.dynamics`. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any drone returned by `crazyflow.available_drones`.
 
 ---
 
@@ -109,7 +109,7 @@ All models come from the [drone-models](https://learnsyslab.github.io/drone-mode
      crazyflow_experiments commit 6b65eeedefe32690f1e5ca7818d62439314f0de5
 -->
 
-Throughput for one drone across parallel worlds, first-principles physics. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 4090.
+Throughput for one drone across parallel worlds, first-principles dynamics. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 4090.
 
 ```vegalite
 {
@@ -205,7 +205,7 @@ GPU throughput across `n_worlds` and `n_drones` (RTX 4090). Empty cells exceed a
 
 Most simulators offer either vectorized environments for RL training or multi-drone swarm simulation — rarely both, and rarely with accurate onboard flight dynamics for every agent. Crazyflow is built around both simultaneously. The entire simulator is structured around an `n_worlds × n_drones` batch dimension: `n_worlds` gives you massively parallel independent environments, and `n_drones` gives you full swarm simulation inside each one, each drone running its own accurate, identified flight model and control stack. Scaling to millions of parallel instances requires no code changes.
 
-Simulating the full Crazyflie firmware stack with GPU acceleration and differentiability is not possible with existing tools, so Crazyflow reimplements the entire dynamics and control stack in JAX. This gives accelerated, fully batchable simulation that runs on CPU and GPU without modification. Differentiability comes as a direct consequence: `jax.grad` works through physics, control, and integration without any manual gradient derivations, enabling gradient-based policy optimization, system identification, and sensitivity analysis out of the box.
+Simulating the full Crazyflie firmware stack with GPU acceleration and differentiability is not possible with existing tools, so Crazyflow reimplements the entire dynamics and control stack in JAX. This gives accelerated, fully batchable simulation that runs on CPU and GPU without modification. Differentiability comes as a direct consequence: `jax.grad` works through dynamics, control, and integration without any manual gradient derivations, enabling gradient-based policy optimization, system identification, and sensitivity analysis out of the box.
 
 To make research possible rather than just evaluation, the simulator is designed to be fully open to modification. The step and reset pipelines are plain ordered dictionaries of pure JAX functions. Helper functions in `crazyflow.sim.pipeline` (`append_fn`, `prepend_fn`, `insert_fn_before`, `insert_fn_after`, `replace_fn`, `remove_fn`) let you safely add, reorder, and swap stages by name. There are no fixed hooks or plugin interfaces. You splice in your own dynamics, disturbances, randomization, or reward shaping at any point, and the JIT compiler fuses everything into a single kernel.
 

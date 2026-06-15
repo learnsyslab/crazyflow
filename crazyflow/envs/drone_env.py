@@ -14,26 +14,26 @@ from jax import Array
 from numpy.typing import NDArray
 
 from crazyflow.control.control import Control
+from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
-from crazyflow.sim.physics import Physics
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
 
-def action_space(control_type: Control, drone_model: str) -> spaces.Box:
+def action_space(control_type: Control, drone: str) -> spaces.Box:
     """Select the appropriate action space for a given control type.
 
     Args:
         control_type: The desired control mode.
-        drone_model: Drone model of the environment.
+        drone: Drone model of the environment.
 
     Returns:
         The action space.
     """
     match control_type:
         case Control.attitude:
-            params = load_params(force_torque2rotor_vel, drone_model)
+            params = load_params(force_torque2rotor_vel, drone)
             thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),
@@ -64,8 +64,8 @@ class DroneEnv(VectorEnv):
         *,
         num_envs: int = 1,
         max_episode_time: float = 10.0,
-        physics: Literal["so_rpy", "first_principles"] | Physics = Physics.so_rpy,
-        drone_model: str = "cf2x_L250",
+        dynamics: Literal["so_rpy", "first_principles"] | Dynamics = Dynamics.so_rpy,
+        drone: str = "cf2x_L250",
         freq: int = 500,
         device: str = "cpu",
         reset_randomization: Callable[[SimData, Array], SimData] | None = None,
@@ -75,8 +75,8 @@ class DroneEnv(VectorEnv):
         Args:
             num_envs: The number of environments to run in parallel.
             max_episode_time: The time horizon after which episodes are truncated (s).
-            physics: The crazyflow physics simulation model.
-            drone_model: Drone model of the environment.
+            dynamics: The crazyflow dynamics simulation model.
+            drone: Drone model of the environment.
             freq: The frequency at which the environment is run.
             device: The device of the environment and the simulation.
             reset_randomization: A function that randomizes the initial state of the simulation. If
@@ -86,12 +86,10 @@ class DroneEnv(VectorEnv):
         self.device = jax.devices(device)[0]
         self.freq = freq
         self.max_episode_time = max_episode_time
-        assert Physics(physics) in Physics, f"Invalid physics type {physics}"
+        assert Dynamics(dynamics) in Dynamics, f"Invalid dynamics type {dynamics}"
 
         # Initialize the simulation
-        self.sim = Sim(
-            n_worlds=num_envs, n_drones=1, drone_model=drone_model, device=device, physics=physics
-        )
+        self.sim = Sim(n_worlds=num_envs, n_drones=1, drone=drone, device=device, dynamics=dynamics)
         assert self.sim.freq >= self.sim.control_freq, "Sim freq must be higher than control freq"
         if not self.sim.freq % self.freq == 0:
             # We can handle other cases, but it's not recommended
@@ -109,7 +107,7 @@ class DroneEnv(VectorEnv):
         self._marked_for_reset = jnp.zeros((self.sim.n_worlds), dtype=jnp.bool_, device=self.device)
 
         # Define action and observation spaces
-        self.single_action_space = action_space(self.sim.control, self.sim.drone_model)
+        self.single_action_space = action_space(self.sim.control, self.sim.drone)
         self.action_space = batch_space(self.single_action_space, self.sim.n_worlds)
         self.single_observation_space = spaces.Dict(
             {
@@ -223,6 +221,6 @@ class DroneEnv(VectorEnv):
         pos = jax.random.uniform(key=pos_key, shape=shape, minval=pos_min, maxval=pos_max)
         # Sample initial velocity
         vel = jax.random.uniform(key=vel_key, shape=shape, minval=-1.0, maxval=1.0)
-        # Setting initial ryp_rate when using physics.sys_id will not have an impact, so we skip it
+        # Setting initial ryp_rate when using dynamics.sys_id will not have an impact, so we skip it
         data = data.replace(states=leaf_replace(data.states, mask, pos=pos, vel=vel))
         return data

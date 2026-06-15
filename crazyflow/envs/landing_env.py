@@ -8,9 +8,9 @@ from gymnasium import spaces
 from gymnasium.vector.utils import batch_space
 from jax import Array
 
+from crazyflow.dynamics import Dynamics
 from crazyflow.envs.drone_env import DroneEnv
 from crazyflow.sim.data import SimState
-from crazyflow.sim.physics import Physics
 
 
 class LandingEnv(DroneEnv):
@@ -20,14 +20,14 @@ class LandingEnv(DroneEnv):
         self,
         num_envs: int = 1,
         max_episode_time: float = 10.0,
-        physics: Literal["so_rpy", "first_principles"] | Physics = Physics.so_rpy,
+        dynamics: Literal["so_rpy", "first_principles"] | Dynamics = Dynamics.so_rpy,
         freq: int = 500,
         device: str = "cpu",
     ):
         super().__init__(
             num_envs=num_envs,
             max_episode_time=max_episode_time,
-            physics=physics,
+            dynamics=dynamics,
             freq=freq,
             device=device,
         )

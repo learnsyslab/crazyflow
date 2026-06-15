@@ -2,7 +2,7 @@ import jax
 import numpy as np
 import pytest
 
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import insert_fn_after
 
@@ -15,10 +15,10 @@ def disturbance_fn(data: SimData) -> SimData:
     return data.replace(states=states, core=data.core.replace(rng_key=key))
 
 
-@pytest.mark.parametrize("physics", Physics)
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.integration
-def test_disturbance(physics: Physics):
-    sim = Sim(n_worlds=2, n_drones=3, control="state", physics=physics)
+def test_disturbance(dynamics: Dynamics):
+    sim = Sim(n_worlds=2, n_drones=3, control="state", dynamics=dynamics)
     control = np.zeros((sim.n_worlds, sim.n_drones, 13))
     control[..., :3] = 1.0
     n_steps = 10

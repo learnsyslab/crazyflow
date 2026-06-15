@@ -28,10 +28,10 @@ def state_control(data: SimData, controls: Array) -> SimData:
 def attitude_control(data: SimData, controls: Array) -> SimData:
     """Attitude control function.
 
-    We need to stage the attitude controls because the sys_id physics mode operates directly on
+    We need to stage the attitude controls because the sys_id dynamics mode operates directly on
     the attitude controls. If we were to directly update the controls, this would effectively
-    bypass the control frequency and run the attitude controller at the physics update rate. By
-    staging the controls, we ensure that the physics module sees the old controls until the
+    bypass the control frequency and run the attitude controller at the dynamics update rate. By
+    staging the controls, we ensure that the dynamics module sees the old controls until the
     controller updates at its correct frequency.
     """
     assert data.controls.mode == Control.attitude, f"control type {data.controls.mode} not enabled"
