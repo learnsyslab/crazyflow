@@ -16,7 +16,7 @@ from crazyflow.sim import Sim
 
 sim = Sim()
 print(sim.step_pipeline)
-# Pipeline(step_state_controller -> step_attitude_controller -> integration -> increment_steps -> clip_floor_pos)
+# Pipeline(step_attitude_controller -> step_force_torque_controller -> integration -> increment_steps -> clip_floor_pos)
 ```
 
 ## The reset pipeline
@@ -29,8 +29,8 @@ Populate `sim.reset_pipeline` to add episode-level randomization without modifyi
 
 Stages are addressed by name. Use `insert_before` / `insert_after` to place a function relative to an existing stage, `append` / `prepend` to add it at either end, `replace` to swap a stage's implementation, and `remove` to drop it. New stages are named after the function's `__name__` unless an explicit name is given; names must be unique within a pipeline.
 
-```
-sim = Sim()
+```{ .python continuation }
+from crazyflow.sim.data import SimData
 
 def disturbance_fn(data: SimData) -> SimData:
     return data.replace(states=data.states.replace(vel=data.states.vel + 1e-5))
@@ -48,7 +48,7 @@ To see how to modify the step pipeline with a stochastic disturbance, see the [D
 
 Add a function to the reset pipeline to vary initial conditions between episodes. The function receives the freshly-restored `data` and an optional `mask` of worlds that were reset.
 
-```{ .python notest }
+```python
 import jax
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
@@ -71,8 +71,19 @@ sim.reset()
 
 Multiple stages can be chained; the output of each function is passed as input to the next:
 
-```{ .python notest }
-for fn in (randomize_initial_pos, randomize_mass_fn, log_reset_fn):
+```{ .python continuation }
+def randomize_vel(data: SimData, mask: Array | None) -> SimData:
+    key, subkey = jax.random.split(data.core.rng_key)
+    noise = jax.random.normal(subkey, data.states.vel.shape) * 0.05
+    return data.replace(
+        states=data.states.replace(vel=data.states.vel + noise),
+        core=data.core.replace(rng_key=key),
+    )
+
+def log_reset(data: SimData, mask: Array | None) -> SimData:
+    return data  # a pure pass-through stage, e.g. a hook for metrics
+
+for fn in (randomize_vel, log_reset):
     sim.reset_pipeline += fn
 sim.build_reset_fn()
 ```
@@ -81,7 +92,7 @@ sim.build_reset_fn()
 
 Remove any stage by name. A common case is removing the floor clip when computing gradients through a trajectory that starts high above the ground:
 
-```{ .python notest }
+```python
 from crazyflow.sim import Sim
 
 sim = Sim()
@@ -93,12 +104,12 @@ sim.build_step_fn()
 
 A step pipeline function must have the signature `(SimData) -> SimData`. A reset pipeline function must have the signature `(SimData, Array | None) -> SimData`. Both must be pure JAX functions with no Python-level side effects, so they can be traced and compiled.
 
-```{ .python notest }
+```python
 from crazyflow.sim.data import SimData
 
 def my_step_stage(data: SimData) -> SimData:
     # JAX operations only — return updated data
-    return data.replace(...)
+    return data.replace(states=data.states.replace(pos=data.states.pos + 0.01))
 ```
 
 ## Next steps
