@@ -1,6 +1,6 @@
 import pytest
-from drone_models.drones import available_drones
 
+from crazyflow.models.drones import available_drones
 from crazyflow.sim import Sim
 from crazyflow.sim.physics import Physics
 

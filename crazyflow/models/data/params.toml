@@ -1,0 +1,152 @@
+# This file contains all the **physical** parameters for all models.
+
+[cf2x_L250]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 0.0319
+L = 0.03253
+J = [  # TODO
+    [16.8e-6, 0.0, 0.0],
+    [0.0, 16.8e-6, 0.0],
+    [0.0, 0.0, 29.8e-6]
+]
+rpm2thrust = [0.0, -5.382196214637237e-7, 2.4582929831265485e-10]
+rpm2torque = [0.0, 1.410454111996297e-9, 1.4592584373980652e-12] 
+thrust2torque = 0.007350862856566459
+rotor_dyn_coef = [ 7.355623702172756, 0.0, 0.0, 0.00024443862952110715,] # [ 7.355623702172756, 0.0, 0.0, 0.00024443862952110715,]
+rotor_dyn_coef_simple = 6.886705423469015
+thrust_dyn_coef = 6.8932095506763345
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+    [-0.01471782, 0.0,         0.0         ],
+    [0.0,         -0.01471782, 0.0         ],
+    [0.0,         0.0,         -0.01277641 ]
+]
+# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
+vmotor2thrust = [-0.014830744918356092, 0.04724465241828281, -0.01847364358025878, 0.005960923942142]  # Index is order
+vmotor2torque = [-3.3261514624778425e-6, 8.109636684075977e-5, 5.751459172588052e-5, -1.898633582060136e-7]  # Index is order
+vmotor2rpm = [2968.1791506049194, 6647.948592402306]  # Index is order
+prop_radius = 23.55e-3 # TODO check
+prop_inertia = 34.52e-9 # TODO seems off
+
+
+[cf2x_P250]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 0.0318
+L = 0.03253
+J = [  # TODO from L250
+    [16.8e-6, 0.0, 0.0],
+    [0.0, 16.8e-6, 0.0],
+    [0.0, 0.0, 29.8e-6]
+]
+rpm2thrust = [0.0, -3.6200226530383495e-7, 1.6060924304100328e-10] # Index is order
+rpm2torque = [0.0, -2.2665265829562245e-9, 1.1149485566919186e-12] # Index is order
+thrust2torque = 0.0069928948992470565
+rotor_dyn_coef = [ 5.172596691828673, 8.14774234381285e-5, 0.0, 0.0002095253491455741,]
+rotor_dyn_coef_simple = 7.709730027690284
+thrust_dyn_coef = 7.9435775497736785
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+    [-0.01351483, 0.0,         0.0         ],
+    [0.0,         -0.01351483, 0.0         ],
+    [0.0,         0.0,         -0.01677452 ]
+]
+# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
+vmotor2thrust = [-0.02476537915958403, 0.06523793527519485, -0.026792504967750107, 0.006776789303971145]  # Index is order
+vmotor2torque = [-2.8633106919309745e-5, 0.00011679386117520097, 5.105754520419129e-5, 0.0]  # Index is order
+vmotor2rpm = [4657.542534331524, 7536.161830990926]  # Index is order
+prop_radius = 23.4e-3 # TODO check
+prop_inertia = 26.97e-9
+
+
+[cf2x_T350]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 0.0379
+L = 0.03253
+J = [ 
+    [15.7e-6, 0.0, 0.0],
+    [0.0, 17.1e-6, 0.0],
+    [0.0, 0.0, 30.0e-6]
+]
+rpm2thrust = [0.0, -7.167227176573658e-7, 2.9401303690194613e-10] # Index is order
+rpm2torque = [0.0, 5.815894847811497e-10, 1.331813874166509e-12] # Index is order
+thrust2torque = 0.005355990836477486
+rotor_dyn_coef = [ 11.374753209400291, 0.0, 0.0, 0.00037867688499079635,]
+rotor_dyn_coef_simple = 11.352970450445243
+thrust_dyn_coef = 11.12424272978587
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+    [-0.01556697, 0.0,         0.0         ],
+    [0.0,         -0.01556697, 0.0         ],
+    [0.0,         0.0,         -0.02191672 ]
+]
+# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.01922636758983749  # in N per motor
+thrust_max = 0.18  # in N per motor
+vmotor2thrust = [0.006728127583707208, 0.01011557616217668, 0.010263198062061085, 0.0028358638322392503]  # Index is order
+vmotor2torque = [-1.2906047901738756e-5, 0.0001436101487030899, 2.794753913624656e-5, 1.3104535533494383e-5]  # Index is order
+vmotor2rpm = [2977.884883031915, 8101.0293594093055]  # Index is order
+prop_radius = 25.4e-3 # TODO check
+prop_inertia = 38.93e-9 # TODO value from B500, currenty unknown
+
+
+[cf21B_500]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 0.04338
+L = 0.035355
+J = [
+    [25e-6, 0.0,   0.0],
+    [0.0,   28e-6, 0.0],
+    [0.0,   0.0,   49e-6]
+]
+rpm2thrust = [0.0, -3.133427287299859e-7, 4.407354891648379e-10] # TODO , Index is order
+rpm2torque = [0.0, 1.65886356219615e-9, 2.4693477924534137e-12] # TODO , Index is order
+thrust2torque = 0.00593893393599368
+rotor_dyn_coef = [ 13.996001897562685, 0.00011093207920685363, 5.933168530682111, 0.00031951312393561264,]
+rotor_dyn_coef_simple = 15.416891997523813
+thrust_dyn_coef = 15.09965949800411
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+    [-0.02149163, 0.0,          0.0         ],
+    [0.0,         -0.02149163,  0.0         ],
+    [0.0,         0.0,          -0.02359736 ]
+]
+# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.02136263065537499  # in N per motor
+thrust_max = 0.2  # in N per motor
+vmotor2thrust = [-0.014058926705279723, 0.04265273261724981, 0.0018327760144017432, 0.0020576974784587178]  # Index is order
+vmotor2torque = [-0.00016088354909542246, 0.0003960426420309137, -4.6274122414327404e-5, 1.8490661674309596e-5]  # TODO, Index is order
+vmotor2rpm = [2938.3995608848436, 6001.834195381014]  # Index is order
+prop_radius = 27.5e-3 # TODO check
+prop_inertia = 38.93e-9

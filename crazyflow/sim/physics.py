@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-from drone_models.core import load_params
-from drone_models.first_principles import dynamics as first_principles_dynamics
-from drone_models.so_rpy import dynamics as so_rpy_dynamics
-from drone_models.so_rpy_rotor import dynamics as so_rpy_rotor_dynamics
-from drone_models.so_rpy_rotor_drag import dynamics as so_rpy_rotor_drag_dynamics
 from flax.struct import dataclass
 from jax import Array
+
+from crazyflow.models.core import load_params
+from crazyflow.models.first_principles import dynamics as first_principles_dynamics
+from crazyflow.models.so_rpy import dynamics as so_rpy_dynamics
+from crazyflow.models.so_rpy_rotor import dynamics as so_rpy_rotor_dynamics
+from crazyflow.models.so_rpy_rotor_drag import dynamics as so_rpy_rotor_drag_dynamics
 
 if TYPE_CHECKING:
     from jax import Device

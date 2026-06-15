@@ -30,7 +30,6 @@ dependencies = [
     "flax",
     "ml_collections",
     "casadi",
-    "drone-models==0.1.0",             # from PyPI (regular install) or submodules folder (pixi install)
     "drone-controllers==0.2.0",        # from PyPI (regular install) or submodules folder (pixi install)
 ]
 requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
@@ -124,7 +123,6 @@ ruff = "*"
 
 [tool.pixi.pypi-dependencies]
 crazyflow = { path = "./", editable = true }
-drone-models = { path = "./submodules/drone-models", editable = true }
 drone-controllers = { path = "./submodules/drone-controllers", editable = true }
 
 [tool.pixi.feature.gpu]

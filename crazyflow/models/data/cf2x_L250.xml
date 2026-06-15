@@ -1,0 +1,85 @@
+<mujoco model="cf2x">
+  <compiler inertiafromgeom="false" meshdir="assets" autolimits="true" />
+
+  <asset>
+    <material name="black" rgba="0.102 0.102 0.102 1"/>
+    <material name="gray" rgba="0.3 0.3 0.3 1"/>
+    <material name="light-gray" rgba="0.7 0.7 0.7 1"/>
+    <material name="silver" rgba="0.898 0.898 0.898 1"/>
+    <material name="white" rgba="1 1 1 0.3"/>
+    <material name="gold" rgba="0.969 0.878 0.6 1"/>
+    <!-- The LED materials are initially transparent and can be changed dynamically -->
+    <material name="led_top" rgba="1.0 1.0 1.0 0.0"/>
+    <material name="led_bot" rgba="1.0 1.0 1.0 0.0"/>
+
+    <mesh name="pcb" file="cf2x/cf2x_pcb.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="motors" file="cf2x/cf2xL_motors.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="motor-holder" file="cf2x/cf2x_motor-holder.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="propL" file="cf2x/cf2xL_PropL.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="propR" file="cf2x/cf2xL_PropR.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="connectors" file="cf2x/cf2x_connectors.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="connector-pins" file="cf2x/cf2x_connector-pins.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="battery" file="cf2x/cf2x_battery.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="battery-holder" file="cf2x/cf2x_battery-holder.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="led-diffuser" file="cf21B/cf_led-diffuser.stl" scale="1e-3 1e-3 1e-3"/>
+  </asset>
+
+  <default>
+    <default class="cf2x">
+      <default class="visual">
+        <geom group="2" type="mesh" contype="0" conaffinity="0" />
+      </default>
+      <default class="collision">
+        <geom group="3" condim="1" />
+      </default>
+      <site group="5" />
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="drone" pos="0 0 0.05" childclass="cf2x">
+      <site name="CoM" />
+      <inertial pos="0.0 0.0 0.0" mass="0.027" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5" />
+      
+      <!-- Meshes -->
+      <geom mesh="pcb" material="gray" class="visual" />
+      <geom mesh="motors" material="silver" class="visual" />
+      <geom mesh="motor-holder" material="white" class="visual" />
+      <geom mesh="connectors" material="black" class="visual" />
+      <geom mesh="connector-pins" material="gold" class="visual" />
+      <geom mesh="battery" material="light-gray" class="visual" />
+      <geom mesh="battery-holder" material="black" class="visual" />
+      <geom name="led_top" mesh="led-diffuser" material="led_top" class="visual" pos="0 0 0.008" euler="180 0 0"/>
+      <geom name="led_bot" mesh="led-diffuser" material="led_bot" class="visual" pos="0 0 -0.003"/>
+
+      <!-- Collision geometry is estimated based on the visual mesh. We use a sphere for maximum
+       computational efficiency with larger swarms. Used by default-->
+      <geom  name="col_sphere" type="sphere" size="0.07" pos="0 0 0.005" class="collision" contype="1" conaffinity="1" />
+      <!-- For higher accuracy with lower performance, you can use a box. By default off. -->
+      <geom  name="col_box" type="box" size="0.055 0.055 0.02" class="collision" rgba="0.5 0.5 0.5 0" contype="0" conaffinity="0" />
+
+      <!-- Motors and Propellers -->
+      <site name="motor0" pos="0.0325 -0.0325 0.0" />
+      <site name="motor1" pos="-0.0325 -0.0325 0.0" />
+      <site name="motor2" pos="-0.0325 0.0325 0.0" />
+      <site name="motor3" pos="0.0325 0.0325 0.0" />
+      <body name="prop0" pos="0.0325 -0.0325 0.012" euler="0 0 45">
+        <geom mesh="propL" material="black" class="visual"/>
+      </body>
+      <body name="prop1" pos="-0.0325 -0.0325 0.012" euler="0 0 135">
+        <geom mesh="propR" material="black" class="visual"/>
+      </body>
+      <body name="prop2" pos="-0.0325 0.0325 0.012" euler="0 0 225">
+        <geom mesh="propL" material="black" class="visual"/>
+      </body>
+      <body name="prop3" pos="0.0325 0.0325 0.012" euler="0 0 315">
+        <geom mesh="propR" material="black" class="visual"/>
+      </body>
+
+      <!-- Cameras -->
+      <camera name="track_cam" pos="-1 0 .5" xyaxes="0 -1 0 1 0 2" mode="trackcom" />
+      <camera name="fpv_cam" pos="0.03 0 0" euler="0 -90 -90" fovy="70" resolution="640 480" />
+    </body>
+  </worldbody>
+
+</mujoco>

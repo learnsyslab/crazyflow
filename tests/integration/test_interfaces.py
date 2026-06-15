@@ -3,11 +3,11 @@ import numpy as np
 import pytest
 from drone_controllers import parametrize
 from drone_controllers.mellinger import state2attitude
-from drone_models.core import load_params
-from drone_models.transform import motor_force2rotor_vel
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control.control import Control
+from crazyflow.models.core import load_params
+from crazyflow.models.transform import motor_force2rotor_vel
 from crazyflow.sim import Physics, Sim
 
 
