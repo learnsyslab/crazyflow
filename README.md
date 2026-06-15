@@ -53,7 +53,7 @@ pip install "crazyflow[gpu]"    # GPU (Linux x86-64, CUDA 12)
 Developer install with editable submodules ([pixi](https://pixi.sh/) required):
 
 ```bash
-git clone --recurse-submodules git@github.com:learnsyslab/crazyflow.git
+git clone --recurse-submodules https://github.com/learnsyslab/crazyflow.git
 cd crazyflow
 pixi shell
 ```
