@@ -5,45 +5,46 @@ inserting functions before and after existing elements by name, i.e. keys.
 
 ``Pipeline`` stores its functions under unique names so that stages can be addressed directly,
 e.g. ``pipeline.insert_before("integration", my_fn)``, instead of through positional indices.
-Stage names default to the function's ``__name__`` and can be set explicitly for callables that
-don't have one (e.g. ``functools.partial`` objects) by passing a ``(name, fn)`` tuple.
+Stage names default to the function's ``__name__`` and can be set explicitly via the ``name``
+argument of ``append``/``prepend``/``insert_before``/``insert_after`` for callables that don't
+have one (e.g. ``functools.partial`` objects).
 """
 
 from __future__ import annotations
 
 from collections import OrderedDict
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from typing import Generator, Iterable, Iterator
+    from typing import Iterable, Iterator
 
 F = TypeVar("F", bound=Callable)
 
 
-class Pipeline(Generic[F], Mapping[str, F]):
+class Pipeline(Generic[F]):
     """Ordered collection of named functions.
 
     Functions are addressed by their unique name, which allows inserting, replacing and removing
     stages without relying on their position in the pipeline. Iterating over a pipeline yields the
     functions in order, ready to be chained at trace time.
 
-    Pipelines support summation like tuples: ``pipeline + fn`` and ``fn + pipeline`` return
-    new pipelines with the functions appended or prepended.
+    Pipelines support summation: ``pipeline + fn`` and ``fn + pipeline`` return new pipelines with
+    the function appended or prepended. ``+`` names the function by its ``__name__``; use ``append``
+    to add a function under an explicit name.
 
     Warning:
         Modifying a pipeline does not affect the compiled simulation functions. Always rebuild
         with ``Sim.build_step_fn()`` / ``Sim.build_reset_fn()`` after changing a pipeline.
     """
 
-    def __init__(self, items: Iterable[tuple[str, F]] = ()):
-        self._entries: OrderedDict[str, F] = {}
+    def __init__(self, items: Iterable[F] | Pipeline[F] = ()):
+        self._entries: OrderedDict[str, F] = OrderedDict()
         self.extend(items)
 
     @property
     def names(self) -> tuple[str, ...]:
         """The names of all stages in pipeline order."""
-        return tuple(self.keys())
+        return self.keys()
 
     def append(self, fn: F, name: str | None = None):
         """Add a function to the end of the pipeline.
@@ -52,8 +53,7 @@ class Pipeline(Generic[F], Mapping[str, F]):
             fn: The function to add.
             name: Unique name of the new stage. Defaults to ``fn.__name__``.
         """
-        name, fn = self._make_entry(name, fn)
-        self._entries[name] = fn
+        self._entries[self._resolve_name(name, fn)] = fn
 
     def prepend(self, fn: F, name: str | None = None):
         """Add a function to the front of the pipeline.
@@ -62,19 +62,17 @@ class Pipeline(Generic[F], Mapping[str, F]):
             fn: The function to add.
             name: Unique name of the new stage. Defaults to ``fn.__name__``.
         """
-        name, fn = self._make_entry(name, fn)
-        self._entries = OrderedDict([(name, fn)]) | self._entries
+        name = self._resolve_name(name, fn)
+        self._entries = {name: fn} | self._entries
 
-    def extend(self, items: Iterable[tuple[str, F] | F] | Pipeline[F]) -> None:
-        """Add multiple functions to the end of the pipeline.
+    def extend(self, items: Iterable[F] | Pipeline[F]) -> None:
+        """Append functions (named by ``__name__``), or copy the stages of another pipeline.
 
         Args:
-            items: An iterable of functions or ``(name, fn)`` tuples.
+            items: An iterable of functions, or a ``Pipeline`` whose stage names are preserved.
         """
-        if isinstance(items, Pipeline):
-            return self.extend(items.items())
-        for item in items:
-            name, fn = item if isinstance(item, tuple) else (None, item)
+        pairs = items.items() if isinstance(items, Pipeline) else ((None, fn) for fn in items)
+        for name, fn in pairs:
             self.append(fn, name)
 
     def insert_before(self, anchor: str, fn: F, name: str | None = None):
@@ -85,11 +83,7 @@ class Pipeline(Generic[F], Mapping[str, F]):
             fn: The function to insert.
             name: Unique name of the new stage. Defaults to ``fn.__name__``.
         """
-        name, fn = self._make_entry(name, fn)
-        index = self.index(anchor)
-        items = list(self.items())
-        items.insert(index, (name, fn))
-        self._entries = OrderedDict(items)
+        self._insert(anchor, fn, name, offset=0)
 
     def insert_after(self, anchor: str, fn: F, name: str | None = None):
         """Insert a function directly after the stage named ``anchor``.
@@ -99,10 +93,12 @@ class Pipeline(Generic[F], Mapping[str, F]):
             fn: The function to insert.
             name: Unique name of the new stage. Defaults to ``fn.__name__``.
         """
-        name, fn = self._make_entry(name, fn)
-        index = self.index(anchor)
+        self._insert(anchor, fn, name, offset=1)
+
+    def _insert(self, anchor: str, fn: F, name: str | None, offset: int):
+        name = self._resolve_name(name, fn)
         items = list(self.items())
-        items.insert(index + 1, (name, fn))
+        items.insert(self.index(anchor) + offset, (name, fn))
         self._entries = OrderedDict(items)
 
     def replace(self, name: str, fn: F):
@@ -111,7 +107,12 @@ class Pipeline(Generic[F], Mapping[str, F]):
         Args:
             name: Name of the stage to replace.
             fn: The new function for the stage.
+
+        Raises:
+            KeyError: If no stage with this name exists.
         """
+        if name not in self._entries:
+            raise KeyError(f"No pipeline stage named '{name}'. Available stages: {self.names}")
         self._entries[name] = fn
 
     def remove(self, name: str):
@@ -136,29 +137,24 @@ class Pipeline(Generic[F], Mapping[str, F]):
                 return i
         raise ValueError(f"No pipeline stage named '{name}'. Available stages: {self.names}")
 
-    def _make_entry(self, name: str | None, fn: F) -> tuple[str, F]:
+    def _resolve_name(self, name: str | None, fn: F) -> str:
+        assert callable(fn), f"Expected fn to be callable, got {fn}"
         if name is None:
             name = getattr(fn, "__name__", None)
         if name is None:  # E.g. functools.partial objects have no __name__
             raise ValueError(f"{fn} has no __name__, an explicit name is required")
-        if name in self.keys():
+        if name in self._entries:
             raise KeyError(f"Pipeline stage '{name}' already exists. Names must be unique")
         assert isinstance(name, str), f"Expected name to be str, got {name}"
-        assert callable(fn), f"Expected fn to be callable, got {fn}"
-        return (name, fn)
+        return name
 
-    def __add__(self, other: F | tuple[str, F] | Pipeline[F]) -> Pipeline[F]:
-        """Return a new pipeline with the items of ``other`` appended."""
+    def __add__(self, other: F | Pipeline[F]) -> Pipeline[F]:
+        """Return a new pipeline with ``other`` appended."""
         new = Pipeline(self)
         if isinstance(other, Pipeline):
-            new.extend(other.items())
-            return new
-        if not isinstance(other, tuple):
-            other = self._make_entry(None, other)
-        assert len(other) == 2, f"Invalid pipeline sum operand: {other}"
-        assert isinstance(other[0], str), f"Expected name to be str, got {other[0]}"
-        assert callable(other[1]), f"Expected fn to be callable, got {other[1]}"
-        new.append(other[1], other[0])
+            new.extend(other)
+        else:
+            new.append(other)  # Raises if ``other`` is anonymous (e.g. a partial or a tuple)
         return new
 
     def __radd__(self, other: Iterable[F]) -> Pipeline[F]:
@@ -177,7 +173,7 @@ class Pipeline(Generic[F], Mapping[str, F]):
 
     def __contains__(self, name: str) -> bool:
         """Check whether a stage with the given name exists in the pipeline."""
-        return name in self.keys()
+        return name in self._entries
 
     def __repr__(self) -> str:
         """Show the stage names in pipeline order."""
@@ -199,6 +195,6 @@ class Pipeline(Generic[F], Mapping[str, F]):
         """Return the stage functions in pipeline order."""
         return tuple(self._entries.values())
 
-    def items(self) -> Generator[tuple[str, F], None, None]:
+    def items(self) -> tuple[tuple[str, F], ...]:
         """Return the stage names and functions in pipeline order."""
-        return self._entries.items()
+        return tuple(self._entries.items())
