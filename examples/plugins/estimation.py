@@ -1,4 +1,7 @@
-"""State estimation example using UWB position measurements."""
+"""State estimation example using UWB position measurements.
+
+WARNING: This is an advanced example meant for advanced Crazyflow users.
+"""
 
 from __future__ import annotations
 

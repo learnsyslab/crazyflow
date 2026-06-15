@@ -13,10 +13,8 @@ from crazyflow.utils import grid_2d, leaf_replace
 def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
     key, mass_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
-    mass = (
-        data.params.mass
-        + jax.random.normal(mass_key, (data.core.n_worlds, data.core.n_drones, 1)) * 2e-3
-    )
+    dist = jax.random.normal(mass_key, (data.core.n_worlds, data.core.n_drones, 1)) * 2e-3
+    mass = data.params.mass + dist
     return data.replace(params=leaf_replace(data.params, mask, mass=mass))
 
 
@@ -24,10 +22,8 @@ def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
 def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
     key, inertia_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
-    J = (
-        data.params.J
-        + jax.random.normal(inertia_key, (data.core.n_worlds, data.core.n_drones, 3, 3)) * 1e-8
-    )
+    dist = jax.random.normal(inertia_key, (data.core.n_worlds, data.core.n_drones, 3, 3)) * 1e-8
+    J = data.params.J + dist
     return data.replace(params=leaf_replace(data.params, mask, J=J, J_inv=jnp.linalg.inv(J)))
 
 

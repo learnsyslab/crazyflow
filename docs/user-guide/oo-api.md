@@ -198,7 +198,7 @@ sim.close()                           # close the viewer
 
 Define physical-parameter randomization as a reset pipeline stage. Each stage receives the restored `SimData` and an optional world mask, and returns the randomized data:
 
-```{ .python notest }
+```python
 import jax
 from jax import Array
 

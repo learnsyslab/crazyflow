@@ -1,4 +1,7 @@
-"""Track a Lissajous curve with a simple sampling-based MPC controller."""
+"""Track a Lissajous curve with a simple sampling-based MPC controller.
+
+WARNING: This is an advanced example meant for advanced Crazyflow users.
+"""
 
 import os
 from collections import deque
@@ -39,7 +42,7 @@ T = 1.0  # Prediction horizon in seconds
 N = 25  # Prediction steps
 N_SAMPLES = 500_000 if DEVICE_CONTROLLER == "gpu" else 2_000
 NOISE_SIGMA = jnp.array([0.10, 0.10, 0.0, 0.08], dtype=jnp.float32)
-ELITE_PERCENTAGE = 0.01  # Percentage of samples to use for the mean update
+ELITE_FRACTION = 0.01  # Fraction of samples in (0,1] to use for the mean update
 MAX_CMD_ANGLE = np.deg2rad(60.0)
 
 # Lissajous reference configuration
@@ -65,23 +68,14 @@ def lissajous_reference(t: Array | float) -> dict[str, Array]:
     """Return position, velocity, and yaw references at time ``t``."""
     t = jnp.asarray(t)
     omega = 2.0 * jnp.pi / REF_PERIOD
-
-    pos = jnp.stack(
-        (
-            REF_CENTER[0] + REF_SCALE[0] * jnp.sin(omega * t),
-            REF_CENTER[1] + REF_SCALE[1] * jnp.sin(2.0 * omega * t),
-            jnp.broadcast_to(REF_CENTER[2], t.shape),
-        ),
-        axis=-1,
-    )
-    vel = jnp.stack(
-        (
-            REF_SCALE[0] * omega * jnp.cos(omega * t),
-            2.0 * REF_SCALE[1] * omega * jnp.cos(2.0 * omega * t),
-            jnp.zeros_like(t),
-        ),
-        axis=-1,
-    )
+    pos_x = REF_CENTER[0] + REF_SCALE[0] * jnp.sin(omega * t)
+    pos_y = REF_CENTER[1] + REF_SCALE[1] * jnp.sin(2.0 * omega * t)
+    pos_z = jnp.broadcast_to(REF_CENTER[2], t.shape)
+    pos = jnp.stack((pos_x, pos_y, pos_z), axis=-1)
+    vel_x = REF_SCALE[0] * omega * jnp.cos(omega * t)
+    vel_y = 2.0 * REF_SCALE[1] * omega * jnp.cos(2.0 * omega * t)
+    vel_z = jnp.zeros_like(t)
+    vel = jnp.stack((vel_x, vel_y, vel_z), axis=-1)
     return {"pos": pos, "vel": vel, "yaw": jnp.zeros_like(t)}
 
 
@@ -182,7 +176,7 @@ def update_controller(
     references = lissajous_reference(times)
     costs, positions = rollout_fn(obs, candidates.transpose(1, 0, 2), references)
 
-    n_elites = max(1, int(N_SAMPLES * ELITE_PERCENTAGE))
+    n_elites = max(1, int(N_SAMPLES * ELITE_FRACTION))
     elite_indices = jnp.argsort(costs)[:n_elites]
     updated_controls = jnp.mean(candidates[elite_indices], axis=0)
 
