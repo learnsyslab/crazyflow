@@ -196,43 +196,30 @@ sim.close()                           # close the viewer
 
 ## Domain randomization
 
-Physical parameters can be randomized per-world using the `randomize` helpers:
+Define physical-parameter randomization as a reset pipeline stage. Each stage receives the restored `SimData` and an optional world mask, and returns the randomized data:
 
 ```python
 import jax
-import numpy as np
+from jax import Array
+
 from crazyflow.sim import Sim
-from crazyflow.randomize import randomize_inertia, randomize_mass
+from crazyflow.sim.data import SimData
+from crazyflow.utils import leaf_replace
+
+@jax.jit
+def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
+    key, mass_key = jax.random.split(data.core.rng_key)
+    mass = data.params.mass + jax.random.normal(mass_key, data.params.mass.shape) * 2e-3
+    params = leaf_replace(data.params, mask, mass=mass)
+    return data.replace(params=params, core=data.core.replace(rng_key=key))
 
 sim = Sim(n_worlds=4, n_drones=1)
-sim.reset()
-
-nominal_mass = sim.data.params.mass
-noise = jax.random.normal(jax.random.key(0), nominal_mass.shape) * 2e-3
-randomize_mass(sim, nominal_mass + noise)
-
-nominal_J = sim.data.params.J
-J_noise = jax.random.normal(jax.random.key(1), nominal_J.shape) * 1e-6
-randomize_inertia(sim, nominal_J + J_noise)
+sim.reset_pipeline = (randomize_mass,)
+sim.build_reset_fn()
+sim.reset()  # randomizes every world
 ```
 
-To randomize only a subset of worlds, pass a boolean mask:
-
-```python
-import jax
-import numpy as np
-from crazyflow.sim import Sim
-from crazyflow.randomize import randomize_mass
-
-sim = Sim(n_worlds=4, n_drones=1)
-sim.reset()
-
-import jax.numpy as jnp
-mask = jnp.array([True, True, False, False])  # only worlds 0 and 1
-nominal_mass = sim.data.params.mass
-noise = jax.random.normal(jax.random.key(0), nominal_mass.shape) * 2e-3
-randomize_mass(sim, nominal_mass + noise, mask=mask)
-```
+Passing a boolean mask to `sim.reset(mask=mask)` randomizes only the worlds being reset. See the [domain randomization example](../examples/index.md#domain-randomization) for mass and inertia randomization in a complete simulation.
 
 ## Next steps
 

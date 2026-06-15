@@ -60,7 +60,6 @@ else:
     * [envs.reach_pos_env](crazyflow/envs/reach_pos_env.md)
     * [envs.reach_vel_env](crazyflow/envs/reach_vel_env.md)
     * [envs.norm_actions_wrapper](crazyflow/envs/norm_actions_wrapper.md)
-* [randomize](crazyflow/randomize/index.md)
 * [utils](crazyflow/utils.md)
 """
 

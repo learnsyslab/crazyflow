@@ -8,7 +8,7 @@ import pytest
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
 # Make example_scripts a list of strings instead of Path objects so that pytest can use it in its
 # automatic printouts. We convert the elements back to Paths in the test function.
-example_scripts = [str(p) for p in sorted(EXAMPLES_DIR.glob("*.py"))]
+example_scripts = [str(p) for p in sorted(EXAMPLES_DIR.rglob("*.py"))]
 
 
 @pytest.mark.parametrize("example_script", [str(p) for p in example_scripts])

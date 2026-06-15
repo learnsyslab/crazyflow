@@ -1,6 +1,6 @@
 # Examples
 
-These examples build on each other — each one introduces one new concept on top of the previous. Start from the top if you're new, or jump to whichever section covers what you need.
+These runnable examples cover control, JAX transformations, pipeline extensions, rendering, contacts, and Gymnasium environments. Start with hover if you're new, or jump to the section that matches your use case.
 
 ---
 
@@ -9,11 +9,11 @@ These examples build on each other — each one introduces one new concept on to
 A single drone commanded to hold a fixed height using state control. This is the minimal end-to-end loop: create a `Sim`, reset it, apply a state command, and step forward.
 
 ```{ .python notest }
---8<-- "examples/hover.py"
+--8<-- "examples/control/hover.py"
 ```
 
 ```bash
-python examples/hover.py
+python examples/control/hover.py
 ```
 
 ---
@@ -23,7 +23,17 @@ python examples/hover.py
 Commanding roll, pitch, yaw, and collective thrust directly. This level bypasses the Mellinger position loop and is typical for RL agents that output attitude targets.
 
 ```{ .python notest }
---8<-- "examples/attitude.py"
+--8<-- "examples/control/attitude.py"
+```
+
+---
+
+## Sampling-based MPC
+
+A sampling-based model predictive controller tracks a Lissajous curve while avoiding a grid of obstacles. It rolls out thousands of candidate control sequences in parallel using a reduced dynamics model, then applies the first action from a cost-weighted update of the best samples. The controller automatically uses a GPU when one is available and lowers the sample count on CPU.
+
+```bash
+python examples/control/sampling.py
 ```
 
 ---
@@ -33,17 +43,21 @@ Commanding roll, pitch, yaw, and collective thrust directly. This level bypasses
 Because the simulator is built entirely from JAX operations, `jax.grad` can differentiate through it. Starting the drone above the target height keeps it away from the floor, so the floor-clipping stage never fires and gradients flow freely through the entire trajectory.
 
 ```{ .python notest }
---8<-- "examples/gradient.py"
+--8<-- "examples/jax/gradient.py"
 ```
 
 ---
 
 ## Domain randomization
 
-Varying physical parameters per world at reset. Each world gets a slightly different mass, so identical commands produce diverging trajectories.
+Randomizing mass and inertia through the reset pipeline. An optional mask limits randomization to selected worlds.
 
 ```{ .python notest }
---8<-- "examples/randomize.py"
+--8<-- "examples/plugins/randomize.py"
+```
+
+```bash
+python examples/plugins/randomize.py
 ```
 
 ---
@@ -53,7 +67,7 @@ Varying physical parameters per world at reset. Each world gets a slightly diffe
 Inserting a random external force and torque into the step pipeline. The disturbance fires on every physics tick, so the drone fights wind-like perturbations.
 
 ```{ .python notest }
---8<-- "examples/disturbance.py"
+--8<-- "examples/plugins/disturbance.py"
 ```
 
 ---
@@ -67,11 +81,11 @@ Offscreen rendering returns RGB and depth images on every frame. The FPV camera 
 </figure>
 
 ```{ .python notest }
---8<-- "examples/cameras.py"
+--8<-- "examples/rendering/cameras.py"
 ```
 
 ```bash
-python examples/cameras.py
+python examples/rendering/cameras.py
 ```
 
 ---
@@ -85,11 +99,11 @@ python examples/cameras.py
 </figure>
 
 ```{ .python notest }
---8<-- "examples/led_deck.py"
+--8<-- "examples/rendering/led_deck.py"
 ```
 
 ```bash
-python examples/led_deck.py
+python examples/rendering/led_deck.py
 ```
 
 ---
@@ -108,7 +122,7 @@ The default collision geometry is a sphere around the drone frame. `use_box_coll
 </div>
 
 ```{ .python notest }
---8<-- "examples/contacts.py"
+--8<-- "examples/contacts/contacts.py"
 ```
 
 ---
@@ -118,11 +132,11 @@ The default collision geometry is a sphere around the drone frame. `use_box_coll
 `render_depth` fires rays from a camera and returns per-pixel distances. This is faster than full RGB rendering and useful for obstacle sensing or depth-based controllers.
 
 ```{ .python notest }
---8<-- "examples/raycasting.py"
+--8<-- "examples/rendering/raycasting.py"
 ```
 
 ```bash
-python examples/raycasting.py
+python examples/rendering/raycasting.py
 ```
 
 ---
@@ -132,5 +146,5 @@ python examples/raycasting.py
 Evaluating a random policy in the figure-8 environment. The env wraps `Sim` behind the standard Gymnasium `VectorEnv` interface.
 
 ```{ .python notest }
---8<-- "examples/figure8.py"
+--8<-- "examples/environments/figure8.py"
 ```
