@@ -106,8 +106,9 @@ class Sim:
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
-        self.reset_pipeline: OrderedDict[str, Callable[[SimData, Array[bool] | None], SimData]]
-        self.reset_pipeline = OrderedDict()
+        self.reset_pipeline: OrderedDict[
+            str, Callable[[SimData, SimData, Array[bool] | None], SimData]
+        ] = OrderedDict()
         append_fn(self.reset_pipeline, reset)
 
         self.step_pipeline: OrderedDict[str, Callable[[SimData], SimData]] = OrderedDict()

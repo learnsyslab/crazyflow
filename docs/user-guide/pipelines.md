@@ -1,6 +1,21 @@
 # Pipelines
 
-Crazyflow has two pipelines, one for stepping and one for resetting, each an ordered collection of named, pure JAX functions that transform `SimData`. Both are constructed at `Sim` initialisation and compiled into a single `jax.jit`-cached function by `build_step_fn()` / `build_reset_fn()`. You can modify either pipeline through its named stages and recompile with the corresponding build function.
+Crazyflow has two pipelines, one for stepping and one for resetting. Each is an ordered dictionary of pure JAX functions that transform `SimData`. Stages are keyed by a unique string name so they can be addressed directly without relying on positional indices.
+
+`crazyflow.sim.pipeline` provides helper functions for safely modifying a pipeline:
+
+| Function | Description |
+|---|---|
+| `append_fn(pipeline, fn, name=None)` | Add a stage at the end |
+| `prepend_fn(pipeline, fn, name=None)` | Add a stage at the beginning |
+| `insert_fn_before(pipeline, anchor, fn, name=None)` | Insert before a named stage |
+| `insert_fn_after(pipeline, anchor, fn, name=None)` | Insert after a named stage |
+| `replace_fn(pipeline, fn, name)` | Swap the function of an existing stage |
+| `remove_fn(pipeline, name)` | Remove a stage by name |
+
+All helpers raise `KeyError` on duplicate or missing names. Stage names default to `fn.__name__`. Pass an explicit `name` for anonymous callables such as `functools.partial` objects.
+
+Both pipelines are constructed at `Sim` initialisation and compiled into a single `jax.jit`-cached function by `build_step_fn()` / `build_reset_fn()`. Modify the pipeline and then call the corresponding build function to recompile.
 
 ## The step pipeline
 
