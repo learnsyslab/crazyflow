@@ -37,6 +37,7 @@ requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
+mps = ["jax-mps"]
 benchmark = ["fire", "matplotlib", "pandas"]
 
 [project.urls]

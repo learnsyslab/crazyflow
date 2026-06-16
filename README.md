@@ -48,6 +48,7 @@ for _ in range(100):
 ```bash
 pip install crazyflow           # CPU
 pip install "crazyflow[gpu]"    # GPU (Linux x86-64, CUDA 12)
+pip install "crazyflow[mps]"    # Apple Silicon (MPS via jax-mps)
 ```
 
 Developer install with editable submodules ([pixi](https://pixi.sh/) required):
@@ -71,6 +72,8 @@ First-principles physics, one drone. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 409
 | 262 144 | 12.6 M | 914 M |
 
 Full benchmarks including multi-drone scaling are in the [documentation](https://learnsyslab.github.io/crazyflow).
+
+> **Apple Silicon:** Crazyflow also runs on the MPS backend via `jax-mps`. Pass `device='mps'` when creating a `Sim`, or set `JAX_MPS_ASYNC_DISPATCH=1` for async dispatch. Use `pip install "crazyflow[mps]"` or `pixi run pip install jax-mps` inside the pixi environment. Under pixi, jax-mps auto-registers as the default backend with CPU fallback, so `device='cpu'` tests also pass without extra configuration.
 
 ## Related packages
 

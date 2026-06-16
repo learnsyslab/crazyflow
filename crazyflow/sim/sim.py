@@ -235,8 +235,10 @@ class Sim:
         """Build the MuJoCo model and data structures for the simulation."""
         mj_model = spec.compile()
         mj_data = mujoco.MjData(mj_model)
-        mjx_model = mjx.put_model(mj_model, device=self.device)
-        mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
+        # Always use the JAX implementation directly to support
+        # non-standard backends such as jax-mps (Apple Silicon).
+        mjx_model = mjx.put_model(mj_model, device=self.device, impl="JAX")
+        mjx_data = mjx.put_data(mj_model, mj_data, device=self.device, impl="JAX")
         mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
         return mj_model, mj_data, mjx_model, mjx_data
 
