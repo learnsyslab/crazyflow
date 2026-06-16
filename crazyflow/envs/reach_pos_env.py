@@ -101,7 +101,7 @@ class ReachPosEnv(DroneEnv):
 
     @staticmethod
     def _reset_randomization(
-        data: SimData, mask: Array, pmin: Array, pmax: Array, vmin: float, vmax: float
+        data: SimData, _: SimData, mask: Array, pmin: Array, pmax: Array, vmin: float, vmax: float
     ) -> SimData:
         shape = (data.core.n_worlds, data.core.n_drones, 3)
         key, pos_key, vel_key = jax.random.split(data.core.rng_key, 3)

@@ -13,6 +13,7 @@ import numpy as np
 from drone_models.transform import motor_force2rotor_vel
 
 from crazyflow import Sim
+from crazyflow.sim.pipeline import insert_fn_after, prepend_fn
 from crazyflow.sim.visualize import draw_line, draw_points
 
 if TYPE_CHECKING:
@@ -166,16 +167,10 @@ def main(noisy: bool = False, render: bool = True) -> None:
         plugins=sim.data.plugins | plugins, core=sim.data.core.replace(rng_key=key)
     )
 
-    controllers = sim.step_pipeline[:-3]
-    integration = sim.step_pipeline[-3:]
-    sim.step_pipeline = (
-        simulate_uwb,
-        estimate_state,
-        use_estimate_for_control,
-        *controllers,
-        restore_ground_truth,
-        *integration,
-    )
+    prepend_fn(sim.step_pipeline, simulate_uwb)
+    insert_fn_after(sim.step_pipeline, "simulate_uwb", estimate_state)
+    insert_fn_after(sim.step_pipeline, "estimate_state", use_estimate_for_control)
+    insert_fn_after(sim.step_pipeline, "step_force_torque_controller", restore_ground_truth)
     sim.build_default_data()
     sim.build_step_fn()
 

@@ -108,11 +108,12 @@ class Sim:
         # Build the simulation pipeline and overwrite the default _step implementation with it
         self.reset_pipeline: OrderedDict[str, Callable[[SimData, Array[bool] | None], SimData]]
         self.reset_pipeline = OrderedDict()
+        append_fn(self.reset_pipeline, reset)
+
         self.step_pipeline: OrderedDict[str, Callable[[SimData], SimData]] = OrderedDict()
         # The ``select_xxx_fn`` methods return functions, not the results of calling those
         # functions. They act as factories that produce building blocks for the construction of our
-        # simulation pipeline. Stages carry unique names so that users can address them with
-        # ``insert_fn_before``/``insert_fn_after``/``replace_fn`` etc. without relying on positions.
+        # simulation pipeline.
         for fn in build_control_fns(self.control, self.physics):
             append_fn(self.step_pipeline, fn)
         integrate_fn = select_integrate_fn(self.integrator, select_physics_fn(self.physics))
@@ -308,9 +309,8 @@ class Sim:
 
         @jax.jit
         def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
-            data = pytree_replace(data, default_data, mask)  # Does not overwrite rng_key
             for fn in pipeline:
-                data = fn(data, mask)
+                data = fn(data, default_data, mask)
             data = data.replace(core=data.core.replace(mjx_synced=False))  # Flag mjx data as stale
             return data
 
@@ -499,6 +499,11 @@ def select_integrate_fn(
             raise NotImplementedError(f"Integrator {integrator} not implemented")
 
     return partial(integrate_fn, deriv_fn=physics_fn)
+
+
+def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
+    """Reset the simulation data to the default data for the worlds specified by the mask."""
+    return pytree_replace(data, default_data, mask)  # Does not overwrite rng_key
 
 
 def increment_steps(data: SimData) -> SimData:

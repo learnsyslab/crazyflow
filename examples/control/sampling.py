@@ -286,8 +286,7 @@ def main() -> None:
             action_low=action_low,
             action_high=action_high,
             noise_sigma=noise_sigma,
-        ),
-        device=controller_device,
+        )
     )
     mean_controls = jax.device_put(jnp.broadcast_to(hover_cmd, (N, 4)), controller_device)
     key = jax.device_put(jax.random.key(0), controller_device)

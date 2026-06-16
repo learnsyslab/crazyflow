@@ -10,16 +10,17 @@ Crazyflow ships a set of [Gymnasium](https://gymnasium.farama.org/) vectorized e
 | `ReachPosEnv` | Reach a target position | pos, quat, vel, ang_vel, target | attitude |
 | `ReachVelEnv` | Match a target velocity | vel, ang_vel, target_vel | attitude |
 | `LandingEnv` | Land safely | pos, quat, vel, ang_vel | attitude |
-| `Figure8Env` | Follow a figure-8 trajectory | pos, quat, vel, ang_vel, phase | attitude |
+| `FigureEightEnv` | Follow a figure-8 trajectory | pos, quat, vel, ang_vel, phase | attitude |
 
 All environments run `num_envs` parallel instances backed by a single `Sim` with `n_worlds=num_envs`.
 
 ## Basic usage
 
-```{ .python notest }
-from crazyflow.envs import Figure8Env
+```python
+import gymnasium
+import crazyflow.envs  # noqa: F401 - registers the environments
 
-env = Figure8Env(num_envs=16, device="cpu")
+env = gymnasium.make_vec("DroneFigureEightTrajectory-v0", num_envs=16)
 obs, info = env.reset()
 
 for _ in range(500):
@@ -41,17 +42,18 @@ All environments accept these common arguments:
 | `drone_model` | `"cf2x_L250"` | Drone configuration |
 | `freq` | 500 | Physics frequency, Hz |
 | `device` | `"cpu"` | `"cpu"` or `"gpu"` |
-| `reset_randomization` | `None` | Optional `(SimData, mask) → SimData` function applied at reset |
+| `reset_randomization` | `None` | Optional `(SimData, SimData, mask) → SimData` function applied at reset (base `DroneEnv` only) |
 
 ## Action normalization
 
 `NormalizeActionsWrapper` rescales the action space to `[-1, 1]`, which simplifies policy learning:
 
-```{ .python notest }
-from crazyflow.envs import Figure8Env
-from crazyflow.envs.norm_actions_wrapper import NormalizeActionsWrapper
+```python
+import gymnasium
+import crazyflow.envs  # noqa: F401 - registers the environments
+from crazyflow.envs.norm_actions_wrapper import NormalizeActions
 
-env = NormalizeActionsWrapper(Figure8Env(num_envs=32))
+env = NormalizeActions(gymnasium.make_vec("DroneFigureEightTrajectory-v0", num_envs=32))
 obs, info = env.reset()
 action = env.action_space.sample()  # in [-1, 1]^4
 obs, reward, terminated, truncated, info = env.step(action)
@@ -60,22 +62,23 @@ env.close()
 
 ## Reset randomization
 
-Pass a `reset_randomization` callable to vary initial conditions between episodes. The function receives `SimData` and a boolean mask selecting the environments being reset, and must return updated `SimData`:
+Pass a `reset_randomization` callable to vary initial conditions between episodes. The function receives `SimData`, the default `SimData`, and a boolean mask selecting the environments being reset, and must return updated `SimData`:
 
-```{ .python notest }
+```python
 import jax
-from crazyflow.envs import ReachPosEnv
+from crazyflow.envs.drone_env import DroneEnv
 from crazyflow.sim.data import SimData
 from crazyflow.utils import leaf_replace
 
-def randomize(data: SimData, mask: jax.Array | None) -> SimData:
+def randomize(data: SimData, default_data: SimData, mask: jax.Array | None) -> SimData:
     key, subkey = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
     noise = jax.random.normal(subkey, data.states.pos.shape) * 0.05
     states = leaf_replace(data.states, mask, pos=data.states.pos + noise)
     return data.replace(states=states)
 
-env = ReachPosEnv(num_envs=64, reset_randomization=randomize)
+env = DroneEnv(num_envs=64, reset_randomization=randomize)
+env.close()
 ```
 
 ## Next steps

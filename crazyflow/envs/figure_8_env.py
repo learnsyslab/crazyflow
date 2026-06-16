@@ -120,7 +120,7 @@ class FigureEightEnv(DroneEnv):
         return hit_floor | bounding_box
 
     @staticmethod
-    def _reset_randomization(data: SimData, mask: Array) -> SimData:
+    def _reset_randomization(data: SimData, _: SimData, mask: Array) -> SimData:
         """Randomize the initial position and velocity of the drones.
 
         This function will get compiled into the reset function of the simulation. Therefore, it

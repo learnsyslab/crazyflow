@@ -6,11 +6,12 @@ from jax import Array
 from crazyflow.control import Control
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
+from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import grid_2d, leaf_replace
 
 
 @jax.jit
-def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
+def randomize_mass(data: SimData, _: SimData, mask: Array | None = None) -> SimData:
     key, mass_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
     dist = jax.random.normal(mass_key, (data.core.n_worlds, data.core.n_drones, 1)) * 2e-3
@@ -19,7 +20,7 @@ def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
 
 
 @jax.jit
-def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
+def randomize_inertia(data: SimData, _: SimData, mask: Array | None = None) -> SimData:
     key, inertia_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
     dist = jax.random.normal(inertia_key, (data.core.n_worlds, data.core.n_drones, 3, 3)) * 1e-8
@@ -29,7 +30,8 @@ def randomize_inertia(data: SimData, mask: Array | None = None) -> SimData:
 
 def main():
     sim = Sim(n_worlds=3, n_drones=4, control=Control.state)
-    sim.reset_pipeline = (randomize_mass, randomize_inertia)
+    append_fn(sim.reset_pipeline, randomize_mass)
+    append_fn(sim.reset_pipeline, randomize_inertia)
     sim.build_reset_fn()
 
     mask = np.array([True, False, False])  # Only randomize the first world
