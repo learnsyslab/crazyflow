@@ -17,6 +17,7 @@ from crazyflow.control.control import Control
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.physics import Physics
+from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
 
@@ -101,7 +102,7 @@ class DroneEnv(VectorEnv):
         # Compile our domain randomization on reset into the sim pipeline
         if reset_randomization is None:
             reset_randomization = self._reset_randomization
-        self.sim.reset_pipeline.append(reset_randomization, name="reset_randomization")
+        append_fn(self.sim.reset_pipeline, reset_randomization, name="reset_randomization")
         self.sim.build_reset_fn()
 
         self.n_substeps = self.sim.freq // self.freq

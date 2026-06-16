@@ -27,7 +27,7 @@ Populate `sim.reset_pipeline` to add episode-level randomization without modifyi
 
 ## Modifying the step pipeline
 
-Stages are addressed by name. Use `insert_before` / `insert_after` to place a function relative to an existing stage, `append` / `prepend` to add it at either end, `replace` to swap a stage's implementation, and `remove` to drop it. New stages are named after the function's `__name__` unless an explicit name is given; names must be unique within a pipeline.
+Stages are addressed by name. Use `insert_fn_before` / `insert_fn_after` to place a function relative to an existing stage, `append_fn` to add it at the end, and `replace_fn` to swap a stage's implementation. New stages are named after the function's `__name__` unless an explicit name is given; names must be unique within a pipeline.
 
 ```{ .python continuation }
 from crazyflow.sim.data import SimData

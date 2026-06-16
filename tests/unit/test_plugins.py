@@ -13,6 +13,7 @@ import jax.numpy as jnp
 import pytest
 
 from crazyflow.sim import Sim
+from crazyflow.sim.pipeline import append_fn
 
 if TYPE_CHECKING:
     from crazyflow.sim.data import SimData
@@ -56,7 +57,7 @@ def test_plugin_data_changes(n_worlds: int):
     """Plugin data changes across simulation steps."""
     sim = Sim(n_worlds=n_worlds)
     sim.data = sim.data.replace(plugins={"counter": jnp.zeros((n_worlds, 1), dtype=jnp.int32)})
-    sim.step_pipeline = sim.step_pipeline + counter_plugin
+    append_fn(sim.step_pipeline, counter_plugin)
     sim.build_step_fn()
     n_steps = 7
     sim.step(n_steps)
@@ -71,7 +72,7 @@ def test_plugin_resets():
     """sim.reset() restores the counter to its default value (0)."""
     sim = Sim()
     sim.data = sim.data.replace(plugins={"counter": jnp.zeros((1, 1), dtype=jnp.int32)})
-    sim.step_pipeline = sim.step_pipeline + counter_plugin
+    append_fn(sim.step_pipeline, counter_plugin)
     sim.build_default_data()
     sim.build_step_fn()
     sim.step(10)
@@ -87,7 +88,7 @@ def test_plugin_masked_reset():
     n_worlds = 2
     sim = Sim(n_worlds=n_worlds)
     sim.data = sim.data.replace(plugins={"counter": jnp.zeros((n_worlds, 1), dtype=jnp.int32)})
-    sim.step_pipeline = sim.step_pipeline + counter_plugin
+    append_fn(sim.step_pipeline, counter_plugin)
     sim.build_default_data()
     sim.build_step_fn()
     sim.step(10)
@@ -110,7 +111,8 @@ def test_chained_plugins():
             "accumulated": jnp.zeros((1, 1), dtype=jnp.int32),
         }
     )
-    sim.step_pipeline = sim.step_pipeline + counter_plugin + accumulater_plugin
+    append_fn(sim.step_pipeline, counter_plugin)
+    append_fn(sim.step_pipeline, accumulater_plugin)
     sim.build_default_data()
     sim.build_step_fn()
     n_steps = 3

@@ -11,6 +11,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from crazyflow import Sim
+from crazyflow.sim.pipeline import prepend_fn
 from crazyflow.sim.visualize import draw_points
 
 if TYPE_CHECKING:
@@ -60,7 +61,7 @@ def main():
     # resets.
     custom_data = {"queued_actions": jnp.zeros((delay_steps, 1, 1, 4))}
     sim.data = sim.data.replace(plugins=sim.data.plugins | custom_data)
-    sim.step_pipeline.prepend(action_delay)
+    prepend_fn(sim.step_pipeline, action_delay, name="action_delay")
     sim.build_default_data()
     sim.build_step_fn()
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from functools import partial, wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
@@ -30,6 +31,7 @@ from crazyflow.sim.physics import (
     so_rpy_rotor_physics,
 )
 from crazyflow.sim.pipeline import Pipeline
+from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import grid_2d, leaf_replace, pytree_replace
 
 if TYPE_CHECKING:
@@ -105,20 +107,21 @@ class Sim:
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
-        self.reset_pipeline: Pipeline[Callable[[SimData, Array[bool] | None], SimData]] = Pipeline()
-        self.step_pipeline: Pipeline[Callable[[SimData], SimData]] = Pipeline()
+        self.reset_pipeline: OrderedDict[str, Callable[[SimData, Array[bool] | None], SimData]]
+        self.reset_pipeline = OrderedDict()
+        self.step_pipeline: OrderedDict[str, Callable[[SimData], SimData]] = OrderedDict()
         # The ``select_xxx_fn`` methods return functions, not the results of calling those
         # functions. They act as factories that produce building blocks for the construction of our
         # simulation pipeline. Stages carry unique names so that users can address them with
-        # ``insert_before``/``insert_after``/``remove`` etc. without relying on positions.
+        # ``insert_fn_before``/``insert_fn_after``/``replace_fn`` etc. without relying on positions.
         for fn in build_control_fns(self.control, self.physics):
-            self.step_pipeline += fn
-        physics_fn = select_physics_fn(self.physics)
-        self.step_pipeline.append(select_integrate_fn(self.integrator, physics_fn), "integration")
-        self.step_pipeline += increment_steps
+            append_fn(self.step_pipeline, fn)
+        integrate_fn = select_integrate_fn(self.integrator, select_physics_fn(self.physics))
+        append_fn(self.step_pipeline, integrate_fn, name="integration")
+        append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
-        self.step_pipeline += clip_floor_pos
+        append_fn(self.step_pipeline, clip_floor_pos)
 
         self._reset = self.build_reset_fn()
         self._step = self.build_step_fn()
@@ -264,7 +267,7 @@ class Sim:
         # Snapshot the pipeline functions into a tuple. jax.jit traces lazily on the first call,
         # so without a snapshot, modifying the pipeline between building and the first step would
         # silently get compiled in.
-        pipeline = tuple(self.step_pipeline)
+        pipeline = tuple(self.step_pipeline.values())
 
         # None is required by jax.lax.scan to unpack the tuple returned by single_step.
         def single_step(data: SimData, _: None) -> tuple[SimData, None]:
@@ -302,7 +305,7 @@ class Sim:
         # Snapshot the pipeline functions into a tuple. jax.jit traces lazily on the first call,
         # so without a snapshot, modifying the pipeline between building and the first reset would
         # silently get compiled in.
-        pipeline = tuple(self.reset_pipeline)
+        pipeline = tuple(self.reset_pipeline.values())
 
         @jax.jit
         def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:

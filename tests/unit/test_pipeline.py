@@ -1,12 +1,20 @@
-"""Unit tests for the named simulation pipeline datastructure."""
+"""Unit tests for pipeline utility helpers based on OrderedDict."""
 
+from collections import OrderedDict
 from functools import partial
 
 import jax.numpy as jnp
 import pytest
 
 from crazyflow.sim import Sim
-from crazyflow.sim.pipeline import Pipeline
+from crazyflow.sim.pipeline import (
+    append_fn,
+    insert_fn_after,
+    insert_fn_before,
+    prepend_fn,
+    remove_fn,
+    replace_fn,
+)
 
 
 def fn_a(x: int) -> int:
@@ -22,100 +30,74 @@ def fn_c(x: int) -> int:
 
 
 @pytest.mark.unit
-def test_names_and_iteration():
-    pipeline = Pipeline((fn_a, fn_b))
-    assert pipeline.names == ("fn_a", "fn_b")
-    assert tuple(pipeline) == (fn_a, fn_b)
-    assert len(pipeline) == 2
-    assert "fn_a" in pipeline
-    assert "missing" not in pipeline
+def test_append_and_prepend_order_and_names():
+    pipeline: OrderedDict[str, object] = OrderedDict()
+    append_fn(pipeline, fn_a)
+    append_fn(pipeline, fn_b)
+    prepend_fn(pipeline, fn_c)
+    assert tuple(pipeline.keys()) == ("fn_c", "fn_a", "fn_b")
+    assert tuple(pipeline.values()) == (fn_c, fn_a, fn_b)
 
 
 @pytest.mark.unit
 def test_insert_before_after():
-    pipeline = Pipeline((fn_a, fn_b))
-    pipeline.insert_before("fn_b", fn_c)
-    assert pipeline.names == ("fn_a", "fn_c", "fn_b")
-    pipeline.remove("fn_c")
-    pipeline.insert_after("fn_a", fn_c)
-    assert pipeline.names == ("fn_a", "fn_c", "fn_b")
+    pipeline = OrderedDict([("fn_a", fn_a), ("fn_b", fn_b)])
+    insert_fn_before(pipeline, "fn_b", fn_c)
+    assert tuple(pipeline.keys()) == ("fn_a", "fn_c", "fn_b")
+    remove_fn(pipeline, "fn_c")
+    insert_fn_after(pipeline, "fn_a", fn_c)
+    assert tuple(pipeline.keys()) == ("fn_a", "fn_c", "fn_b")
 
 
 @pytest.mark.unit
-def test_append_prepend_replace_remove():
-    pipeline = Pipeline((fn_a,))
-    pipeline.append(fn_b)
-    pipeline.prepend(fn_c)
-    assert pipeline.names == ("fn_c", "fn_a", "fn_b")
-    pipeline.replace("fn_a", fn_b)
-    assert pipeline.names == ("fn_c", "fn_a", "fn_b"), "Replace must keep position and name"
-    assert tuple(pipeline)[1] == fn_b
-    pipeline.remove("fn_c")
-    assert pipeline.names == ("fn_a", "fn_b")
+def test_replace_keeps_position_and_name():
+    pipeline = OrderedDict([("fn_c", fn_c), ("fn_a", fn_a), ("fn_b", fn_b)])
+    replace_fn(pipeline, fn_b, "fn_a")
+    assert tuple(pipeline.keys()) == ("fn_c", "fn_a", "fn_b")
+    assert tuple(pipeline.values())[1] == fn_b
+
+
+@pytest.mark.unit
+def test_remove_existing_stage():
+    pipeline = OrderedDict([("fn_a", fn_a), ("fn_b", fn_b)])
+    remove_fn(pipeline, "fn_a")
+    assert tuple(pipeline.keys()) == ("fn_b",)
 
 
 @pytest.mark.unit
 def test_unique_names():
-    pipeline = Pipeline((fn_a,))
+    pipeline = OrderedDict([("fn_a", fn_a)])
     with pytest.raises(KeyError, match="already exists"):
-        pipeline.append(fn_a)
+        append_fn(pipeline, fn_a)
     with pytest.raises(KeyError, match="already exists"):
-        pipeline.insert_after("fn_a", fn_b, name="fn_a")
+        insert_fn_after(pipeline, "fn_a", fn_b, name="fn_a")
 
 
 @pytest.mark.unit
 def test_anonymous_fn_requires_name():
-    pipeline = Pipeline()
+    pipeline: OrderedDict[str, object] = OrderedDict()
     with pytest.raises(ValueError, match="explicit name"):
-        pipeline.append(partial(fn_a))
-    pipeline.append(partial(fn_a), name="fn_a_partial")
-    assert pipeline.names == ("fn_a_partial",)
+        append_fn(pipeline, partial(fn_a))
+    append_fn(pipeline, partial(fn_a), name="fn_a_partial")
+    assert tuple(pipeline.keys()) == ("fn_a_partial",)
 
 
 @pytest.mark.unit
 def test_missing_stage():
-    pipeline = Pipeline((fn_a,))
-    with pytest.raises(ValueError, match="No pipeline stage named 'missing'"):
-        pipeline.insert_before("missing", fn_b)
+    pipeline = OrderedDict([("fn_a", fn_a)])
+    with pytest.raises(KeyError, match="No stage named 'missing'"):
+        insert_fn_before(pipeline, "missing", fn_b)
+    with pytest.raises(KeyError, match="No stage named 'missing'"):
+        replace_fn(pipeline, fn_b, "missing")
+    with pytest.raises(KeyError, match="No stage named 'missing'"):
+        remove_fn(pipeline, "missing")
 
 
 @pytest.mark.unit
-def test_sums():
-    pipeline = Pipeline((fn_a,))
-    pipeline = pipeline + fn_b
-    pipeline.append(fn_c, "fn_c_named")
-    assert pipeline.names == ("fn_a", "fn_b", "fn_c_named")
-    pipeline = Pipeline((fn_a,))
-    pipeline += fn_b
-    assert pipeline.names == ("fn_a", "fn_b")
-    pipeline = (fn_c,) + Pipeline((fn_a,))
-    assert pipeline.names == ("fn_c", "fn_a")
-    with pytest.raises(ValueError, match="no __name__"):
-        Pipeline((fn_a,)) + partial(fn_b)  # ``+`` only appends named functions
-
-
-@pytest.mark.unit
-def test_sum_returns_new_pipeline():
-    pipeline = Pipeline((fn_a,))
-    extended = pipeline + fn_b
-    assert pipeline.names == ("fn_a",), "Sums must not modify the original pipeline"
-    assert extended.names == ("fn_a", "fn_b")
-
-
-@pytest.mark.unit
-def test_sim_pipeline_names():
-    """The default sim pipelines expose the documented stage names."""
-    sim = Sim(control="state")
-    assert sim.step_pipeline.names == (
-        "step_state_controller",
-        "step_attitude_controller",
-        "step_force_torque_controller",
-        "integration",
-        "increment_steps",
-        "clip_floor_pos",
-    )
-    assert len(sim.reset_pipeline) == 0
-    sim.close()
+def test_explicit_name_with_append():
+    pipeline = OrderedDict([("fn_a", fn_a)])
+    append_fn(pipeline, fn_c, name="fn_c_named")
+    assert tuple(pipeline.keys()) == ("fn_a", "fn_c_named")
 
 
 @pytest.mark.unit
@@ -128,7 +110,7 @@ def test_pipeline_snapshot():
     def fail_stage(data):  # noqa: ANN001, ANN202
         raise AssertionError("Stage added after build_step_fn must not be traced")
 
-    sim.step_pipeline.append(fail_stage)
+    append_fn(sim.step_pipeline, fail_stage)
     sim.step()  # Traces the compiled function on first call, must use the snapshot
     assert jnp.all(sim.data.core.steps == steps + 1)
     sim.close()
