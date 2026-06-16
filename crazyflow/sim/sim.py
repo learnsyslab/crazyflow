@@ -30,7 +30,6 @@ from crazyflow.sim.physics import (
     so_rpy_rotor_drag_physics,
     so_rpy_rotor_physics,
 )
-from crazyflow.sim.pipeline import Pipeline
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import grid_2d, leaf_replace, pytree_replace
 

@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimState
 from crazyflow.sim.physics import Physics
-from crazyflow.sim.pipeline import insert_fn_after, remove_fn
+from crazyflow.sim.pipeline import remove_fn
 from crazyflow.sim.symbolic import symbolic_from_sim
 
 
