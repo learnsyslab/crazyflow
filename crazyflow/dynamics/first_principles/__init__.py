@@ -1,4 +1,4 @@
-r"""Full rigid-body dynamics model for a quadrotor.
+r"""Full rigid-body dynamics for a quadrotor.
 
 This package implements Newton-Euler dynamics based on physical constants —
 mass, inertia, motor thrust and torque curves, arm length, and drag

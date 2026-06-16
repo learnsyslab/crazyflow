@@ -1,4 +1,4 @@
-"""Symbols used in the symbolic drone models."""
+"""Symbols used in the symbolic drone dynamics."""
 
 import casadi as cs
 
@@ -42,7 +42,7 @@ cmd_roll, cmd_pitch, cmd_yaw = (cs.MX.sym("cmd_roll"), cs.MX.sym("cmd_pitch"), c
 cmd_thrust = cs.MX.sym("cmd_thrust")
 cmd_rpyt = cs.vertcat(cmd_roll, cmd_pitch, cmd_yaw, cmd_thrust)
 
-# Special states for the so_rpy models
+# Special states for the so_rpy dynamics
 roll, pitch, yaw = cs.MX.sym("roll"), cs.MX.sym("pitch"), cs.MX.sym("yaw")
 rpy = cs.vertcat(roll, pitch, yaw)
 droll, dpitch, dyaw = cs.MX.sym("droll"), cs.MX.sym("dpitch"), cs.MX.sym("dyaw")

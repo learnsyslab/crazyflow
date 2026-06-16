@@ -3808,6 +3808,7 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/charset-normalizer?source=hash-mapping
+  run_exports: {}
   size: 58872
   timestamp: 1775127203018
 - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.2.1-pyh707e725_0.conda

@@ -1,9 +1,8 @@
-"""Second-order fitted RPY dynamics model (no rotor dynamics).
+"""Second-order fitted RPY dynamics (no rotor dynamics).
 
-This module implements a simplified quadrotor dynamics model where the rotational
-dynamics are modelled as a fitted second-order linear system driven by roll, pitch,
+This module implements a simplified quadrotor dynamics where the rotational dynamics are modelled as a fitted second-order linear system driven by roll, pitch,
 and yaw (RPY) commands, and the translational dynamics are driven by the collective
-thrust command.  No motor spin-up dynamics are modelled.
+thrust command.  Motor spin-up dynamics are not modelled.
 
 The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
 
@@ -56,7 +55,7 @@ def dynamics(
     rpy_rates_coef: Array,
     cmd_rpy_coef: Array,
 ) -> tuple[Array, Array, Array, Array, Array | None]:
-    """The fitted model with linear, second order rpy dynamics.
+    """The fitted linear, second order rpy dynamics.
 
     Args:
         pos: Position of the drone (m).
@@ -64,7 +63,7 @@ def dynamics(
         vel: Velocity of the drone (m/s).
         ang_vel: Angular velocity of the drone (rad/s).
         cmd: Roll pitch yaw (rad) and collective thrust (N) command.
-        rotor_vel: Speed of the 4 motors (RPMs). Kept for compatibility with the model signature.
+        rotor_vel: Speed of the 4 motors (RPMs). Kept for compatibility with the dynamics signature.
         dist_f: Disturbance force (N) in the world frame acting on the CoM.
         dist_t: Disturbance torque (Nm) in the world frame acting on the CoM.
 
@@ -140,7 +139,7 @@ def symbolic_dynamics(
     rpy_rates_coef: Array,
     cmd_rpy_coef: Array,
 ) -> tuple[cs.MX, cs.MX, cs.MX, cs.MX]:
-    """Return CasADi symbolic expressions for the so_rpy model in quaternion form.
+    """Return CasADi symbolic expressions for the so_rpy dynamics in quaternion form.
 
     Internally delegates to
     [symbolic_dynamics_euler][crazyflow.dynamics.so_rpy.symbolic_dynamics_euler] and converts the
@@ -148,9 +147,9 @@ def symbolic_dynamics(
     [symbolic_dynamics][crazyflow.dynamics.first_principles.symbolic_dynamics].
 
     Args:
-        model_rotor_vel: If ``True``, a scalar rotor-velocity state is appended
-            to ``X`` (for interface compatibility only — ``so_rpy`` has no thrust
-            dynamics and will log a warning).  Defaults to ``False``.
+        model_rotor_vel: If ``True``, a scalar rotor-velocity state is appended to ``X`` (for
+            interface compatibility only — ``so_rpy`` has no thrust dynamics and will log a
+            warning).  Defaults to ``False``.
         model_dist_f: If ``True``, a 3-D force disturbance is appended to ``X``.
         model_dist_t: If ``True``, a 3-D torque disturbance is appended to ``X``.
         mass: Drone mass in kg.
@@ -171,7 +170,7 @@ def symbolic_dynamics(
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), quat(4)]``.
     """
-    # We need to set the rpy and drpy symbols before building the euler model
+    # We need to set the rpy and drpy symbols before building the euler dynamics
     _saved_rpy = symbols.rpy
     _saved_drpy = symbols.drpy
     _rpy_quat = rotation.cs_quat2euler(symbols.quat)
@@ -196,7 +195,7 @@ def symbolic_dynamics(
     # States and Inputs
     X = cs.vertcat(symbols.pos, symbols.quat, symbols.vel, symbols.ang_vel)
     if model_rotor_vel:
-        logging.getLogger(__name__).warning("The so_rpy model does not support thrust dynamics")
+        logging.getLogger(__name__).warning("so_rpy dynamics do not support thrust dynamics")
         X = cs.vertcat(X, symbols.rotor_vel)
     if model_dist_f:
         X = cs.vertcat(X, symbols.dist_f)
@@ -247,11 +246,11 @@ def symbolic_dynamics_euler(
     rpy_rates_coef: Array,
     cmd_rpy_coef: Array,
 ) -> tuple[cs.MX, cs.MX, cs.MX, cs.MX]:
-    """Return CasADi symbolic expressions for the so_rpy model in Euler-angle form.
+    """Return CasADi symbolic expressions for the so_rpy dynamics in Euler-angle form.
 
-    This is the native representation of the ``so_rpy`` model.  The state uses
-    roll/pitch/yaw and their rates rather than quaternion + angular velocity,
-    which avoids trigonometric overhead inside CasADi-based solvers.
+    This is the native representation of the ``so_rpy`` dynamics. The state uses roll/pitch/yaw and
+    their rates rather than quaternion + angular velocity, which avoids trigonometric overhead
+    inside CasADi-based solvers.
 
     Args:
         model_rotor_vel: If ``True``, a scalar rotor-velocity state is appended
@@ -277,7 +276,7 @@ def symbolic_dynamics_euler(
     # States and Inputs
     X = cs.vertcat(symbols.pos, symbols.rpy, symbols.vel, symbols.drpy)
     if model_rotor_vel:
-        logging.getLogger(__name__).warning("The so_rpy model does not support thrust dynamics")
+        logging.getLogger(__name__).warning("so_rpy dynamics do not support thrust dynamics")
         X = cs.vertcat(X, symbols.rotor_vel)
     U = symbols.cmd_rpyt
     cmd_rpy = U[:3]
@@ -306,20 +305,28 @@ def symbolic_dynamics_euler(
 class Params:
     mass: Array  # (N, M, 1)
     """Mass of the drone."""
+
     gravity_vec: Array  # (N, M, 3)
     """Gravity vector of the drone."""
+
     J: Array  # (N, M, 3, 3)
     """Inertia matrix of the drone."""
+
     J_inv: Array  # (N, M, 3, 3)
     """Inverse of the inertia matrix of the drone."""
+
     acc_coef: Array  # (N, M, 1)
     """Coefficient for the acceleration."""
+
     cmd_f_coef: Array  # (N, M, 1)
     """Coefficient for the collective thrust."""
+
     rpy_coef: Array  # (N, M, 1)
     """Coefficient for the roll pitch yaw dynamics."""
+
     rpy_rates_coef: Array  # (N, M, 1)
     """Coefficient for the roll pitch yaw rates dynamics."""
+
     cmd_rpy_coef: Array  # (N, M, 1)
     """Coefficient for the roll pitch yaw command dynamics."""
 
@@ -342,7 +349,7 @@ class Params:
 
 
 def sim_dynamics(data: SimData) -> SimData:
-    """Compute the forces and torques from the so_rpy dynamics model."""
+    """Compute the forces and torques from the so_rpy dynamics."""
     params: Params = data.params
     vel, _, acc, ang_acc, _ = dynamics(
         pos=data.states.pos,

@@ -1,4 +1,4 @@
-"""Core tools for registering and capability checking for the drone models."""
+"""Core tools for registering and capability checking for the drone dynamics."""
 
 from __future__ import annotations
 
@@ -28,22 +28,21 @@ def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
 
     Wraps the decorated function so that:
 
-    * If ``rotor_dynamics=False`` and the caller passes ``rotor_vel``, a
-      ``ValueError`` is raised immediately.
-    * If ``rotor_dynamics=True`` and the caller omits ``rotor_vel``, a
-      ``UserWarning`` is issued and the commanded value is used directly.
+    * If ``rotor_dynamics=False`` and the caller passes ``rotor_vel``, a ``ValueError`` is raised
+      immediately.
+    * If ``rotor_dynamics=True`` and the caller omits ``rotor_vel``, a ``UserWarning`` is issued and
+      the commanded value is used directly.
 
-    The decorator also attaches a ``__dynamics_features__`` attribute to the
-    wrapper, which [dynamics_features][crazyflow.dynamics.dynamics_features] reads.
+    The decorator also attaches a ``__dynamics_features__`` attribute to the wrapper, which
+    [dynamics_features][crazyflow.dynamics.dynamics_features] reads.
 
     Args:
-        rotor_dynamics: Whether the decorated function models rotor velocity
-            dynamics. Set to ``False`` for models that do not accept or integrate
-            ``rotor_vel`` (e.g. ``so_rpy``). Defaults to ``True``.
+        rotor_dynamics: Whether the decorated function models rotor velocity dynamics. Set to
+            ``False`` for models that do not accept or integrate ``rotor_vel`` (e.g. ``so_rpy``).
+            Defaults to ``True``.
 
     Returns:
-        A decorator that wraps the dynamics function with the capability checks
-        described above.
+        A decorator that wraps the dynamics function with the capability checks.
     """
 
     def decorator(fn: F) -> F:
@@ -74,11 +73,11 @@ def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
 def parametrize(
     fn: Callable[P, R], drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> Callable[P, R]:
-    """Parametrize a dynamics function with the default dynamics parameters for a drone model.
+    """Parametrize a dynamics function with the default dynamics parameters for a drone.
 
     Args:
         fn: The dynamics function to parametrize.
-        drone: The drone model to use.
+        drone: The drone to use.
         xp: The array API module to use. If not provided, numpy is used.
         device: The device to use. If none, the device is inferred from the xp module.
 
@@ -109,54 +108,52 @@ def parametrize(
         params = {k: xp.asarray(v, device=device) for k, v in params.items() if k in kwonly_params}
     except KeyError as e:
         raise KeyError(
-            f"Model `{dynamics}` does not exist in the parameter registry for drone `{drone}`"
+            f"Dynamics `{dynamics}` does not exist in the parameter registry for drone `{drone}`"
         ) from e
     except ValueError as e:
-        raise ValueError(f"Drone model `{drone}` not supported for `{dynamics}`") from e
+        raise ValueError(f"Drone `{drone}` not supported for dynamics `{dynamics}`") from e
     return partial(fn, **params)
 
 
 def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict:
-    """Load and merge physical and model-specific parameters for a drone configuration.
+    """Load and merge physical and dynamics-specific parameters for a drone configuration.
 
     Reads parameters from two TOML files:
 
-    * ``crazyflow/drones/params.toml`` — physical parameters shared across all
-      dynamics models (mass, inertia, thrust curves, …).
-    * ``crazyflow/dynamics/<dynamics>/params.toml`` — model-specific coefficients
-      (e.g. fitted RPY coefficients for ``so_rpy``).
+    * ``crazyflow/drones/params.toml`` — physical parameters shared across all dynamics (mass,
+      inertia, thrust curves, …).
+    * ``crazyflow/dynamics/<dynamics>/params.toml`` — dynamics-specific coefficients (e.g. fitted
+      RPY coefficients for ``so_rpy``).
 
-    The two dicts are merged (model-specific values take precedence), and
-    ``J_inv`` is computed from ``J`` and added to the result.
+    The two dicts are merged (dynamics-specific values take precedence), and ``J_inv`` is computed
+    from ``J`` and added to the result.
 
     Args:
-        dynamics: Name of the model sub-package, e.g. ``"first_principles"``,
-            ``"so_rpy"``, ``"so_rpy_rotor"``, or ``"so_rpy_rotor_drag"``.
-        drone: Name of the drone configuration, e.g. ``"cf2x_L250"``.
-            Must exist as a section in both TOML files.
-        xp: Array API module used to convert parameter values. If ``None``,
-            NumPy is used.
+        dynamics: Name of the dynamics sub-package, e.g. ``"first_principles"``, ``"so_rpy"``,
+            ``"so_rpy_rotor"``, or ``"so_rpy_rotor_drag"``.
+        drone: Name of the drone configuration, e.g. ``"cf2x_L250"``. Must exist as a section in
+            both TOML files.
+        xp: Array API module used to convert parameter values. If ``None``, NumPy is used.
 
     Returns:
-        A flat dict mapping parameter names to arrays (or scalars) in the
-        requested array namespace.  Always contains at least ``mass``, ``J``,
-        ``J_inv``, ``gravity_vec``, and the model-specific coefficients for
-        ``dynamics``.
+        A flat dict mapping parameter names to arrays (or scalars) in the requested array namespace.
+        Always contains at least ``mass``, ``J``, ``J_inv``, ``gravity_vec``, and the
+        dynamics-specific coefficients for ``dynamics``.
 
     Raises:
-        KeyError: If ``drone`` is not found in either TOML file, or if
-            ``dynamics`` does not correspond to a known sub-package.
+        KeyError: If ``drone`` is not found in either TOML file, or if ``dynamics`` does not
+        correspond to a known sub-package.
     """
     xp = np if xp is None else xp
     with open(Path(__file__).parents[1] / "drones/params.toml", "rb") as f:
         physical_params = tomllib.load(f)
     if drone not in physical_params:
-        raise KeyError(f"Drone model `{drone}` not found in drones/params.toml")
+        raise KeyError(f"Drone `{drone}` not found in drones/params.toml")
     with open(Path(__file__).parent / f"{dynamics}/params.toml", "rb") as f:
-        model_params = tomllib.load(f)
-    if drone not in model_params:
-        raise KeyError(f"Drone model `{drone}` not found in model params.toml")
-    params = physical_params[drone] | model_params[drone]
+        dynamics_params = tomllib.load(f)
+    if drone not in dynamics_params:
+        raise KeyError(f"Drone `{drone}` not found in {dynamics}/params.toml")
+    params = physical_params[drone] | dynamics_params[drone]
     # Make sure J_inv does not have a dtype fixed before conversion to xp arrays to avoid fixing it
     # to np.float64 when other frameworks might prefer a different dtype.
     params["J_inv"] = np.linalg.inv(params["J"]).tolist()

@@ -1,4 +1,4 @@
-# This file contains all the **physical** parameters for all models.
+# This file contains all the **physical** parameters for all drones.
 
 [cf2x_L250]
 gravity_vec = [0.0, 0.0, -9.81]
@@ -20,12 +20,12 @@ mixing_matrix = [
     [-1.0,  1.0,  1.0, -1.0],
     [-1.0,  1.0, -1.0,  1.0]
 ]
-drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
     [-0.01471782, 0.0,         0.0         ],
     [0.0,         -0.01471782, 0.0         ],
     [0.0,         0.0,         -0.01277641 ]
 ]
-# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# The following parameters are for the platform, but are maybe not actually used by the dynamics. However, 
 # we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
 pwm_min = 7000
 pwm_max = 65535
@@ -58,12 +58,12 @@ mixing_matrix = [
     [-1.0,  1.0,  1.0, -1.0],
     [-1.0,  1.0, -1.0,  1.0]
 ]
-drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
     [-0.01351483, 0.0,         0.0         ],
     [0.0,         -0.01351483, 0.0         ],
     [0.0,         0.0,         -0.01677452 ]
 ]
-# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# The following parameters are for the platform, but are maybe not actually used by the dynamics. However, 
 # we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
 pwm_min = 7000
 pwm_max = 65535
@@ -96,12 +96,12 @@ mixing_matrix = [
     [-1.0,  1.0,  1.0, -1.0],
     [-1.0,  1.0, -1.0,  1.0]
 ]
-drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
     [-0.01556697, 0.0,         0.0         ],
     [0.0,         -0.01556697, 0.0         ],
     [0.0,         0.0,         -0.02191672 ]
 ]
-# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# The following parameters are for the platform, but are maybe not actually used by the dynamics. However, 
 # we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
 pwm_min = 7000
 pwm_max = 65535
@@ -134,12 +134,12 @@ mixing_matrix = [
     [-1.0,  1.0,  1.0, -1.0],
     [-1.0,  1.0, -1.0,  1.0]
 ]
-drag_matrix = [  # This term is from the so_rpy_rotor_drag model
+drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
     [-0.02149163, 0.0,          0.0         ],
     [0.0,         -0.02149163,  0.0         ],
     [0.0,         0.0,          -0.02359736 ]
 ]
-# The following parameters are for the platform, but are maybe not actually used by the models. However, 
+# The following parameters are for the platform, but are maybe not actually used by the dynamics. However, 
 # we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
 pwm_min = 7000
 pwm_max = 65535

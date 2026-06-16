@@ -12,7 +12,7 @@
 
 </div>
 
-Crazyflow is a research simulator for quadrotors. It runs batched, differentiable simulations on CPU and GPU via JAX, with analytical and abstracted models for the Crazyflie 2.x family.
+Crazyflow is a research simulator for quadrotors. It runs batched, differentiable simulations on CPU and GPU via JAX, with analytical and abstracted dynamics for the Crazyflie 2.x family.
 
 ```python
 import numpy as np
@@ -38,8 +38,8 @@ for _ in range(100):
 - **n\_worlds x n\_drones** — batched over independent environments and multi-drone swarms simultaneously
 - **GPU-accelerated** — up to 914 M steps/s on an RTX 4090 (first-principles physics, 262 K worlds)
 - **Differentiable** — `jax.grad` works through the full dynamics and control pipeline
-- **First-principles models** — physics model using first-principles equations and parameters identified from real-world measurements
-- **Abstracted models** — three physics models fitted from real Crazyflie flight data
+- **First-principles dynamics** — physics model using first-principles equations and parameters identified from real-world measurements
+- **Abstracted dynamics** — three dynamics models fitted from real Crazyflie flight data
 - **Modular pipelines** — step and reset are tuples of plain JAX functions; insert anything, anywhere
 - **MuJoCo integration** — onscreen and offscreen rendering, raycasting, and contact detection via MJX
 
@@ -71,17 +71,6 @@ First-principles physics, one drone. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 409
 | 262 144 | 12.6 M | 914 M |
 
 Full benchmarks including multi-drone scaling are in the [documentation](https://learnsyslab.github.io/crazyflow).
-
-## Related packages
-
-Crazyflow is built on two companion packages that can also be used independently:
-
-| Package | Description |
-|---|---|
-| [drone-models](https://github.com/learnsyslab/drone-models) | Drone dynamics models (first-principles and fitted) compatible with NumPy, JAX, and PyTorch. Used by Crazyflow as the physics backend. |
-| [drone-controllers](https://github.com/learnsyslab/drone-controllers) | Reference controller implementations including the Mellinger geometric controller. Used by Crazyflow to provide the state and attitude control modes. |
-
-Both are installed automatically as dependencies. For development, they are included as submodules in `submodules/` and installed in editable mode by the pixi environment.
 
 ## Citation
 

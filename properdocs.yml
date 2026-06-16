@@ -49,7 +49,7 @@ nav:
     - Simulator Overview: user-guide/sim-overview.md
     - Object-Oriented API: user-guide/oo-api.md
     - Functional API: user-guide/functional-api.md
-    - Dynamics Models: user-guide/dynamics-models.md
+    - Dynamics: user-guide/dynamics.md
     - Control Modes: user-guide/control-modes.md
     - Pipelines: user-guide/pipelines.md
     - Visualization: user-guide/visualization.md

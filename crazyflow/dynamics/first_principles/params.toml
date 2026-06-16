@@ -1,4 +1,4 @@
-# Since the first principles models only rely on physical parameters, 
+# Since the first principles dynamics only rely on physical parameters, 
 # which are already defined in data/params.toml, this file is intentionally left empty.
 
 [cf2x_L250]

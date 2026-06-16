@@ -1,12 +1,16 @@
-"""crazyflow.dynamics: quadrotor dynamics models for estimation, control, and simulation.
+"""Quadrotor dynamics for estimation, control, and simulation.
 
-This package provides numeric and symbolic quadrotor dynamics models at multiple
-fidelity levels. The models are pure functions compatible with any Array API backend
-(NumPy, JAX, PyTorch, etc.) and with CasADi for symbolic computation.
+This package provides numeric and symbolic quadrotor dynamics at multiple fidelity levels. The
+dynamics are implemented as pure functions compatible with any Array API backend (NumPy, JAX,
+PyTorch, etc.) and with CasADi for symbolic computation.
+
+The dynamics are at the core of Crazyflow's simulation. However, they are written to be as
+self-contained as possible, so that they can be used independently for other purposes, such as state
+estimation or control design.
 
 Use [parametrize][crazyflow.dynamics.parametrize] to bind a dynamics function to a named drone
 configuration, and [available_dynamics][crazyflow.dynamics.available_dynamics] to enumerate all
-registered dynamics models.
+registered dynamics.
 """
 
 import os
@@ -49,7 +53,7 @@ def dynamics_features(dynamics: Callable) -> dict[str, bool]:
     """Return the feature flags declared by a dynamics function.
 
     Feature flags are set by the [supports][crazyflow.dynamics.core.supports] decorator on each
-    dynamics function and describe which optional inputs the dynamics model accepts.
+    dynamics function and describe which optional inputs the dynamics accepts.
 
     Args:
         dynamics: A dynamics function, or a ``functools.partial`` wrapping one (as
@@ -57,7 +61,7 @@ def dynamics_features(dynamics: Callable) -> dict[str, bool]:
 
     Returns:
         A dict of feature names to booleans. Currently contains:
-            - ``"rotor_dynamics"``: ``True`` if the model accepts and integrates
+            - ``"rotor_dynamics"``: ``True`` if the dynamics accepts and integrates
               ``rotor_vel``, ``False`` if passing ``rotor_vel`` raises a
               ``ValueError``.
 
