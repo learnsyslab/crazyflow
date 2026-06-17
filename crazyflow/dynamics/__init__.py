@@ -12,24 +12,7 @@ Use [parametrize][crazyflow.dynamics.parametrize] to bind a dynamics function to
 configuration, and ``available_dynamics`` to enumerate all registered dynamics.
 """
 
-import os
-import sys
 from typing import Callable
-
-# SciPy array API check. We use the most recent array API features, which require the
-# SCIPY_ARRAY_API environment variable to be set to "1". This flag MUST be set before importing
-# scipy, because scipy's C extensions cannot be unloaded once they have been imported. Therefore, we
-# have to error out if the flag is not set. Otherwise, we immediately import scipy to ensure that no
-# other package sets the flag to a different value before importing scipy.
-
-if "scipy" in sys.modules and os.environ.get("SCIPY_ARRAY_API") != "1":
-    msg = """scipy has already been imported and the 'SCIPY_ARRAY_API' environment variable has not
-    been set. Please restart your Python session and set SCIPY_ARRAY_API="1" before importing any
-    packages that depend on scipy, or import this package first to automatically set the flag."""
-    raise RuntimeError(msg)
-
-os.environ["SCIPY_ARRAY_API"] = "1"
-import scipy  # noqa: F401, ensure scipy uses array API features
 
 from crazyflow.dynamics.core import Dynamics, parametrize
 from crazyflow.dynamics.first_principles import dynamics as _first_principles_dynamics

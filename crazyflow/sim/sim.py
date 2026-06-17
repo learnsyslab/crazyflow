@@ -9,16 +9,17 @@ import jax
 import jax.numpy as jnp
 import mujoco
 import mujoco.mjx as mjx
-from drone_controllers.mellinger import (
-    attitude2force_torque,
-    force_torque2rotor_vel,
-    state2attitude,
-)
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 
 import crazyflow.sim.functional as F
-from crazyflow.control.control import Control, controllable
+from crazyflow.control.control import Control
+from crazyflow.control.mellinger import (
+    sim_attitude2force_torque,
+    sim_commit_attitude,
+    sim_force_torque2rotor_vel,
+    sim_state2attitude,
+)
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
 from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
@@ -28,17 +29,11 @@ from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.utils import grid_2d, leaf_replace, pytree_replace
+from crazyflow.utils import grid_2d, pytree_replace
 
 if TYPE_CHECKING:
     from mujoco.mjx import Data, Model
     from numpy.typing import NDArray
-
-    from crazyflow.control.mellinger import (
-        MellingerAttitudeData,
-        MellingerForceTorqueData,
-        MellingerStateData,
-    )
 
 Params = ParamSpec("Params")  # Represents arbitrary parameters
 Return = TypeVar("Return")  # Represents the return type
@@ -447,18 +442,18 @@ def build_control_fns(
     """
     match control:
         case Control.state:
-            control_pipeline = (step_state_controller, step_attitude_controller)
+            control_pipeline = (sim_state2attitude, sim_attitude2force_torque)
             if dynamics == Dynamics.first_principles:
-                control_pipeline = control_pipeline + (step_force_torque_controller,)
+                control_pipeline = control_pipeline + (sim_force_torque2rotor_vel,)
         case Control.attitude:
             if dynamics == Dynamics.first_principles:
-                control_pipeline = (step_attitude_controller, step_force_torque_controller)
+                control_pipeline = (sim_attitude2force_torque, sim_force_torque2rotor_vel)
             elif dynamics in (Dynamics.so_rpy, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag):
-                control_pipeline = (commit_attitude_controller,)
+                control_pipeline = (sim_commit_attitude,)
             else:
                 raise NotImplementedError(f"Control mode {control} not implemented for {dynamics}")
         case Control.force_torque:
-            control_pipeline = (step_force_torque_controller,)
+            control_pipeline = (sim_force_torque2rotor_vel,)
         case Control.rotor_vel:
             control_pipeline = ()
         case _:
@@ -534,79 +529,6 @@ def sync_sim2mjx(data: SimData, mjx_data: Data, mjx_model: Model) -> tuple[SimDa
     mjx_data = jax.vmap(mjx.collision, in_axes=(None, 0))(mjx_model, mjx_data)
     data = data.replace(core=data.core.replace(mjx_synced=True))
     return data, mjx_data
-
-
-def step_state_controller(data: SimData) -> SimData:
-    """Compute the updated controls for the state controller."""
-    states = data.states
-    state_ctrl: MellingerStateData = data.controls.state
-    assert state_ctrl is not None, "Using state controller without initialized data"
-    mask = controllable(data.core.steps, data.core.freq, state_ctrl.steps, state_ctrl.freq)
-    state_ctrl = leaf_replace(state_ctrl, mask, cmd=state_ctrl.staged_cmd)
-    rpyt, pos_err_i = state2attitude(
-        states.pos,
-        states.quat,
-        states.vel,
-        state_ctrl.cmd,
-        ctrl_errors=(state_ctrl.pos_err_i,),
-        ctrl_freq=state_ctrl.freq,
-        **state_ctrl.params,
-    )
-    state_ctrl = leaf_replace(state_ctrl, mask, steps=data.core.steps, pos_err_i=pos_err_i)
-    attitude_ctrl = leaf_replace(data.controls.attitude, mask, staged_cmd=rpyt)
-    return data.replace(controls=data.controls.replace(state=state_ctrl, attitude=attitude_ctrl))
-
-
-def step_attitude_controller(data: SimData) -> SimData:
-    """Compute the updated controls for the attitude controller."""
-    states = data.states
-    attitude_ctrl: MellingerAttitudeData = data.controls.attitude
-    assert attitude_ctrl is not None, "Using attitude controller without initialized data"
-    mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
-    attitude_ctrl = leaf_replace(attitude_ctrl, mask, cmd=attitude_ctrl.staged_cmd)
-    force, torque, r_int_error = attitude2force_torque(
-        states.quat,
-        states.ang_vel,
-        attitude_ctrl.cmd,
-        ctrl_errors=(attitude_ctrl.r_int_error,),
-        ctrl_freq=attitude_ctrl.freq,
-        prev_ang_vel=attitude_ctrl.last_ang_vel,
-        **attitude_ctrl.params,
-    )
-    attitude_ctrl = leaf_replace(
-        attitude_ctrl,
-        mask,
-        r_int_error=r_int_error,
-        last_ang_vel=states.ang_vel,
-        steps=data.core.steps,
-    )
-    ft_ctrl = leaf_replace(
-        data.controls.force_torque, mask, staged_cmd=jnp.concat([force, torque], axis=-1)
-    )
-    return data.replace(
-        states=states, controls=data.controls.replace(attitude=attitude_ctrl, force_torque=ft_ctrl)
-    )
-
-
-def commit_attitude_controller(data: SimData) -> SimData:
-    """Commit the staged attitude command to the controller setpoint."""
-    attitude_ctrl: MellingerAttitudeData = data.controls.attitude
-    mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
-    attitude_ctrl = leaf_replace(attitude_ctrl, mask, cmd=attitude_ctrl.staged_cmd)
-    return data.replace(controls=data.controls.replace(attitude=attitude_ctrl))
-
-
-def step_force_torque_controller(data: SimData) -> SimData:
-    """Compute the updated controls for the thrust controller."""
-    ft_ctrl: MellingerForceTorqueData = data.controls.force_torque
-    assert ft_ctrl is not None, "Using force torque controller without initialized data"
-    mask = controllable(data.core.steps, data.core.freq, ft_ctrl.steps, ft_ctrl.freq)
-    ft_ctrl = leaf_replace(ft_ctrl, mask, cmd=ft_ctrl.staged_cmd)
-    rotor_vel = force_torque2rotor_vel(
-        ft_ctrl.cmd[..., [0]], ft_ctrl.cmd[..., 1:], **ft_ctrl.params
-    )
-    ft_ctrl = leaf_replace(ft_ctrl, mask, steps=data.core.steps)
-    return data.replace(controls=data.controls.replace(rotor_vel=rotor_vel, force_torque=ft_ctrl))
 
 
 def clip_floor_pos(data: SimData) -> SimData:
