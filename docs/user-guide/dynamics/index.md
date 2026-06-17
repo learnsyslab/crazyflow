@@ -95,5 +95,5 @@ The `Dynamics` enum above is how you select a dynamics *inside the simulator*. T
 
 ## Next steps
 
-- [Control Modes](../control-modes.md) — command shapes and the control hierarchy
+- [Control Modes](../control/index.md) — command shapes and the control hierarchy
 - [Object-Oriented API](../oo-api.md) — full constructor arguments

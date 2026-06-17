@@ -59,7 +59,11 @@ else:
     * [dynamics.symbols](crazyflow/dynamics/symbols.md)
 * Control
     * [control](crazyflow/control/index.md)
-    * [control.mellinger](crazyflow/control/mellinger.md)
+    * [control.control](crazyflow/control/control.md)
+    * [control.core](crazyflow/control/core.md)
+    * [control.transform](crazyflow/control/transform.md)
+    * [control.mellinger](crazyflow/control/mellinger/index.md)
+    * [control.mellinger.control](crazyflow/control/mellinger/control.md)
 * Environments
     * [envs](crazyflow/envs/index.md)
     * [envs.drone_env](crazyflow/envs/drone_env.md)

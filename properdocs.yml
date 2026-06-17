@@ -56,7 +56,14 @@ nav:
       - Symbolic dynamics: user-guide/dynamics/symbolic.md
       - System identification: user-guide/dynamics/system-identification.md
       - Transform utilities: user-guide/dynamics/transforms.md
-    - Control Modes: user-guide/control-modes.md
+    - Control Modes:
+      - user-guide/control/index.md
+      - Controllers: user-guide/control/controllers.md
+      - Mellinger controller: user-guide/control/mellinger.md
+      - Parametrization: user-guide/control/parametrize.md
+      - Integral errors: user-guide/control/integral-errors.md
+      - Batching: user-guide/control/batching.md
+      - JIT compilation: user-guide/control/jit.md
     - Pipelines: user-guide/pipelines.md
     - Visualization: user-guide/visualization.md
     - MuJoCo Integration: user-guide/mujoco.md

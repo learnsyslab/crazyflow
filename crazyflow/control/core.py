@@ -61,8 +61,9 @@ def load_params(controller: str, drone: str) -> dict[str, dict]:
     """Load the raw parameter table for a controller and drone.
 
     Reads ``crazyflow/control/<controller>/params.toml`` and returns the drone's table, nested by
-    section (``"core"`` and one per controller function). Use [load_fn_params][load_fn_params] to
-    select and convert the parameters a specific controller function accepts.
+    section (``"core"`` and one per controller function). Use
+    [load_fn_params][crazyflow.control.core.load_fn_params] to select and convert the parameters a
+    specific controller function accepts.
 
     Args:
         controller: Name of the controller sub-package, e.g. ``"mellinger"``.

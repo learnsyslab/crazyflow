@@ -162,7 +162,18 @@ Each control mode has its own update rate. The dynamics tick (`freq`) is always 
 
 The simulator applies a new command only when the control tick fires. Between ticks, the previous command is held. The number of dynamics steps per control tick is `freq // control_freq`.
 
+## Using the controllers standalone
+
+The control modes above are how the simulator drives the onboard controllers. Those controllers also live in `crazyflow.control` as a self-contained library of pure functions, usable on their own for control design, learning-based policies, or as a reference implementation, independent of `Sim`. The following guides cover that standalone API:
+
+- [Controllers](controllers.md): the controller interface and the Mellinger pipeline
+- [Mellinger controller](mellinger.md): the three stages, their inputs and outputs
+- [Parametrization](parametrize.md): binding a controller to a drone configuration
+- [Integral errors](integral-errors.md): carrying controller state across calls
+- [Batching](batching.md): evaluating many drones at once
+- [JIT compilation](jit.md): compiling controllers with `jax.jit`
+
 ## Next steps
 
-- [Functional API](functional-api.md) — running control inside JIT with `F.controllable`
-- [Dynamics](dynamics/index.md) — compatibility between dynamics and control modes
+- [Functional API](../functional-api.md): running control inside JIT with `F.controllable`
+- [Dynamics](../dynamics/index.md): compatibility between dynamics and control modes

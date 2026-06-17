@@ -36,7 +36,7 @@ def state2attitude(
     quat: Array,
     vel: Array,
     cmd: Array,
-    ctrl_errors: tuple[Array, ...] | None = None,
+    pos_err_i: Array | None = None,
     ctrl_freq: float = 100,
     *,
     mass: float,
@@ -60,8 +60,8 @@ def state2attitude(
         vel: Drone velocity with shape (..., 3).
         cmd: Full state command in SI units and rad with shape (..., 13). The entries are
             [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
-        ctrl_errors: Tuple of integral errors. For state2attitude, the tuple contains a single array
-            (..., 3) for the position integral error or is None.
+        pos_err_i: Position integral error (..., 3) from the previous call. If None, it is
+            initialised to zero.
         ctrl_freq: Control frequency in Hz
         mass: Drone mass used for calculations in the controller in kg.
         kp: Proportional gain for the position controller with shape (3,).
@@ -90,7 +90,7 @@ def state2attitude(
     pos_err = setpoint_pos - pos  # l. 145 Position Error (ep)
     vel_err = setpoint_vel - vel  # l. 148 Velocity Error (ev)
     # l.151 ff Integral Error
-    int_pos_err = xp.zeros_like(pos) if ctrl_errors is None else ctrl_errors[0]
+    int_pos_err = xp.zeros_like(pos) if pos_err_i is None else pos_err_i
     int_pos_err = xp.clip(int_pos_err + pos_err * dt, -int_err_max, int_err_max)
     # l. 161 Desired thrust [F_des]
     # => only one case here, since setpoint is always in absolute mode
@@ -147,7 +147,7 @@ def attitude2force_torque(
     ang_vel: Array,
     cmd: Array,
     prev_ang_vel: Array | None = None,
-    ctrl_errors: tuple[Array, ...] | None = None,
+    r_int_error: Array | None = None,
     ctrl_freq: int = 500,
     *,
     kR: Array,
@@ -173,8 +173,8 @@ def attitude2force_torque(
         quat: Drone orientation as xyzw quaternion with shape (..., 4).
         ang_vel: Drone angular drone velocity in rad/s with shape (..., 3).
         cmd: Commanded attitude (roll, pitch, yaw) and total thrust [rad, rad, rad, N].
-        ctrl_errors: Tuple of integral errors. For attitude2force_torque, the tuple contains a
-            single array (..., 3) for the angular velocity integral error or is None.
+        r_int_error: Angular velocity integral error (..., 3) from the previous call. If None, it
+            is initialised to zero.
         ctrl_freq: Control frequency in Hz
         kR: Proportional gain for the rotation error with shape (3,).
         kw: Proportional gain for the angular velocity error with shape (3,).
@@ -221,7 +221,7 @@ def attitude2force_torque(
     ang_vel_d_err = xpx.at(ang_vel_d_err)[..., 2].set(0)
 
     # l. 268 ff Integral Error
-    r_int_error = xp.zeros_like(ang_vel) if ctrl_errors is None else ctrl_errors[0]
+    r_int_error = xp.zeros_like(ang_vel) if r_int_error is None else r_int_error
     r_int_error = r_int_error - eR * dt
     r_int_error = xp.clip(r_int_error, -int_err_max, int_err_max)
     # l. 278 ff Moment:
@@ -244,8 +244,8 @@ def attitude2force_torque(
     # TODO: Long-term, the Mellinger controller should use the new power distribution which
     # calculates motor forces in Newtons. However, for now the firmware uses the legacy power
     # distribution, so we keep it here for compatibility. To have a single consistent interface for
-    # controllers within drone_models, we still want to return SI forces and torques. We thus need
-    # to convert the legacy output to SI units.
+    # controllers, we still want to return SI forces and torques. We thus need to convert the legacy
+    # output to SI units.
     # l. 310 ff
     torque_des = (mixing_matrix @ motor_forces[..., None])[..., 0] * xp.stack([L, L, thrust2torque])
     force_des = xp.sum(motor_forces, axis=-1)[..., None]
@@ -420,7 +420,7 @@ def sim_state2attitude(data: SimData) -> SimData:
         states.quat,
         states.vel,
         state_ctrl.cmd,
-        ctrl_errors=(state_ctrl.pos_err_i,),
+        pos_err_i=state_ctrl.pos_err_i,
         ctrl_freq=state_ctrl.freq,
         **state_ctrl.params,
     )
@@ -440,7 +440,7 @@ def sim_attitude2force_torque(data: SimData) -> SimData:
         states.quat,
         states.ang_vel,
         attitude_ctrl.cmd,
-        ctrl_errors=(attitude_ctrl.r_int_error,),
+        r_int_error=attitude_ctrl.r_int_error,
         ctrl_freq=attitude_ctrl.freq,
         prev_ang_vel=attitude_ctrl.last_ang_vel,
         **attitude_ctrl.params,
