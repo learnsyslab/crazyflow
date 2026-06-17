@@ -8,11 +8,11 @@ from crazyflow.control.mellinger.control import (
     MellingerForceTorqueData,
     MellingerStateData,
     attitude2force_torque,
+    control_attitude2force_torque,
+    control_commit_attitude,
+    control_force_torque2rotor_vel,
+    control_state2attitude,
     force_torque2rotor_vel,
-    sim_attitude2force_torque,
-    sim_commit_attitude,
-    sim_force_torque2rotor_vel,
-    sim_state2attitude,
     state2attitude,
 )
 
@@ -23,8 +23,8 @@ __all__ = [
     "MellingerStateData",
     "MellingerAttitudeData",
     "MellingerForceTorqueData",
-    "sim_state2attitude",
-    "sim_attitude2force_torque",
-    "sim_commit_attitude",
-    "sim_force_torque2rotor_vel",
+    "control_state2attitude",
+    "control_attitude2force_torque",
+    "control_commit_attitude",
+    "control_force_torque2rotor_vel",
 ]

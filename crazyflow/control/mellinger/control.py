@@ -408,7 +408,7 @@ class MellingerForceTorqueData:
         )
 
 
-def sim_state2attitude(data: SimData) -> SimData:
+def control_state2attitude(data: SimData) -> SimData:
     """Compute the updated controls for the state controller."""
     states = data.states
     state_ctrl: MellingerStateData = data.controls.state
@@ -429,7 +429,7 @@ def sim_state2attitude(data: SimData) -> SimData:
     return data.replace(controls=data.controls.replace(state=state_ctrl, attitude=attitude_ctrl))
 
 
-def sim_attitude2force_torque(data: SimData) -> SimData:
+def control_attitude2force_torque(data: SimData) -> SimData:
     """Compute the updated controls for the attitude controller."""
     states = data.states
     attitude_ctrl: MellingerAttitudeData = data.controls.attitude
@@ -460,7 +460,7 @@ def sim_attitude2force_torque(data: SimData) -> SimData:
     )
 
 
-def sim_commit_attitude(data: SimData) -> SimData:
+def control_commit_attitude(data: SimData) -> SimData:
     """Commit the staged attitude command to the controller setpoint."""
     attitude_ctrl: MellingerAttitudeData = data.controls.attitude
     mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
@@ -468,7 +468,7 @@ def sim_commit_attitude(data: SimData) -> SimData:
     return data.replace(controls=data.controls.replace(attitude=attitude_ctrl))
 
 
-def sim_force_torque2rotor_vel(data: SimData) -> SimData:
+def control_force_torque2rotor_vel(data: SimData) -> SimData:
     """Compute the updated controls for the thrust controller."""
     ft_ctrl: MellingerForceTorqueData = data.controls.force_torque
     assert ft_ctrl is not None, "Using force torque controller without initialized data"

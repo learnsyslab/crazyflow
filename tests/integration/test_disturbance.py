@@ -4,7 +4,7 @@ import pytest
 
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
-from crazyflow.sim.pipeline import insert_fn_after
+from crazyflow.sim.pipeline import append_fn
 
 
 def disturbance_fn(data: SimData) -> SimData:
@@ -30,7 +30,7 @@ def test_disturbance(dynamics: Dynamics):
         pos.append(sim.data.states.pos[0, 0])
 
     sim.reset()
-    insert_fn_after(sim.step_pipeline, "step_state_controller", disturbance_fn)
+    append_fn(sim.step_pipeline, disturbance_fn, name="disturbance")
     sim.build_step_fn()
     for _ in range(n_steps):
         sim.state_control(control)

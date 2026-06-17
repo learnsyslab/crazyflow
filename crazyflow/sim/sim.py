@@ -15,10 +15,10 @@ from jax import Array, Device
 import crazyflow.sim.functional as F
 from crazyflow.control.control import Control
 from crazyflow.control.mellinger import (
-    sim_attitude2force_torque,
-    sim_commit_attitude,
-    sim_force_torque2rotor_vel,
-    sim_state2attitude,
+    control_attitude2force_torque,
+    control_commit_attitude,
+    control_force_torque2rotor_vel,
+    control_state2attitude,
 )
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
@@ -107,8 +107,8 @@ class Sim:
         # The ``select_xxx_fn`` methods return functions, not the results of calling those
         # functions. They act as factories that produce building blocks for the construction of our
         # simulation pipeline.
-        for fn in build_control_fns(self.control, self.dynamics):
-            append_fn(self.step_pipeline, fn)
+        for name, fn in build_control_fns(self.control, self.dynamics):
+            append_fn(self.step_pipeline, fn, name=name)
         integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
         append_fn(self.step_pipeline, increment_steps)
@@ -433,33 +433,37 @@ class Sim:
 
 def build_control_fns(
     control: Control, dynamics: Dynamics
-) -> tuple[Callable[[SimData], SimData], ...]:
-    """Select the control functions for the given control mode.
+) -> tuple[tuple[str, Callable[[SimData], SimData]], ...]:
+    """Select the named control stages for the given control mode.
 
     Note:
-        This function returns a tuple of functions, not a single function. The returned functions
-        are called in succession in the simulation pipeline.
+        Returns ``(name, fn)`` pairs, called in succession in the simulation pipeline. The names are
+        the stable pipeline stage identifiers used to insert, replace, or remove stages.
     """
+    state = ("state_controller", control_state2attitude)
+    attitude = ("attitude_controller", control_attitude2force_torque)
+    force_torque = ("force_torque_controller", control_force_torque2rotor_vel)
+    commit_attitude = ("commit_attitude", control_commit_attitude)
     match control:
         case Control.state:
-            control_pipeline = (sim_state2attitude, sim_attitude2force_torque)
+            stages = (state, attitude)
             if dynamics == Dynamics.first_principles:
-                control_pipeline = control_pipeline + (sim_force_torque2rotor_vel,)
+                stages = stages + (force_torque,)
         case Control.attitude:
             if dynamics == Dynamics.first_principles:
-                control_pipeline = (sim_attitude2force_torque, sim_force_torque2rotor_vel)
+                stages = (attitude, force_torque)
             elif dynamics in (Dynamics.so_rpy, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag):
-                control_pipeline = (sim_commit_attitude,)
+                stages = (commit_attitude,)
             else:
                 raise NotImplementedError(f"Control mode {control} not implemented for {dynamics}")
         case Control.force_torque:
-            control_pipeline = (sim_force_torque2rotor_vel,)
+            stages = (force_torque,)
         case Control.rotor_vel:
-            control_pipeline = ()
+            stages = ()
         case _:
             raise NotImplementedError(f"Control mode {control} not implemented")
 
-    return control_pipeline
+    return stages
 
 
 def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
