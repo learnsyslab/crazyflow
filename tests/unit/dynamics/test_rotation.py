@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import array_api_compat.numpy as np
 import array_api_strict as xp
+import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 

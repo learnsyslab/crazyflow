@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import array_api_compat.numpy as np
+import numpy as np
 import pytest
 
 from crazyflow.dynamics.utils.data_utils import derivatives_svf, preprocessing

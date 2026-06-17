@@ -5,11 +5,11 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Callable
 
-import array_api_compat.numpy as np
 import array_api_strict as xp
 import casadi as cs
 import jax
 import jax.numpy as jp
+import numpy as np
 import pytest
 from array_api_compat import device as xp_device
 
