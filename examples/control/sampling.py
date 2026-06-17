@@ -32,7 +32,7 @@ except RuntimeError:
 
 # Simulation configuration
 DRONE_MODEL = "cf21B_500"
-DURATION = 18.0
+DURATION = 10.0
 FPS = 60
 RENDER = True
 
