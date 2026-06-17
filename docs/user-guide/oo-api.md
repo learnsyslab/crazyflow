@@ -196,7 +196,7 @@ sim.close()                           # close the viewer
 
 ## Domain randomization
 
-Define physical-parameter randomization as a reset pipeline stage. Each stage receives the restored `SimData` and an optional world mask, and returns the randomized data:
+Define physical-parameter randomization as a reset pipeline stage. Each stage receives the restored `SimData`, the default `SimData`, and an optional world mask, and returns the randomized data:
 
 ```python
 import jax
@@ -204,17 +204,17 @@ from jax import Array
 
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
+from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
-@jax.jit
-def randomize_mass(data: SimData, mask: Array | None = None) -> SimData:
+def randomize_mass(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
     key, mass_key = jax.random.split(data.core.rng_key)
     mass = data.params.mass + jax.random.normal(mass_key, data.params.mass.shape) * 2e-3
     params = leaf_replace(data.params, mask, mass=mass)
     return data.replace(params=params, core=data.core.replace(rng_key=key))
 
 sim = Sim(n_worlds=4, n_drones=1)
-sim.reset_pipeline = (randomize_mass,)
+append_fn(sim.reset_pipeline, randomize_mass)
 sim.build_reset_fn()
 sim.reset()  # randomizes every world
 ```

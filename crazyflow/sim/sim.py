@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from functools import partial, wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
@@ -29,6 +30,7 @@ from crazyflow.sim.physics import (
     so_rpy_rotor_drag_physics,
     so_rpy_rotor_physics,
 )
+from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import grid_2d, leaf_replace, pytree_replace
 
 if TYPE_CHECKING:
@@ -104,18 +106,23 @@ class Sim:
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
-        self.reset_pipeline: tuple[Callable[[SimData, Array[bool] | None], SimData], ...] = tuple()
-        self.step_pipeline: tuple[Callable[[SimData], SimData], ...] = tuple()
+        self.reset_pipeline: OrderedDict[
+            str, Callable[[SimData, SimData, Array[bool] | None], SimData]
+        ] = OrderedDict()
+        append_fn(self.reset_pipeline, reset)
+
+        self.step_pipeline: OrderedDict[str, Callable[[SimData], SimData]] = OrderedDict()
         # The ``select_xxx_fn`` methods return functions, not the results of calling those
         # functions. They act as factories that produce building blocks for the construction of our
         # simulation pipeline.
-        self.step_pipeline += build_control_fns(self.control, self.physics)
-        physics_fn = select_physics_fn(self.physics)
-        self.step_pipeline += (select_integrate_fn(self.integrator, physics_fn),)
-        self.step_pipeline += (increment_steps,)
+        for fn in build_control_fns(self.control, self.physics):
+            append_fn(self.step_pipeline, fn)
+        integrate_fn = select_integrate_fn(self.integrator, select_physics_fn(self.physics))
+        append_fn(self.step_pipeline, integrate_fn, name="integration")
+        append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
-        self.step_pipeline += (clip_floor_pos,)
+        append_fn(self.step_pipeline, clip_floor_pos)
 
         self._reset = self.build_reset_fn()
         self._step = self.build_step_fn()
@@ -258,7 +265,10 @@ class Sim:
             The pure JAX function that steps through the simulation. It takes the current SimData
             and the number of steps to simulate, and returns the updated SimData.
         """
-        pipeline = self.step_pipeline
+        # Snapshot the pipeline functions into a tuple. jax.jit traces lazily on the first call,
+        # so without a snapshot, modifying the pipeline between building and the first step would
+        # silently get compiled in.
+        pipeline = tuple(self.step_pipeline.values())
 
         # None is required by jax.lax.scan to unpack the tuple returned by single_step.
         def single_step(data: SimData, _: None) -> tuple[SimData, None]:
@@ -293,13 +303,15 @@ class Sim:
             The pure JAX function that resets simulation data. It takes the current SimData, default
             SimData, and an optional mask for worlds to reset, returning the updated SimData.
         """
-        pipeline = self.reset_pipeline
+        # Snapshot the pipeline functions into a tuple. jax.jit traces lazily on the first call,
+        # so without a snapshot, modifying the pipeline between building and the first reset would
+        # silently get compiled in.
+        pipeline = tuple(self.reset_pipeline.values())
 
         @jax.jit
         def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
-            data = pytree_replace(data, default_data, mask)  # Does not overwrite rng_key
             for fn in pipeline:
-                data = fn(data, mask)
+                data = fn(data, default_data, mask)
             data = data.replace(core=data.core.replace(mjx_synced=False))  # Flag mjx data as stale
             return data
 
@@ -488,6 +500,11 @@ def select_integrate_fn(
             raise NotImplementedError(f"Integrator {integrator} not implemented")
 
     return partial(integrate_fn, deriv_fn=physics_fn)
+
+
+def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
+    """Reset the simulation data to the default data for the worlds specified by the mask."""
+    return pytree_replace(data, default_data, mask)  # Does not overwrite rng_key
 
 
 def increment_steps(data: SimData) -> SimData:

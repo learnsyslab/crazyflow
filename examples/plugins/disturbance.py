@@ -6,6 +6,7 @@ from numpy.typing import NDArray
 
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
+from crazyflow.sim.pipeline import insert_fn_before
 
 os.environ["SCIPY_ARRAY_API"] = "1"
 
@@ -42,9 +43,9 @@ def main(plot: bool = False):
 
     # Second run
     # We insert the disturbance function into the step pipeline before the integration step. You can
-    # inspect the step pipeline with
+    # inspect the step pipeline stages with
     # print(sim.step_pipeline)
-    sim.step_pipeline = sim.step_pipeline[:2] + (disturbance_fn,) + sim.step_pipeline[2:]
+    insert_fn_before(sim.step_pipeline, "integration", disturbance_fn)
     sim.build_step_fn()
     pos_disturbed, quat_disturbed = [], []
     sim.reset()

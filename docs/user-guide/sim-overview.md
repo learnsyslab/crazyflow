@@ -81,7 +81,7 @@ sim.step(sim.freq // sim.control_freq)  # 500 // 100 = 5 physics steps, controll
 
 ## The step and reset pipelines
 
-Each call to `sim.step()` runs `sim.step_pipeline`, a tuple of pure JAX functions that transforms `SimData`. By default it contains the control conversion functions, the numerical integrator, a step counter, and a floor clip. Similarly, `sim.reset_pipeline` is applied during `sim.reset()` and is empty by default.
+Each call to `sim.step()` runs `sim.step_pipeline`, an ordered collection of named, pure JAX functions that transform `SimData`. By default it contains the control conversion functions, the numerical integrator, a step counter, and a floor clip. Similarly, `sim.reset_pipeline` is applied during `sim.reset()` and is empty by default.
 
 Both pipelines can be extended with custom functions for disturbances, domain randomization, or logging without modifying the core simulator.
 
