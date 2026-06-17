@@ -113,7 +113,7 @@ def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict
 
     Raises:
         KeyError: If ``drone`` is not found in either TOML file, or if ``dynamics`` does not
-        correspond to a known sub-package.
+            correspond to a known sub-package.
     """
     xp = np if xp is None else xp
     with open(Path(__file__).parents[1] / "drones/params.toml", "rb") as f:

@@ -184,10 +184,10 @@ def symbolic_dynamics(
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
         * ``X_dot``: State derivative, length 14 when ``model_rotor_vel=True`` (13 otherwise), plus
-          3 per enabled disturbance.
+            3 per enabled disturbance.
         * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with ``rotor_vel(1)``
-          appended if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust
-          state in Newtons.
+            appended if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust
+            state in Newtons.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), quat(4)]``.
     """
@@ -296,8 +296,8 @@ def symbolic_dynamics_euler(
 
         * ``X_dot``: State derivative, length 13 when ``model_rotor_vel=True`` (12 otherwise).
         * ``X``: State vector ``[pos(3), rpy(3), vel(3), drpy(3)]``, with ``rotor_vel(1)`` appended
-          if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust state in
-          Newtons.
+            if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust state in
+            Newtons.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), rpy(3)]``.
     """

@@ -16,7 +16,6 @@ theme:
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
-    - navigation.sections
     - navigation.tabs
     - navigation.top
     - navigation.tracking

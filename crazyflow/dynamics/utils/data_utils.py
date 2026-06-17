@@ -22,15 +22,11 @@ logger = logging.getLogger(__name__)
 def preprocessing(data: dict[str, Array]) -> dict[str, Array]:
     """Applies preprocessing to collected data.
 
-    The preprocessing includes
-        outlier detection and interpolation,
-        normalizing orientation (assuming hover at start),
-        calculating rpy from quaternions,
-        and calculating rotational error
+    The preprocessing includes outlier detection and interpolation, normalizing orientation
+    (assuming hover at start), calculating rpy from quaternions, and calculating rotational error.
 
     Args:
-        data: The raw data dictionary containing
-              time [s], pos [m], quat, cmd_rpy [rad], cmd_f [N].
+        data: The raw data dictionary containing time [s], pos [m], quat, cmd_rpy [rad], cmd_f [N].
 
     Returns:
         The same dict with the following keys added or modified:
@@ -40,8 +36,7 @@ def preprocessing(data: dict[str, Array]) -> dict[str, Array]:
         * ``"quat"``: Quaternions corrected so the initial attitude is identity.
         * ``"rpy"``: Roll/pitch/yaw in radians, shape ``(N, 3)``.
         * ``"z_axis"``: Body z-axis in world frame, shape ``(N, 3)``.
-        * ``"eR"``: Rotation error vector (vee of skew-symmetric error matrix),
-          shape ``(N, 3)``.
+        * ``"eR"``: Rotation error vector (vee of skew-symmetric error matrix), shape ``(N, 3)``.
         * ``"eR_vec"``: Rotation error as rotation vector, shape ``(N, 3)``.
     """
     data["dt"] = np.diff(data["time"])
@@ -94,10 +89,9 @@ def preprocessing(data: dict[str, Array]) -> dict[str, Array]:
 def derivatives_svf(data: dict[str, Array]) -> dict[str, Array]:
     """Apply a State Variable Filter (SVF) to compute smoothed signals and their time derivatives.
 
-    Filters position, attitude (RPY), and command signals with separate
-    corner frequencies (6 Hz for translation, 8 Hz for rotation) and computes
-    up to third-order time derivatives.  All output keys are prefixed with
-    ``"SVF_"``.
+    Filters position, attitude (RPY), and command signals with separate corner frequencies (6 Hz for
+    translation, 8 Hz for rotation) and computes up to third-order time derivatives.  All output
+    keys are prefixed with ``"SVF_"``.
 
     Args:
         data: Dict produced by [preprocessing][crazyflow.dynamics.utils.data_utils.preprocessing].
@@ -106,18 +100,17 @@ def derivatives_svf(data: dict[str, Array]) -> dict[str, Array]:
     Returns:
         The same dict with the following ``"SVF_"`` keys added:
 
-        * ``"SVF_pos"``, ``"SVF_vel"``, ``"SVF_acc"``, ``"SVF_jerk"``:
-          Filtered position and its first three derivatives.
-        * ``"SVF_rpy"``, ``"SVF_drpy"``, ``"SVF_ddrpy"``, ``"SVF_dddrpy"``:
-          Filtered roll/pitch/yaw and its first three derivatives.
+        * ``"SVF_pos"``, ``"SVF_vel"``, ``"SVF_acc"``, ``"SVF_jerk"``: Filtered position and its
+            first three derivatives.
+        * ``"SVF_rpy"``, ``"SVF_drpy"``, ``"SVF_ddrpy"``, ``"SVF_dddrpy"``: Filtered roll/pitch/yaw
+            and its first three derivatives.
         * ``"SVF_quat"``: Quaternion computed from ``SVF_rpy``.
         * ``"SVF_z_axis"``: Body z-axis in world frame computed from ``SVF_rpy``.
-        * ``"SVF_ang_vel"``, ``"SVF_ang_acc"``, ``"SVF_ang_jerk"``:
-          Angular velocity/acceleration/jerk in body frame.
+        * ``"SVF_ang_vel"``, ``"SVF_ang_acc"``, ``"SVF_ang_jerk"``: Angular
+            velocity/acceleration/jerk in body frame.
         * ``"SVF_cmd_f"``: Filtered collective thrust command.
         * ``"SVF_cmd_rpy"``: Filtered roll/pitch/yaw command.
-        * ``"SVF_eR"``, ``"SVF_eR_vec"``: Rotation error between actual and
-          commanded attitude.
+        * ``"SVF_eR"``, ``"SVF_eR_vec"``: Rotation error between actual and commanded attitude.
     """
     # Important: Don't mix with unfiltered signals (also for input!)
     if data is None:

@@ -5,7 +5,7 @@ files, their referenced meshes (``assets/``), and the physical parameters shared
 (``params.toml`` with mass, inertia, thrust and torque curves, …). These describe the *hardware* and
 are independent of the dynamics formulation used to simulate it (see [crazyflow.dynamics][]).
 
-Use [available_drones][crazyflow.drones.available_drones] to enumerate the supported configurations.
+Use ``available_drones`` to enumerate the supported configurations.
 """
 
 # Currently supported platforms:

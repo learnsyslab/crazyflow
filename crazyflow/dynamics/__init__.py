@@ -9,8 +9,7 @@ self-contained as possible, so that they can be used independently for other pur
 estimation or control design.
 
 Use [parametrize][crazyflow.dynamics.parametrize] to bind a dynamics function to a named drone
-configuration, and [available_dynamics][crazyflow.dynamics.available_dynamics] to enumerate all
-registered dynamics.
+configuration, and ``available_dynamics`` to enumerate all registered dynamics.
 """
 
 import os

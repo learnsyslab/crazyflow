@@ -211,9 +211,9 @@ def symbolic_dynamics(
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
         * ``X_dot``: State derivative, length 17 when ``model_rotor_vel=True`` (13 otherwise), plus
-          3 per enabled disturbance.
+            3 per enabled disturbance.
         * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with ``rotor_vel(4)``
-          appended if ``model_rotor_vel=True``.
+            appended if ``model_rotor_vel=True``.
         * ``U``: Input vector ``[rpm_1, rpm_2, rpm_3, rpm_4]``.
         * ``Y``: Output ``[pos(3), quat(4)]``.
     """
