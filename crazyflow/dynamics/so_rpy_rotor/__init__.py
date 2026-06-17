@@ -26,7 +26,7 @@ roll/pitch/yaw angles extracted from \(\mathbf{q}\), and
 \(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world frame.
 """
 
-from crazyflow.dynamics.so_rpy_rotor.model import (
+from crazyflow.dynamics.so_rpy_rotor.dynamics import (
     Params,
     dynamics,
     sim_dynamics,

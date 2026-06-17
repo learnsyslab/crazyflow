@@ -40,9 +40,7 @@ def symbolic_from_sim(
             )
         case Dynamics.so_rpy:
             return parametrize(so_rpy_symbolic_dynamics, sim.drone)(
-                model_rotor_vel=model_rotor_vel,
-                model_dist_f=model_dist_f,
-                model_dist_t=model_dist_t,
+                model_dist_f=model_dist_f, model_dist_t=model_dist_t
             )
         case _:
             raise ValueError(f"Dynamics mode {sim.dynamics} not supported")

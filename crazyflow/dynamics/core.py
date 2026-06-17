@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import inspect
 import tomllib
-import warnings
 from enum import Enum
-from functools import partial, wraps
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
@@ -14,8 +13,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-    from crazyflow._typing import Array  # To be changed to array_api_typing later
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -26,14 +23,7 @@ R = TypeVar("R")
 def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
     """Decorator that declares which optional inputs a dynamics function supports.
 
-    Wraps the decorated function so that:
-
-    * If ``rotor_dynamics=False`` and the caller passes ``rotor_vel``, a ``ValueError`` is raised
-      immediately.
-    * If ``rotor_dynamics=True`` and the caller omits ``rotor_vel``, a ``UserWarning`` is issued and
-      the commanded value is used directly.
-
-    The decorator also attaches a ``__dynamics_features__`` attribute to the wrapper, which
+    The decorator attaches a ``__dynamics_features__`` attribute to the wrapper, which
     [dynamics_features][crazyflow.dynamics.dynamics_features] reads.
 
     Args:
@@ -42,30 +32,12 @@ def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
             Defaults to ``True``.
 
     Returns:
-        A decorator that wraps the dynamics function with the capability checks.
+        The function decorated with capability flags.
     """
 
     def decorator(fn: F) -> F:
-        @wraps(fn)
-        def wrapper(
-            pos: Array,
-            quat: Array,
-            vel: Array,
-            ang_vel: Array,
-            cmd: Array,
-            rotor_vel: Array | None = None,
-            *args: Any,
-            **kwargs: Any,
-        ) -> tuple[Array, Array, Array, Array, Array | None]:
-            if not rotor_dynamics and rotor_vel is not None:
-                raise ValueError("Rotor dynamics not supported, but rotor_vel is provided.")
-            if rotor_dynamics and rotor_vel is None:
-                warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
-            return fn(pos, quat, vel, ang_vel, cmd, rotor_vel, *args, **kwargs)
-
-        wrapper.__dynamics_features__ = {"rotor_dynamics": rotor_dynamics}
-
-        return wrapper  # type: ignore
+        fn.__dynamics_features__ = {"rotor_dynamics": rotor_dynamics}
+        return fn
 
     return decorator
 

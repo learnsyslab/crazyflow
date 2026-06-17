@@ -26,7 +26,7 @@ world frame, and \({}^{\mathcal{B}}\boldsymbol{\omega}\) is recovered from
 \(c_{\dot{\psi}}\), \(c_u\) are identified from flight data.
 """
 
-from crazyflow.dynamics.so_rpy.model import (
+from crazyflow.dynamics.so_rpy.dynamics import (
     Params,
     dynamics,
     sim_dynamics,

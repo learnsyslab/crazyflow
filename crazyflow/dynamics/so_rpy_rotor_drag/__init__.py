@@ -28,7 +28,7 @@ roll/pitch/yaw angles extracted from \(\mathbf{q}\),
 \(D_b\) is the diagonal body-frame aerodynamic drag matrix.
 """
 
-from crazyflow.dynamics.so_rpy_rotor_drag.model import (
+from crazyflow.dynamics.so_rpy_rotor_drag.dynamics import (
     Params,
     dynamics,
     sim_dynamics,
