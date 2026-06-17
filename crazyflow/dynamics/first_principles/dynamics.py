@@ -14,6 +14,7 @@ symbolic CasADi implementation
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import casadi as cs
@@ -106,6 +107,7 @@ def dynamics(
     rot_mat = rot.inv().as_matrix()  # from world to body
     # Rotor dynamics
     if rotor_vel is None:
+        warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
         rotor_vel, rotor_vel_dot = cmd, None
     else:
         rotor_vel_dot = xp.where(

@@ -1,8 +1,9 @@
 """Second-order fitted RPY dynamics (no rotor dynamics).
 
-This module implements a simplified quadrotor dynamics where the rotational dynamics are modelled as a fitted second-order linear system driven by roll, pitch,
-and yaw (RPY) commands, and the translational dynamics are driven by the collective
-thrust command.  Motor spin-up dynamics are not modelled.
+This module implements a simplified quadrotor dynamics where the rotational dynamics are modelled as
+a fitted second-order linear system driven by roll, pitch, and yaw (RPY) commands, and the
+translational dynamics are driven by the collective thrust command.  Motor spin-up dynamics are not
+modelled.
 
 The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
 

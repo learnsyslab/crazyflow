@@ -14,7 +14,6 @@ import numpy as np
 if TYPE_CHECKING:
     from types import ModuleType
 
-
 F = TypeVar("F", bound=Callable[..., Any])
 P = ParamSpec("P")
 R = TypeVar("R")

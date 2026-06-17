@@ -14,6 +14,7 @@ CasADi implementations ([symbolic_dynamics][crazyflow.dynamics.so_rpy_rotor.symb
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import casadi as cs
@@ -103,6 +104,7 @@ def dynamics(
 
     # Note that we are abusing the rotor_vel state as the thrust
     if rotor_vel is None:
+        warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
         rotor_vel, rotor_vel_dot = cmd_f[..., None], None
     else:
         rotor_vel_dot = 1 / thrust_time_coef * (cmd_f[..., None] - rotor_vel)
