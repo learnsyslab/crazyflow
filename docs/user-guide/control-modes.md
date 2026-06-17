@@ -165,4 +165,4 @@ The simulator applies a new command only when the control tick fires. Between ti
 ## Next steps
 
 - [Functional API](functional-api.md) — running control inside JIT with `F.controllable`
-- [Dynamics](dynamics.md) — compatibility between dynamics and control modes
+- [Dynamics](dynamics/index.md) — compatibility between dynamics and control modes

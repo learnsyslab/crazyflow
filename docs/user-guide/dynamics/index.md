@@ -82,7 +82,18 @@ The `so_rpy_rotor_drag` variant includes translational drag, which captures the 
 !!! warning
     Using `Control.force_torque` or `Control.rotor_vel` with a fitted dynamics raises `ConfigError` at construction time.
 
+## Using the dynamics standalone
+
+The `Dynamics` enum above is how you select a dynamics *inside the simulator*. The dynamics also live in `crazyflow.dynamics` as a self-contained library of pure functions, usable on their own for state estimation, control design, or as MPC models independent of `Sim`. The following guides cover that standalone API:
+
+- [Dynamics functions](dynamics-functions.md) — the state representation, the four dynamics functions, and external disturbances
+- [Parametrization](parametrize.md) — binding a dynamics function to a drone configuration
+- [Batching & domain randomization](batching.md) — evaluating many drones at once and randomizing parameters
+- [Symbolic dynamics](symbolic.md) — CasADi expressions for MPC and estimation
+- [System identification](system-identification.md) — fitting dynamics coefficients from flight data
+- [Transform utilities](transforms.md) — motor/force/PWM and rotation conversions
+
 ## Next steps
 
-- [Control Modes](control-modes.md) — command shapes and the control hierarchy
-- [Object-Oriented API](oo-api.md) — full constructor arguments
+- [Control Modes](../control-modes.md) — command shapes and the control hierarchy
+- [Object-Oriented API](../oo-api.md) — full constructor arguments

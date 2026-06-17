@@ -49,7 +49,14 @@ nav:
     - Simulator Overview: user-guide/sim-overview.md
     - Object-Oriented API: user-guide/oo-api.md
     - Functional API: user-guide/functional-api.md
-    - Dynamics: user-guide/dynamics.md
+    - Dynamics:
+      - user-guide/dynamics/index.md
+      - Dynamics functions: user-guide/dynamics/dynamics-functions.md
+      - Parametrization: user-guide/dynamics/parametrize.md
+      - Batching & domain randomization: user-guide/dynamics/batching.md
+      - Symbolic dynamics: user-guide/dynamics/symbolic.md
+      - System identification: user-guide/dynamics/system-identification.md
+      - Transform utilities: user-guide/dynamics/transforms.md
     - Control Modes: user-guide/control-modes.md
     - Pipelines: user-guide/pipelines.md
     - Visualization: user-guide/visualization.md

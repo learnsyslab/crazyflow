@@ -136,5 +136,5 @@ pos = sim.data.states.pos[0, :, :]  # (4, 3) — all 4 drones in world 0
 
 - [Object-Oriented API](../user-guide/oo-api.md) — all control modes, rendering, and reset
 - [Functional API](../user-guide/functional-api.md) — purely functional interface for use inside JAX transformations
-- [Dynamics](../user-guide/dynamics.md) — choosing between first-principles and fitted dynamics
+- [Dynamics](../user-guide/dynamics/index.md) — choosing between first-principles and fitted dynamics
 - [Examples](../examples/index.md) — runnable scripts
