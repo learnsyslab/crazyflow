@@ -16,16 +16,24 @@ from array_api_compat import device as xp_device
 from crazyflow.drones import available_drones
 from crazyflow.dynamics import available_dynamics, dynamics_features
 from crazyflow.dynamics.core import parametrize
-from crazyflow.dynamics.first_principles import dynamics as first_principles_dynamics
-from crazyflow.dynamics.so_rpy import dynamics as so_rpy_dynamics
-from crazyflow.dynamics.so_rpy_rotor import dynamics as so_rpy_rotor_dynamics
-from crazyflow.dynamics.so_rpy_rotor_drag import dynamics as so_rpy_rotor_drag_dynamics
 
 if TYPE_CHECKING:
     from crazyflow._typing import Array  # To be changed to array_api_typing later
 
-# For all tests to pass, we need the same precsion in jax as in np
-jax.config.update("jax_enable_x64", True)
+
+@pytest.fixture(autouse=True)
+def _enable_x64():
+    """Run only this module in float64 so jax matches numpy precision, then restore the default.
+
+    jax_enable_x64 is a global flag, so we scope it to this file's tests to keep every other test
+    running in float32.
+    """
+    prev = jax.config.jax_enable_x64
+    jax.config.update("jax_enable_x64", True)
+    try:
+        yield
+    finally:
+        jax.config.update("jax_enable_x64", prev)
 
 
 def create_rnd_states(
@@ -47,6 +55,52 @@ def create_rnd_commands(shape: tuple[int, ...] = (), dim: int = 4) -> Array:
     return xp.abs(xp.asarray(np.random.randn(*shape, dim)))  # Motor forces must be positive
 
 
+def make_inputs(
+    dynamics: Callable,
+    *,
+    batch: tuple[int, ...] = (),
+    rotor_vel: bool = True,
+    ext_wrench: bool = False,
+) -> dict[str, Array]:
+    """Build random inputs for a parametrized dynamics function, to splat as ``dynamics(**inp)``.
+
+    Only the requested inputs are included, so the dict doubles as the call signature: dynamics
+    without a rotor_vel parameter (so_rpy) simply never get one, and omitted optional inputs fall
+    back to the function defaults.
+
+    Args:
+        dynamics: The (parametrized) dynamics function.
+        batch: Batch shape of the inputs.
+        rotor_vel: Whether to provide rotor_vel (ignored for dynamics without rotor dynamics).
+            Set to False to exercise the commanded-rotor-velocity fallback.
+        ext_wrench: Whether to provide external force/torque disturbances.
+    """
+    pos, quat, vel, ang_vel, rv, dist_f, dist_t = create_rnd_states(batch)
+    cmd = create_rnd_commands(batch)
+    inp = {"pos": pos, "quat": quat, "vel": vel, "ang_vel": ang_vel, "cmd": cmd}
+    if rotor_vel and dynamics_features(dynamics)["rotor_dynamics"]:
+        inp["rotor_vel"] = rv
+    if ext_wrench:
+        inp["dist_f"], inp["dist_t"] = dist_f, dist_t
+    return inp
+
+
+def state_vector(inp: dict) -> Array:
+    """Stacked state vector matching the symbolic state X (present inputs in canonical order)."""
+    order = ("pos", "quat", "vel", "ang_vel", "rotor_vel", "dist_f", "dist_t")
+    return xp.concat([inp[k] for k in order if k in inp], axis=-1)
+
+
+def symbolic_flags(dynamics: Callable, dist: bool = False) -> dict[str, bool]:
+    """Build the symbolic_dynamics flags, gating model_rotor_vel on the rotor dynamics feature."""
+    flags = {}
+    if dynamics_features(dynamics)["rotor_dynamics"]:
+        flags["model_rotor_vel"] = True
+    if dist:
+        flags["model_dist_f"] = flags["model_dist_t"] = True
+    return flags
+
+
 def assert_array_meta(x: Array | None, y: Array | None, name: str | None = None):
     """Assert the output is on the correct device, has the correct type and shape."""
     if x is None and y is None:
@@ -62,36 +116,28 @@ def assert_array_meta(x: Array | None, y: Array | None, name: str | None = None)
     assert np.all(np.isnan(x) == np.isnan(y)), f"{prefix}Derivative of non-nan values are NaN"
 
 
-def skip_dynamics_without_features(dynamics: Callable, features: list[str]):
-    """Skip the dynamics if it does not have the required features."""
-    for feature in features:
-        if not dynamics_features(dynamics)[feature]:
-            pytest.skip(f"Dynamics {dynamics.__name__} does not have the feature '{feature}'.")
-
-
-def assert_dynamics_shapes(
-    dynamics: Callable,
-    batch: int[...] = (),
-    rotor_vel_input: bool = False,
-    ext_force_torque: bool = False,
-):
-    pos, quat, vel, ang_vel, rotor_vel, f_ext, t_ext = create_rnd_states(shape=batch)
-    cmd = create_rnd_commands(shape=batch, dim=4)
-    if not rotor_vel_input:
-        rotor_vel = None
-    if not ext_force_torque:
-        f_ext, t_ext = None, None
-    dpos, dquat, dvel, dang_vel, drotor_vel = dynamics(
-        pos, quat, vel, ang_vel, cmd, rotor_vel, f_ext, t_ext
-    )
-    # Check if the output is on the correct device, has the correct type and shape
-    for name, dx, x in zip(
-        ["dpos", "dquat", "dvel", "dang_vel", "drotor_vel"],
-        [dpos, dquat, dvel, dang_vel, drotor_vel],
-        [pos, quat, vel, ang_vel, rotor_vel],
-        strict=True,
-    ):
+def assert_shapes(dynamics: Callable, inp: dict):
+    """Assert the dynamics output has the correct type, device and shape for each derivative."""
+    out = dynamics(**inp)
+    names = ["dpos", "dquat", "dvel", "dang_vel"]
+    expected = [inp["pos"], inp["quat"], inp["vel"], inp["ang_vel"]]
+    if dynamics_features(dynamics)["rotor_dynamics"]:
+        names.append("drotor_vel")
+        expected.append(inp.get("rotor_vel"))
+    for name, dx, x in zip(names, out, expected, strict=True):
         assert_array_meta(dx, x, name=name)
+
+
+def check_shapes(dynamics: Callable, batch: tuple[int, ...] = ()):
+    """Check output shapes with/without external wrench, and the rotor_vel fallback warning."""
+    assert_shapes(dynamics, make_inputs(dynamics, batch=batch))
+    assert_shapes(dynamics, make_inputs(dynamics, batch=batch, ext_wrench=True))
+    if not dynamics_features(dynamics)["rotor_dynamics"]:
+        return
+    for ext_wrench in (False, True):
+        inp = make_inputs(dynamics, batch=batch, rotor_vel=False, ext_wrench=ext_wrench)
+        with pytest.warns(UserWarning, match="Rotor velocity not provided"):
+            assert_shapes(dynamics, inp)
 
 
 @pytest.mark.unit
@@ -111,267 +157,46 @@ def test_dynamics_features(dynamics_name: str, dynamics: Callable):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
 @pytest.mark.parametrize("drone", available_drones)
-def test_first_principles_dynamics(drone: str):
-    dynamics = parametrize(first_principles_dynamics, drone)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_first_principles_dynamics_batched(drone: str):
-    dynamics = parametrize(first_principles_dynamics, drone, xp=xp)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    shape = (10, 5)
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-    # Batch params
-    dynamics.keywords["J"] = xp.tile(dynamics.keywords["J"][None, None, ...], shape + (1, 1))
-    dynamics.keywords["J_inv"] = xp.tile(
-        dynamics.keywords["J_inv"][None, None, ...], shape + (1, 1)
-    )
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy(drone: str):
-    dynamics = parametrize(so_rpy_dynamics, drone)
-    assert not dynamics_features(dynamics)["rotor_dynamics"], (
-        "Dynamics should not support rotor dynamics"
-    )
-
-    assert_dynamics_shapes(dynamics, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy_batched(drone: str):
-    dynamics = parametrize(so_rpy_dynamics, drone, xp=xp)
-    assert not dynamics_features(dynamics)["rotor_dynamics"], (
-        "Dynamics should not support rotor dynamics"
-    )
-
-    shape = (10, 5)
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-    # Batch params
-    dynamics.keywords["J"] = xp.tile(dynamics.keywords["J"][None, None, ...], shape + (1, 1))
-    dynamics.keywords["J_inv"] = xp.tile(
-        dynamics.keywords["J_inv"][None, None, ...], shape + (1, 1)
-    )
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy_rotor(drone: str):
-    dynamics = parametrize(so_rpy_rotor_dynamics, drone)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy_rotor_batched(drone: str):
-    dynamics = parametrize(so_rpy_rotor_dynamics, drone, xp=xp)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    shape = (10, 5)
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-    # Batch params
-    dynamics.keywords["J"] = xp.tile(dynamics.keywords["J"][None, None, ...], shape + (1, 1))
-    dynamics.keywords["J_inv"] = xp.tile(
-        dynamics.keywords["J_inv"][None, None, ...], shape + (1, 1)
-    )
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy_rotor_drag(drone: str):
-    dynamics = parametrize(so_rpy_rotor_drag_dynamics, drone)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, rotor_vel_input=False, ext_force_torque=True)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_so_rpy_rotor_drag_batched(drone: str):
-    dynamics = parametrize(so_rpy_rotor_drag_dynamics, drone, xp=xp)
-    assert dynamics_features(dynamics)["rotor_dynamics"], "Dynamics should support rotor dynamics"
-
-    shape = (10, 5)
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
-
-    # Batch params
-    dynamics.keywords["J"] = xp.tile(dynamics.keywords["J"][None, None, ...], shape + (1, 1))
-    dynamics.keywords["J_inv"] = xp.tile(
-        dynamics.keywords["J_inv"][None, None, ...], shape + (1, 1)
-    )
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False)
-
-    # External force-torque
-    assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=True, ext_force_torque=True)
-    with pytest.warns(UserWarning, match="Rotor velocity not provided"):
-        assert_dynamics_shapes(dynamics, batch=shape, rotor_vel_input=False, ext_force_torque=True)
+def test_dynamics_shapes(dynamics_name: str, dynamics: Callable, drone: str):
+    check_shapes(parametrize(dynamics, drone))
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
 @pytest.mark.parametrize("drone", available_drones)
-def test_symbolic_dynamics(dynamics_name: str, dynamics: Callable, drone: str):
-    symbolic_dynamics = getattr(sys.modules[dynamics.__module__], "symbolic_dynamics")
-    symbolic_dynamics = parametrize(symbolic_dynamics, drone)
-    dynamics = parametrize(dynamics, drone)
-
-    batch_shape = (10, 5)
-    pos, quat, vel, ang_vel, rotor_vel, _, _ = create_rnd_states(batch_shape)
-    if not dynamics_features(dynamics)["rotor_dynamics"]:
-        rotor_vel = None
-    cmd = create_rnd_commands(batch_shape, dim=4)
-
-    # Create symbolic dynamics from numeric dynamics
-    X_dot, X, U, _ = symbolic_dynamics(model_rotor_vel=rotor_vel is not None)
-    dynamics_symbolic2numeric = cs.Function(dynamics_name, [X, U], [X_dot])
-
-    for i in np.ndindex(np.shape(pos)[:-1]):  # casadi only supports non batched calls
-        x_dot = dynamics(
-            pos[i + (...,)],
-            quat[i + (...,)],
-            vel[i + (...,)],
-            ang_vel[i + (...,)],
-            cmd[i + (...,)],
-            rotor_vel=rotor_vel[i + (...,)] if rotor_vel is not None else None,
-        )
-        x_dot = xp.concat([x for x in x_dot if x is not None], axis=-1)
-        X = xp.concat(
-            [x[i + (...,)] for x in [pos, quat, vel, ang_vel, rotor_vel] if x is not None], axis=-1
-        )
-        U = cmd[i + (...,)]
-        x_dot_symbolic2numeric = xp.asarray(dynamics_symbolic2numeric(np.asarray(X), np.asarray(U)))
-        x_dot_symbolic2numeric = xp.squeeze(x_dot_symbolic2numeric, axis=-1)
-        assert np.allclose(x_dot, x_dot_symbolic2numeric), (
-            "Symbolic and numeric dynamics have different output"
-        )
+def test_dynamics_shapes_batched(dynamics_name: str, dynamics: Callable, drone: str):
+    dynamics = parametrize(dynamics, drone, xp=xp)
+    shape = (10, 5)
+    check_shapes(dynamics, batch=shape)
+    # Batched parameters
+    dynamics.keywords["J"] = xp.tile(dynamics.keywords["J"][None, None, ...], shape + (1, 1))
+    dynamics.keywords["J_inv"] = xp.tile(
+        dynamics.keywords["J_inv"][None, None, ...], shape + (1, 1)
+    )
+    check_shapes(dynamics, batch=shape)
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
 @pytest.mark.parametrize("drone", available_drones)
-def test_symbolic_dynamics_external_wrench(dynamics_name: str, dynamics: Callable, drone: str):
+@pytest.mark.parametrize("ext_wrench", [False, True])
+def test_symbolic_dynamics(dynamics_name: str, dynamics: Callable, drone: str, ext_wrench: bool):
+    """Tests if the symbolic and numeric dynamics produce the same output."""
     symbolic_dynamics = getattr(sys.modules[dynamics.__module__], "symbolic_dynamics")
     symbolic_dynamics = parametrize(symbolic_dynamics, drone)
     dynamics = parametrize(dynamics, drone)
+    inp = make_inputs(dynamics, batch=(10, 5), ext_wrench=ext_wrench)
 
-    batch_shape = (10, 5)
-    pos, quat, vel, ang_vel, rotor_vel, dist_f, dist_t = create_rnd_states(batch_shape)
-    if not dynamics_features(dynamics)["rotor_dynamics"]:
-        rotor_vel = None
-    cmd = create_rnd_commands(batch_shape, dim=4)  # TODO make dependent on dynamics
+    X_dot, X, U, _ = symbolic_dynamics(**symbolic_flags(dynamics, dist=ext_wrench))
+    symbolic2numeric = cs.Function(dynamics_name, [X, U], [X_dot])
 
-    # Create numeric dynamics from symbolic dynamics
-    X_dot, X, U, _ = symbolic_dynamics(
-        model_rotor_vel=rotor_vel is not None, model_dist_f=True, model_dist_t=True
-    )
-    dynamics_symbolic2numeric = cs.Function(dynamics_name, [X, U], [X_dot])
-
-    for i in np.ndindex(np.shape(pos)[:-1]):  # casadi only supports non batched calls
-        x_dot = dynamics(
-            pos[i + (...,)],
-            quat[i + (...,)],
-            vel[i + (...,)],
-            ang_vel[i + (...,)],
-            cmd[i + (...,)],
-            rotor_vel=rotor_vel[i + (...,)] if rotor_vel is not None else None,
-            dist_f=dist_f[i + (...,)],
-            dist_t=dist_t[i + (...,)],
-        )
-        x_dot = xp.concat([x for x in x_dot if x is not None], axis=-1)
-        X = xp.concat(
-            [
-                x[i + (...,)]
-                for x in [pos, quat, vel, ang_vel, rotor_vel, dist_f, dist_t]
-                if x is not None
-            ],
-            axis=-1,
-        )
-        U = cmd[i + (...,)]
-        x_dot_symbolic2numeric = xp.asarray(dynamics_symbolic2numeric(np.asarray(X), np.asarray(U)))
-        x_dot_symbolic2numeric = xp.squeeze(x_dot_symbolic2numeric, axis=-1)
+    for i in np.ndindex(np.shape(inp["pos"])[:-1]):  # casadi only supports non batched calls
+        inp_i = {k: v[i + (...,)] for k, v in inp.items()}
+        x_dot = xp.concat([x for x in dynamics(**inp_i) if x is not None], axis=-1)
+        X, U = np.asarray(state_vector(inp_i)), np.asarray(inp_i["cmd"])
+        x_dot_symbolic2numeric = xp.squeeze(xp.asarray(symbolic2numeric(X, U)), axis=-1)
         assert np.allclose(x_dot, x_dot_symbolic2numeric), (
             "Symbolic and numeric dynamics have different output"
         )
@@ -383,28 +208,13 @@ def test_symbolic_dynamics_external_wrench(dynamics_name: str, dynamics: Callabl
 def test_compare_batched_non_batched(dynamics_name: str, dynamics: Callable, drone: str):
     """Tests if batching works and if the results are identical to the non-batched version."""
     dynamics = parametrize(dynamics, drone)
+    inp = make_inputs(dynamics, batch=(10, 5))
 
-    batch_shape = (10, 5)
-    pos, quat, vel, ang_vel, rotor_vel, _, _ = create_rnd_states(batch_shape)
-    if not dynamics_features(dynamics)["rotor_dynamics"]:
-        rotor_vel = None
-    cmd = create_rnd_commands(batch_shape, dim=4)  # TODO make dependent on dynamics
-
-    x_dot_batched = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel)
-    x_dot_batched = xp.concat([x for x in x_dot_batched if x is not None], axis=-1)
-
-    for i in np.ndindex(np.shape(pos)[:-1]):
-        x_dot_non_batched = dynamics(
-            pos[i + (...,)],
-            quat[i + (...,)],
-            vel[i + (...,)],
-            ang_vel[i + (...,)],
-            cmd[i + (...,)],
-            rotor_vel[i + (...,)] if rotor_vel is not None else None,
-        )
-        x_dot_non_batched = xp.concat([x for x in x_dot_non_batched if x is not None], axis=-1)
-
-        assert np.allclose(x_dot_batched[i + (...,)], x_dot_non_batched, atol=1e-5), (
+    x_dot_batched = xp.concat([x for x in dynamics(**inp) if x is not None], axis=-1)
+    for i in np.ndindex(np.shape(inp["pos"])[:-1]):
+        out = dynamics(**{k: v[i + (...,)] for k, v in inp.items()})
+        x_dot = xp.concat([x for x in out if x is not None], axis=-1)
+        assert np.allclose(x_dot_batched[i + (...,)], x_dot, atol=1e-5), (
             "Non-batched and batched results are not the same"
         )
 
@@ -415,22 +225,9 @@ def test_compare_batched_non_batched(dynamics_name: str, dynamics: Callable, dro
 def test_numeric_jit(dynamics_name: str, dynamics: Callable, drone: str):
     """Tests if the dynamics are jitable and if the results are identical to the array API ones."""
     dynamics = parametrize(dynamics, drone)
-
-    batch_shape = (10, 5)
-    pos, quat, vel, ang_vel, rotor_vel, _, _ = create_rnd_states(batch_shape)
-    if not dynamics_features(dynamics)["rotor_dynamics"]:
-        rotor_vel = None
-    cmd = create_rnd_commands(batch_shape, dim=4)  # TODO make dependent on dynamics
-
-    xp_dot = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel)
-
-    pos, quat = jp.asarray(np.asarray(pos)), jp.asarray(np.asarray(quat))
-    vel, ang_vel = jp.asarray(np.asarray(vel)), jp.asarray(np.asarray(ang_vel))
-    rotor_vel = jp.asarray(np.asarray(rotor_vel)) if rotor_vel is not None else None
-    cmd = jp.asarray(np.asarray(cmd))
-
-    dynamics_jit = jax.jit(dynamics)
-    jp_dot = dynamics_jit(pos, quat, vel, ang_vel, cmd, rotor_vel)
+    inp = make_inputs(dynamics, batch=(10, 5))
+    xp_dot = dynamics(**inp)
+    jp_dot = jax.jit(dynamics)(**{k: jp.asarray(np.asarray(v)) for k, v in inp.items()})
 
     assert isinstance(jp_dot[0], jp.ndarray), "Results are not jax arrays"
     xp_dot = xp.concat([x for x in xp_dot if x is not None], axis=-1)
