@@ -9,7 +9,7 @@ from crazyflow.sim.symbolic import symbolic_from_sim
 @pytest.mark.unit
 @pytest.mark.parametrize("n_worlds", [1, 2])
 def test_symbolic_from_sim(n_worlds: int):
-    """Test creating symbolic model from sim instance."""
+    """Test creating symbolic dynamics from sim instance."""
     sim = Sim(n_worlds=n_worlds, n_drones=1, control=Control.attitude)
     X_dot, X, U, Y = symbolic_from_sim(sim)
 
@@ -26,7 +26,7 @@ def test_symbolic_from_sim(n_worlds: int):
 @pytest.mark.unit
 @pytest.mark.parametrize("control", [Control.state, Control.force_torque])
 def test_symbolic_from_sim_errors(control: Control):
-    """Test creating symbolic model from sim instance."""
+    """Test creating symbolic dynamics from sim instance."""
     sim = Sim(control=control)
-    with pytest.raises(ValueError, match="Symbolic model dynamics only support"):
+    with pytest.raises(ValueError, match="Symbolic dynamics only support"):
         symbolic_from_sim(sim)

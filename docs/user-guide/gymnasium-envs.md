@@ -38,7 +38,7 @@ All environments accept these common arguments:
 |---|---|---|
 | `num_envs` | 1 | Number of parallel environments |
 | `max_episode_time` | 10.0 | Episode length before truncation, seconds |
-| `dynamics` | `Dynamics.so_rpy` | Dynamics model |
+| `dynamics` | `Dynamics.so_rpy` | Dynamics |
 | `drone` | `"cf2x_L250"` | Drone configuration |
 | `freq` | 500 | Dynamics frequency, Hz |
 | `device` | `"cpu"` | `"cpu"` or `"gpu"` |

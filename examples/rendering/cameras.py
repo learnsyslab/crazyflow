@@ -100,9 +100,9 @@ def main(show_plot: bool = False, save_plot: bool = False):
         # mode: Either "human" for the regular window, "rgb_array" for an RGB array,
         #       "depth_array" for a depth array, or "rgbd_tuple" for both at the same time.
         # camera: The name or id of the camera. The names are specified in the corresponding
-        #         xml file in drone_models. For example, "fpv_cam:0" is the first-person view camera
-        #         of the first drone, "track_cam:0" is the tracking camera of the first drone.
-        #         Id -1 is the global camera.
+        #         xml file in crazyflow/drones. For example, "fpv_cam:0" is the first-person view
+        #         camera of the first drone, "track_cam:0" is the tracking camera of the first
+        #         drone. Id -1 is the global camera.
         rgbd = sim.render(
             width=resolution[0], height=resolution[1], mode="rgbd_tuple", camera="fpv_cam:0"
         )

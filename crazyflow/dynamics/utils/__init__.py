@@ -1,4 +1,4 @@
-"""Utility functions for the drone models."""
+"""Utility functions for the drone dynamics."""
 
 from __future__ import annotations
 

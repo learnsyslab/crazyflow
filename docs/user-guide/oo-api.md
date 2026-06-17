@@ -36,7 +36,7 @@ Key constructor arguments:
 | `n_worlds` | 1 | Number of independent parallel environments |
 | `n_drones` | 1 | Drones per world |
 | `drone` | `"cf2x_L250"` | Drone configuration (see `crazyflow.available_drones`) |
-| `dynamics` | `Dynamics.default` | Dynamics model |
+| `dynamics` | `Dynamics.default` | Dynamics |
 | `control` | `Control.default` | Control mode |
 | `integrator` | `Integrator.default` | Numerical integrator |
 | `freq` | 500 | Dynamics frequency, Hz |

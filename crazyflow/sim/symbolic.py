@@ -30,7 +30,7 @@ def symbolic_from_sim(
         The four symbolic expressions for X_dot, X, U, Y.
     """
     if sim.control != Control.attitude:
-        raise ValueError("Symbolic model dynamics only support attitude control")
+        raise ValueError("Symbolic dynamics only support attitude control")
     match sim.dynamics:
         case Dynamics.first_principles:
             return parametrize(first_principles_symbolic_dynamics, sim.drone)(

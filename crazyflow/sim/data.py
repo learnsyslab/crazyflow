@@ -218,7 +218,7 @@ class SimCore:
     rng_key: Array  # (N, 1)
     """Random number generator key for the simulation."""
     mjx_synced: Array  # (1,)
-    """Whether the simulation data is synchronized with the MuJoCo model."""
+    """Whether the simulation data is synchronized with the MuJoCo mjx_data."""
 
     @staticmethod
     def create(

@@ -4,7 +4,7 @@ This page walks through a complete minimal workflow: create a simulator, send a 
 
 ## Create a simulator
 
-`Sim` is the top-level object. All configuration is provided at construction time: dynamics model, control mode, simulation frequency, number of parallel worlds, and number of drones per world.
+`Sim` is the top-level object. All configuration is provided at construction time: dynamics, control mode, simulation frequency, number of parallel worlds, and number of drones per world.
 
 ```python
 from crazyflow.sim import Sim
@@ -136,5 +136,5 @@ pos = sim.data.states.pos[0, :, :]  # (4, 3) — all 4 drones in world 0
 
 - [Object-Oriented API](../user-guide/oo-api.md) — all control modes, rendering, and reset
 - [Functional API](../user-guide/functional-api.md) — purely functional interface for use inside JAX transformations
-- [Dynamics Models](../user-guide/dynamics-models.md) — choosing between first-principles and fitted models
+- [Dynamics](../user-guide/dynamics.md) — choosing between first-principles and fitted dynamics
 - [Examples](../examples/index.md) — runnable scripts

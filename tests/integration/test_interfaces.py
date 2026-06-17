@@ -37,6 +37,7 @@ def test_attitude_interface(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.attitude)
     target_pos = np.array([0.0, 0.0, 1.0])
     # `parametrize` is from the external drone_controllers package, which still uses `drone_model`.
+    # TODO: Refactor once drone_controllers have been moved into crazyflow.
     jit_state2attitude = jax.jit(parametrize(state2attitude, drone_model="cf2x_L250"))
 
     i_error = np.zeros((1, 1, 3))

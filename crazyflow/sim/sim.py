@@ -93,8 +93,8 @@ class Sim:
 
         # Initialize MuJoCo world and data
         self._xml_path = xml_path or Path(__file__).parents[1] / "scene.xml"
-        model_file_name = f"{drone}{'_fused' if fused_mjx_model else ''}.xml"
-        self.drone_path = Path(__file__).parents[1] / "drones" / model_file_name
+        mjx_model_file_name = f"{drone}{'_fused' if fused_mjx_model else ''}.xml"
+        self.drone_path = Path(__file__).parents[1] / "drones" / mjx_model_file_name
         self.spec = self.build_mjx_spec()
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
@@ -212,7 +212,7 @@ class Sim:
         self.viewer = None
 
     def build_mjx_spec(self) -> mujoco.MjSpec:
-        """Build the MuJoCo model specification for the simulation."""
+        """Build the MuJoCo mjx_model specification for the simulation."""
         assert self._xml_path.exists(), f"Model file {self._xml_path} does not exist"
         spec = mujoco.MjSpec.from_file(str(self._xml_path))
         spec.option.timestep = 1 / self.freq
@@ -222,7 +222,7 @@ class Sim:
         if (drone_body := drone_spec.body("drone")) is None:
             raise ValueError("Drone body not found in drone spec")
         # Mocap bodies avoid the nv^2 cost of qM/qLD/efc_J. A single dummy slide joint keeps nv=1 so
-        # mjx.kinematics doesn't error on a zero-DOF model.
+        # mjx.kinematics doesn't error on a zero-DOF mjx_model.
         dummy = spec.worldbody.add_body()
         dummy.name = "_dummy"
         dummy.mass = 1e-6
@@ -521,7 +521,7 @@ def contacts(geom_start: int, geom_count: int, data: Data) -> Array:
 
 @jax.jit
 def sync_sim2mjx(data: SimData, mjx_data: Data, mjx_model: Model) -> tuple[SimData, Data]:
-    """Synchronize the simulation data with the MuJoCo model."""
+    """Synchronize the simulation data with the MuJoCo mjx_model."""
     pos, quat = data.states.pos, data.states.quat
     quat_mjx = jnp.roll(quat, 1, axis=-1)  # MuJoCo quat is [w, x, y, z], ours is [x, y, z, w]
     ids = data.core.drone_mocap_ids

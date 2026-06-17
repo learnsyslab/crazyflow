@@ -44,7 +44,7 @@ class FigureEightEnv(DroneEnv):
             num_envs: Number of environments to run in parallel.
             max_episode_time: Maximum episode time in seconds.
             dynamics: Dynamics backend to use.
-            drone: Drone model of the environment.
+            drone: Drone of the environment.
             freq: Frequency of the simulation.
             device: Device to use for the simulation.
         """

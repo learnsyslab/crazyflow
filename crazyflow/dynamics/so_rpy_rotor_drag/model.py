@@ -1,11 +1,11 @@
-"""Second-order fitted RPY dynamics model with thrust dynamics and linear drag.
+"""Second-order fitted RPY dynamics with thrust dynamics and linear drag.
 
-This module extends the ``so_rpy_rotor`` model by adding a body-frame linear
-drag term to the translational dynamics.  Rotational dynamics are still modelled
-as a fitted second-order linear system, and thrust spin-up uses a first-order lag.
+This module extends the ``so_rpy_rotor`` by adding a body-frame linear drag term to the
+translational dynamics.  Rotational dynamics are still modelled as a fitted second-order linear
+system, and thrust spin-up uses a first-order lag.
 
-The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.  The
-``rotor_vel`` state is a **scalar thrust state in Newtons** (not motor RPMs).
+The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``. The ``rotor_vel`` state is a
+**scalar thrust state in Newtons** (not motor RPMs).
 
 Both a numeric implementation ([dynamics][crazyflow.dynamics.so_rpy_rotor_drag.dynamics]) and
 symbolic CasADi implementations
@@ -35,7 +35,9 @@ if TYPE_CHECKING:
 
     from crazyflow._typing import Array  # To be changed to array_api_typing later
     from crazyflow.sim.data import SimData
-# Additional symbols specific to this model
+
+
+# Additional symbols specific to these dynamics
 roll, pitch, yaw = cs.MX.sym("roll"), cs.MX.sym("pitch"), cs.MX.sym("yaw")
 rpy = cs.vertcat(roll, pitch, yaw)  # Euler angles
 droll, dpitch, dyaw = cs.MX.sym("droll"), cs.MX.sym("dpitch"), cs.MX.sym("dyaw")
@@ -67,7 +69,7 @@ def dynamics(
     cmd_rpy_coef: Array,
     drag_matrix: Array,
 ) -> tuple[Array, Array, Array, Array, Array | None]:
-    """Fitted model with linear, second order rpy dynamics with thrust dynamics and drag.
+    """Fitted linear, second order rpy dynamics with thrust dynamics and drag.
 
     Args:
         pos: Position of the drone (m).
@@ -170,7 +172,7 @@ def symbolic_dynamics(
     cmd_rpy_coef: Array,
     drag_matrix: Array,
 ) -> tuple[cs.MX, cs.MX, cs.MX, cs.MX]:
-    """Return CasADi symbolic expressions for the so_rpy_rotor_drag model in quaternion form.
+    """Return CasADi symbolic expressions for the so_rpy_rotor_drag dynamics in quaternion form.
 
     Internally delegates to
     [symbolic_dynamics_euler][crazyflow.dynamics.so_rpy_rotor_drag.symbolic_dynamics_euler] and
@@ -178,33 +180,31 @@ def symbolic_dynamics(
     matches that of [symbolic_dynamics][crazyflow.dynamics.first_principles.symbolic_dynamics].
 
     Args:
-        model_rotor_vel: If ``True``, the scalar thrust state is included in
-            ``X`` and first-order thrust dynamics are modelled.  Defaults to
-            ``True``.
+        model_rotor_vel: If ``True``, the scalar thrust state is included in ``X`` and first-order
+            thrust dynamics are modelled. Defaults to ``True``.
         model_dist_f: If ``True``, a 3-D force disturbance is appended to ``X``.
         model_dist_t: If ``True``, a 3-D torque disturbance is appended to ``X``.
         mass: Drone mass in kg.
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_time_coef: First-order thrust lag time constant coefficient
-            (1/s).
+        thrust_time_coef: First-order thrust lag time constant coefficient (1/s).
         acc_coef: Scalar acceleration offset coefficient.
         cmd_f_coef: Collective-thrust-to-acceleration coefficient.
         rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
         rpy_rates_coef: RPY-rate feedback coefficient, shape ``(3,)``.
         cmd_rpy_coef: RPY command feedforward coefficient, shape ``(3,)``.
-        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients
-            applied in the body frame.
+        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients applied in the body
+            frame.
 
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
-        * ``X_dot``: State derivative, length 14 when ``model_rotor_vel=True``
-          (13 otherwise), plus 3 per enabled disturbance.
-        * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with
-          ``rotor_vel(1)`` appended if ``model_rotor_vel=True``.  Note that
-          ``rotor_vel`` here represents the thrust state in Newtons.
+        * ``X_dot``: State derivative, length 14 when ``model_rotor_vel=True`` (13 otherwise), plus
+          3 per enabled disturbance.
+        * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with ``rotor_vel(1)``
+          appended if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust
+          state in Newtons.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), quat(4)]``.
     """
@@ -292,38 +292,35 @@ def symbolic_dynamics_euler(
     cmd_rpy_coef: Array,
     drag_matrix: Array,
 ) -> tuple[cs.MX, cs.MX, cs.MX, cs.MX]:
-    """Return CasADi symbolic expressions for the so_rpy_rotor_drag model in Euler-angle form.
+    """Return CasADi symbolic expressions for the so_rpy_rotor_drag dynamics in Euler-angle form.
 
-    This is the native representation of the ``so_rpy_rotor_drag`` model.  The
-    state uses roll/pitch/yaw and their rates rather than quaternion + angular
-    velocity, which avoids trigonometric overhead inside CasADi-based solvers.
+    This is the native representation of the ``so_rpy_rotor_drag`` dynamics. The state uses
+    roll/pitch/yaw and their rates rather than quaternion + angular velocity, which avoids
+    trigonometric overhead inside CasADi-based solvers.
 
     Args:
-        model_rotor_vel: If ``True``, the scalar thrust state is included in
-            ``X`` and first-order thrust dynamics are modelled.  Defaults to
-            ``True``.
+        model_rotor_vel: If ``True``, the scalar thrust state is included in ``X`` and first-order
+            thrust dynamics are modelled. Defaults to ``True``.
         mass: Drone mass in kg.
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_time_coef: First-order thrust lag time constant coefficient
-            (1/s).
+        thrust_time_coef: First-order thrust lag time constant coefficient (1/s).
         acc_coef: Scalar acceleration offset coefficient.
         cmd_f_coef: Collective-thrust-to-acceleration coefficient.
         rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
         rpy_rates_coef: RPY-rate feedback coefficient, shape ``(3,)``.
         cmd_rpy_coef: RPY command feedforward coefficient, shape ``(3,)``.
-        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients
-            applied in the body frame.
+        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients applied in the body
+            frame.
 
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
-        * ``X_dot``: State derivative, length 13 when ``model_rotor_vel=True``
-          (12 otherwise).
-        * ``X``: State vector ``[pos(3), rpy(3), vel(3), drpy(3)]``, with
-          ``rotor_vel(1)`` appended if ``model_rotor_vel=True``.  Note that
-          ``rotor_vel`` here represents the thrust state in Newtons.
+        * ``X_dot``: State derivative, length 13 when ``model_rotor_vel=True`` (12 otherwise).
+        * ``X``: State vector ``[pos(3), rpy(3), vel(3), drpy(3)]``, with ``rotor_vel(1)`` appended
+          if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust state in
+          Newtons.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), rpy(3)]``.
     """
@@ -412,7 +409,7 @@ class Params:
 
 
 def sim_dynamics(data: SimData) -> SimData:
-    """Compute the forces and torques from the so_rpy_rotor_drag dynamics model."""
+    """Compute the forces and torques from the so_rpy_rotor_drag dynamics."""
     params: Params = data.params
     vel, _, acc, ang_acc, rotor_acc = dynamics(
         pos=data.states.pos,

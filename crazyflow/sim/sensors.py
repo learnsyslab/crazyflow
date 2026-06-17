@@ -36,7 +36,7 @@ def build_render_depth_fn(
 ) -> Callable[[Sim], Array]:
     """Build a depth renderer function for given camera and resolution.
 
-    Compiles the mjx model and rays directly into the rendering function for higher performance. The
+    Compiles the mjx_model and rays directly into the rendering function for higher performance. The
     returned function takes a Sim object as input and returns depth images.
     """
     rays = _camera_rays(resolution=resolution, fov_y=jnp.pi / 4)[None, ...]

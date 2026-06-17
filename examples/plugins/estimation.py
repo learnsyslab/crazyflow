@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 import jax
 import jax.numpy as jnp
 import numpy as np
-from drone_models.transform import motor_force2rotor_vel
 
 from crazyflow import Sim
+from crazyflow.dynamics.transform import motor_force2rotor_vel
 from crazyflow.sim.pipeline import insert_fn_after, prepend_fn
 from crazyflow.sim.visualize import draw_line, draw_points
 

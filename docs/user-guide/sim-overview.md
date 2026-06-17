@@ -25,7 +25,7 @@ All simulation state is stored in `sim.data`, a `SimData` pytree. The main sub-t
 | Field | Type | Description |
 |---|---|---|
 | `states` | `SimState` | Current kinematic state of every drone |
-| `states_deriv` | `SimStateDeriv` | Time derivatives computed by the dynamics model |
+| `states_deriv` | `SimStateDeriv` | Time derivatives computed by the dynamics |
 | `controls` | `SimControls` | Staged commands and controller state |
 | `params` | `SimParams` | Physical parameters (mass, inertia, motor constants, …) |
 | `core` | `SimCore` | Metadata: step count, frequency, RNG key, device |

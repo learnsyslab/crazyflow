@@ -41,7 +41,7 @@ JAX defaults to CPU-only execution. The `gpu` extra swaps in `jax[cuda12]`, enab
 
 ## Developer install
 
-[Pixi](https://pixi.sh/) creates a fully reproducible environment. This variant installs `crazyflow`, `drone_models`, and `drone_controllers` in editable mode from the `submodules/` folder. Any source change takes effect immediately without reinstalling. Recommended for contributors and researchers who modify the simulator.
+[Pixi](https://pixi.sh/) creates a fully reproducible environment. This variant installs `crazyflow`, and `drone_controllers` in editable mode from the `submodules/` folder. Any source change takes effect immediately without reinstalling. Recommended for contributors and researchers who modify the simulator.
 
 ## Testing
 

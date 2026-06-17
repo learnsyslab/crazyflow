@@ -29,7 +29,7 @@ def test_attitude_symbolic(dynamics: Dynamics, freq: int):
 
     x0 = sim_state2symbolic_state(sim.data.states)
 
-    # Simulate with both models for 0.5 seconds
+    # Simulate with both dynamics for 0.5 seconds
     t_end = 0.5
     dt = 1 / sim.freq
     steps = int(t_end / dt)

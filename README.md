@@ -36,10 +36,10 @@ for _ in range(100):
 ## Features
 
 - **n\_worlds x n\_drones** — batched over independent environments and multi-drone swarms simultaneously
-- **GPU-accelerated** — up to 914 M steps/s on an RTX 4090 (first-principles physics, 262 K worlds)
+- **GPU-accelerated** — up to 914 M steps/s on an RTX 4090 (first-principles dynamics, 262 K worlds)
 - **Differentiable** — `jax.grad` works through the full dynamics and control pipeline
-- **First-principles dynamics** — physics model using first-principles equations and parameters identified from real-world measurements
-- **Abstracted dynamics** — three dynamics models fitted from real Crazyflie flight data
+- **First-principles dynamics** — dynamics using first-principles equations and parameters identified from real-world measurements
+- **Abstracted dynamics** — simplified dynamics in three flavors fitted from real Crazyflie flight data
 - **Modular pipelines** — step and reset are tuples of plain JAX functions; insert anything, anywhere
 - **MuJoCo integration** — onscreen and offscreen rendering, raycasting, and contact detection via MJX
 
@@ -60,7 +60,7 @@ pixi shell
 
 ## Performance
 
-First-principles physics, one drone. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 4090.
+First-principles dynamics, one drone. CPU: AMD Ryzen 9 7950X. GPU: NVIDIA RTX 4090.
 
 | n\_worlds | CPU steps/s | GPU steps/s |
 |---|---|---|

@@ -1,6 +1,6 @@
-# Dynamics Models
+# Dynamics
 
-Crazyflow supports four dynamics models, selectable via the `Dynamics` enum. All models share the same state representation and control interface, so you can swap them at construction time without changing any other code.
+Crazyflow supports four dynamics, selectable via the `Dynamics` enum. All dynamics share the same state representation and control interface, so you can swap them at construction time without changing any other code.
 
 ```python
 from crazyflow.sim import Sim, Dynamics
@@ -8,20 +8,20 @@ from crazyflow.sim import Sim, Dynamics
 sim = Sim(dynamics=Dynamics.first_principles)
 ```
 
-## Available models
+## Available dynamics
 
-| Model | Enum value | Command input | Description |
+| Dynamics | Enum value | Command input | Description |
 |---|---|---|---|
-| First principles | `Dynamics.first_principles` | Rotor RPM | Full analytical model with identified parameters |
-| SO(3) + RPY | `Dynamics.so_rpy` | Roll/pitch/yaw + thrust | Simplified fitted model |
+| First principles | `Dynamics.first_principles` | Rotor RPM | Full analytical dynamics with identified parameters |
+| SO(3) + RPY | `Dynamics.so_rpy` | Roll/pitch/yaw + thrust | Simplified fitted dynamics |
 | SO(3) + RPY + rotor | `Dynamics.so_rpy_rotor` | Roll/pitch/yaw + thrust | Adds first-order rotor dynamics |
 | SO(3) + RPY + rotor + drag | `Dynamics.so_rpy_rotor_drag` | Roll/pitch/yaw + thrust | Adds translational and rotational drag |
 
 `Dynamics.default` resolves to `Dynamics.first_principles`.
 
-## First-principles model
+## First-principles dynamics
 
-The first-principles model derives forces and torques analytically from motor speeds using identified physical parameters: mass, arm length, propeller constants, and the full inertia tensor. It operates at the rotor-velocity level and is the most accurate model for sim-to-real transfer.
+The first-principles dynamics derives forces and torques analytically from motor speeds using identified physical parameters: mass, arm length, propeller constants, and the full inertia tensor. It operates at the rotor-velocity level and is the most accurate dynamics for sim-to-real transfer.
 
 ```python
 from crazyflow.sim import Sim, Dynamics
@@ -47,11 +47,11 @@ Parameters accessible through `sim.data.params`:
 | `mixing_matrix` | Maps rotor RPMs² to [thrust, tx, ty, tz] |
 | `rotor_dyn_coef` | First-order rotor time constant |
 
-## Fitted models (so_rpy family)
+## Fitted dynamics (so_rpy family)
 
-The `so_rpy` models are identified from flight data using a small number of flight minutes. They take higher-level commands (roll/pitch/yaw setpoints + collective thrust in Newtons) and are faster to simulate because they skip the rotor-velocity level.
+The `so_rpy` dynamics are identified from flight data using a small number of flight minutes. They take higher-level commands (roll/pitch/yaw setpoints + collective thrust in Newtons) and are faster to simulate because they skip the rotor-velocity level.
 
-These models are a good choice when:
+These dynamics are a good choice when:
 
 - You are training RL agents and want speed over fidelity
 - Your controller outputs attitude targets (as most Crazyflie firmware does)
@@ -68,11 +68,11 @@ sim = Sim(
 sim.reset()
 ```
 
-The `so_rpy_rotor_drag` variant includes translational drag, which captures the velocity-dependent deceleration effect visible in aggressive flights. It is the recommended fitted model for sim-to-real experiments.
+The `so_rpy_rotor_drag` variant includes translational drag, which captures the velocity-dependent deceleration effect visible in aggressive flights. It is the recommended fitted dynamics for sim-to-real experiments.
 
 ## Control mode compatibility
 
-| Dynamics model | `Control.state` | `Control.attitude` | `Control.force_torque` | `Control.rotor_vel` |
+| Dynamics | `Control.state` | `Control.attitude` | `Control.force_torque` | `Control.rotor_vel` |
 |---|---|---|---|---|
 | `first_principles` | ✓ | ✓ | ✓ | ✓ |
 | `so_rpy` | ✓ | ✓ | ✗ | ✗ |
@@ -80,7 +80,7 @@ The `so_rpy_rotor_drag` variant includes translational drag, which captures the 
 | `so_rpy_rotor_drag` | ✓ | ✓ | ✗ | ✗ |
 
 !!! warning
-    Using `Control.force_torque` or `Control.rotor_vel` with a fitted model raises `ConfigError` at construction time.
+    Using `Control.force_torque` or `Control.rotor_vel` with a fitted dynamics raises `ConfigError` at construction time.
 
 ## Next steps
 

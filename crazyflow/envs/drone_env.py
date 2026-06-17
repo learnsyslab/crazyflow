@@ -26,7 +26,7 @@ def action_space(control_type: Control, drone: str) -> spaces.Box:
 
     Args:
         control_type: The desired control mode.
-        drone: Drone model of the environment.
+        drone: Drone of the environment.
 
     Returns:
         The action space.
@@ -75,8 +75,8 @@ class DroneEnv(VectorEnv):
         Args:
             num_envs: The number of environments to run in parallel.
             max_episode_time: The time horizon after which episodes are truncated (s).
-            dynamics: The crazyflow dynamics simulation model.
-            drone: Drone model of the environment.
+            dynamics: The crazyflow dynamics.
+            drone: Drone of the environment.
             freq: The frequency at which the environment is run.
             device: The device of the environment and the simulation.
             reset_randomization: A function that randomizes the initial state of the simulation. If

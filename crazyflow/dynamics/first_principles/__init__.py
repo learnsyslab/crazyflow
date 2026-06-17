@@ -1,9 +1,9 @@
 r"""Full rigid-body dynamics for a quadrotor.
 
-This package implements Newton-Euler dynamics based on physical constants —
-mass, inertia, motor thrust and torque curves, arm length, and drag
-coefficients. The command interface is four motor angular velocities in RPM.
-No data fitting is required; all parameters are measurable physical quantities.
+This package implements Newton-Euler dynamics based on physical constants: mass, inertia, motor 
+thrust and torque curves, arm length, and drag coefficients. The command interface is four motor
+angular velocities in RPM. No data fitting is required; all parameters are measurable physical
+quantities.
 
 Motor forces and torques are quadratic polynomials in RPM:
 
@@ -43,8 +43,8 @@ The rigid-body equations of motion are:
 \end{aligned}
 \]
 
-where \(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world
-frame, and the forces and torques are:
+where \(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world frame,
+and the forces and torques are:
 
 \[
 \begin{aligned}
@@ -78,9 +78,8 @@ with:
 \end{aligned}
 \]
 
-where \(D_b\) is the body-frame drag matrix, \(l\) is the motor arm length,
-\(J_p\) is the propeller moment of inertia, \(M\) is the \(3\times 4\) mixing
-matrix, and \(\mathbf{m}_z\) is its last row.
+where \(D_b\) is the body-frame drag matrix, \(l\) is the motor arm length, \(J_p\) is the propeller
+moment of inertia, \(M\) is the \(3\times 4\) mixing matrix, and \(\mathbf{m}_z\) is its last row.
 """
 
 from crazyflow.dynamics.first_principles.model import (

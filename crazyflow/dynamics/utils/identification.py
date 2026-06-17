@@ -1,4 +1,4 @@
-"""This module contains functions to identify so_rpy models from data."""
+"""This module contains functions to identify so_rpy dynamics from data."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def _simulate_system_translation(
         vel: Velocity of the drone (N, 3)
         cmd_f: Commanded thrust (N,)
         t: Time samples (N,)
-        params: Model parameters [cmd_f_coef, thrust_time_coef, drag_xy_coef, drag_z_coef]
+        params: Dynamics parameters [cmd_f_coef, thrust_time_coef, drag_xy_coef, drag_z_coef]
         constants: Additional constants (mass, gravity_vec, etc.)
 
     returns: predicted acceleration (N, 3)
@@ -125,9 +125,9 @@ def _simulate_system_translation(
 
 
 def _build_residuals_fun_translation(
-    model: Literal["so_rpy", "so_rpy_rotor", "so_rpy_rotor_drag"],
+    dynamics: Literal["so_rpy", "so_rpy_rotor", "so_rpy_rotor_drag"],
 ) -> tuple[Callable, Callable]:
-    """Build residual function for the given model type."""
+    """Build residual function for the given dynamics type."""
 
     def _residuals_trans(
         params: Array,
@@ -154,7 +154,7 @@ def _build_residuals_fun_translation(
         constants: dict[str, Array],
         acc_observed: Array,
     ) -> Callable:
-        match model:  # Dummy values for other params
+        match dynamics:  # Dummy values for other params
             case "so_rpy":
                 params_jnp = jnp.array([params[0], 0.0, 0.0, 0.0])
             case "so_rpy_rotor":
@@ -162,7 +162,7 @@ def _build_residuals_fun_translation(
             case "so_rpy_rotor_drag":
                 params_jnp = jnp.array([params[0], params[1], params[2], params[3]])
             case _:
-                raise ValueError(f"Unknown model type: {model}")
+                raise ValueError(f"Unknown dynamics type: {dynamics}")
         return jax.device_get(
             _residuals_trans(params_jnp, quat, vel, cmd_f, t, constants, acc_observed)
         )
@@ -176,7 +176,7 @@ def _build_residuals_fun_translation(
         constants: dict[str, Array],
         acc_observed: Array,
     ) -> Callable:
-        match model:  # Dummy values for other params
+        match dynamics:  # Dummy values for other params
             case "so_rpy":
                 params_jnp = jnp.array([params[0], 0.0, 0.0, 0.0])
             case "so_rpy_rotor":
@@ -184,14 +184,14 @@ def _build_residuals_fun_translation(
             case "so_rpy_rotor_drag":
                 params_jnp = jnp.array([params[0], params[1], params[2], params[3]])
             case _:
-                raise ValueError(f"Unknown model type: {model}")
+                raise ValueError(f"Unknown dynamics type: {dynamics}")
         return jax.device_get(jac_fun(params_jnp, quat, vel, cmd_f, t, constants, acc_observed))
 
     return _residual_fun_trans, _residual_fun_trans_jac
 
 
 def sys_id_translation(
-    model: Literal["so_rpy", "so_rpy_rotor", "so_rpy_rotor_drag"],
+    dynamics: Literal["so_rpy", "so_rpy_rotor", "so_rpy_rotor_drag"],
     mass: float,
     data: dict[str, Array],
     data_validation: dict[str, Array] | None = None,
@@ -199,10 +199,10 @@ def sys_id_translation(
     verbose: int = 0,
     plot: bool = False,
 ) -> dict[str, Array]:
-    """Identify the translational part of the so_rpy model from data.
+    """Identify the translational part of the so_rpy dynamics from data.
 
     Args:
-        model: Model type to identify.
+        dynamics: Dynamics type to identify.
         mass: Mass of the drone.
         data: Training data containing time, and the SVF values of vel, acc, quat, cmd_f.
         data_validation: Optional validation data containing the same fields as data.
@@ -210,7 +210,7 @@ def sys_id_translation(
         verbose: Verbosity level for the optimizer from 0 to 2.
         plot: Whether to plot the results.
 
-    Returns: Identified model parameters.
+    Returns: Identified dynamics parameters.
     """
     theta0 = [1.0, 1.0, 0.0, 0.0]
     method = "trf"
@@ -224,7 +224,7 @@ def sys_id_translation(
     cmd_f = jnp.array(data["SVF_cmd_f"])
 
     # Identification
-    residual_fun_trans, residual_fun_trans_jac = _build_residuals_fun_translation(model)
+    residual_fun_trans, residual_fun_trans_jac = _build_residuals_fun_translation(dynamics)
     res = least_squares(
         residual_fun_trans,
         x0=theta0,
@@ -239,11 +239,11 @@ def sys_id_translation(
 
     theta = res.x
     params = {"cmd_f_coef": theta[0]}
-    if "rotor" in model:
+    if "rotor" in dynamics:
         params["thrust_time_coef"] = theta[1]
     else:
         theta[1] = 0.0
-    if "drag" in model:
+    if "drag" in dynamics:
         params["drag_xy_coef"] = theta[2]
         params["drag_z_coef"] = theta[3]
     else:
@@ -262,7 +262,7 @@ def sys_id_translation(
         )
 
     # Report
-    txt = f"\n=== Stats {model} ==="
+    txt = f"\n=== Stats {dynamics} ==="
     txt += f"\nParameters: {params=}"
     txt += f"\nTraining success={res.success}, results:"
     txt += f"\nRMSE={_rmse(acc, acc_pred):.6f}"
@@ -324,7 +324,7 @@ def _simulate_system_rotation(cmd_rpy: Array, t: Array, params: Array) -> Array:
     Args:
         cmd_rpy: Commanded orientation (N, 3)
         t: Time samples (N,)
-        params: Model parameters [rpy_coef, rpy_rates_coef, cmd_rpy_coef]
+        params: Dynamics parameters [rpy_coef, rpy_rates_coef, cmd_rpy_coef]
 
     returns: predicted acceleration (N, 3)
     """
@@ -339,7 +339,7 @@ def _simulate_system_rotation(cmd_rpy: Array, t: Array, params: Array) -> Array:
         cmd_rpy_coef = jnp.array([params[4], params[4], params[5]])
         rpy, rpy_rates = carry[0], carry[1]
 
-        ### Alternative 1: Using the actual model (slower)
+        ### Alternative 1: Using the actual dynamics (slower)
         quat = R.from_euler("xyz", rpy).as_quat()
         ang_vel = rpy_rates2ang_vel(quat, rpy_rates)
         _, _, _, ang_acc, _ = dynamics_rotation(
@@ -371,7 +371,7 @@ def _simulate_system_rotation(cmd_rpy: Array, t: Array, params: Array) -> Array:
 
 
 def _build_residuals_fun_rotation() -> tuple[Callable, Callable]:
-    """Build residual function for the given model type."""
+    """Build residual function for the given dynamics type."""
 
     def _residuals_rot(params: Array, cmd_rpy: Array, t: Array, rpy_observed: Array) -> Array:
         rpy = _simulate_system_rotation(cmd_rpy, t, params)
@@ -400,7 +400,7 @@ def sys_id_rotation(
     verbose: int = 0,
     plot: bool = False,
 ) -> dict[str, Array]:
-    """Identify the rotational part of the so_rpy model from data.
+    """Identify the rotational part of the so_rpy dynamics from data.
 
     Args:
         data: Training data containing time, and the SVF values of rpy [rad], cmd_rpy [rad].
@@ -408,7 +408,7 @@ def sys_id_rotation(
         verbose: Verbosity level for the optimizer from 0 to 2.
         plot: Whether to plot the results.
 
-    Returns: Identified model parameters.
+    Returns: Identified dynamics parameters.
     """
     # theta includes the values for roll/pitch (same value) and yaw
     theta0 = np.array([-10.0, -10.0, -1.0, -1.0, 10.0, 10.0])  # ry, ry_rates, cmd_ry
