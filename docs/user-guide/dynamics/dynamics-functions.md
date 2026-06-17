@@ -24,7 +24,7 @@ What differs between dynamics is the command interface, which parameters are nee
 
 The full rigid-body dynamics, derived analytically from first principles. The command is four individual motor RPMs. It computes forces and torques from the RPMs using polynomial thrust and torque curves, applies the mixing matrix to find body-frame moments, and integrates using Newton–Euler equations. Propeller inertia and gyroscopic effects are included. No fitting to flight data is required — all parameters are physical constants you can measure or look up.
 
-Working at the rotor-velocity level means you need a controller that converts higher-level commands — position setpoints, attitude + collective thrust — down to individual motor RPMs. [drone-controllers](https://learnsyslab.github.io/drone-controllers/) provides a matching set of controllers designed for exactly this interface.
+Working at the rotor-velocity level means you need a controller that converts higher-level commands, such as position setpoints or attitude plus collective thrust, down to individual motor RPMs. The [controllers](../control/index.md) in `crazyflow.control` provide a matching set designed for exactly this interface.
 
 ```python
 import numpy as np

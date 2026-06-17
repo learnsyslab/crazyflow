@@ -1,4 +1,0 @@
-[submodule "submodules/drone-controllers"]
-	path = submodules/drone-controllers
-	url = https://github.com/learnsyslab/drone-controllers.git
-	branch = main

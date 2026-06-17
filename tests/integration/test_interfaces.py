@@ -1,11 +1,11 @@
 import jax
 import numpy as np
 import pytest
-from drone_controllers import parametrize
-from drone_controllers.mellinger import state2attitude
 from scipy.spatial.transform import Rotation as R
 
+from crazyflow.control import parametrize
 from crazyflow.control.control import Control
+from crazyflow.control.mellinger import state2attitude
 from crazyflow.dynamics.core import load_params
 from crazyflow.dynamics.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim
@@ -36,17 +36,15 @@ def test_state_interface(dynamics: Dynamics):
 def test_attitude_interface(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.attitude)
     target_pos = np.array([0.0, 0.0, 1.0])
-    # `parametrize` is from the external drone_controllers package, which still uses `drone_model`.
-    # TODO: Refactor once drone_controllers have been moved into crazyflow.
-    jit_state2attitude = jax.jit(parametrize(state2attitude, drone_model="cf2x_L250"))
+    jit_state2attitude = jax.jit(parametrize(state2attitude, drone="cf2x_L250"))
 
-    i_error = np.zeros((1, 1, 3))
+    pos_err_i = np.zeros((1, 1, 3))
     cmd = np.zeros((1, 1, 13))
     cmd[0, 0, 2] = 1.0  # Set z position target to 1.0
 
     for _ in range(int(2 * sim.control_freq)):  # Run simulation for 2 seconds
         pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
-        rpyt, i_error = jit_state2attitude(pos, quat, vel, cmd, (i_error,), ctrl_freq=100)
+        rpyt, pos_err_i = jit_state2attitude(pos, quat, vel, cmd, pos_err_i, ctrl_freq=100)
         sim.attitude_control(rpyt)
         sim.step(sim.freq // sim.control_freq)
 
