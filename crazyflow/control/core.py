@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import inspect
 import tomllib
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
 import jax
-import numpy as np
 from jax import Array
 
-from crazyflow.utils import parametrize as parametrize_core
+from crazyflow.utils import filter_to_signature, to_xp
+from crazyflow.utils import parametrize as _parametrize
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -51,7 +50,7 @@ def parametrize(
     Returns:
         The parametrized controller function with all keyword argument only parameters filled in.
     """
-    return parametrize_core(fn, drone, load_params, xp=xp, device=device)
+    return _parametrize(fn, drone, load_params, xp=xp, device=device)
 
 
 def load_params(
@@ -76,14 +75,12 @@ def load_params(
     params_path = Path(__file__).parent / f"{controller}/params.toml"
     if not params_path.exists():
         raise KeyError(f"`{controller}` not found. Available controllers: {tuple(Control)}")
-    xp = np if xp is None else xp
     with open(params_path, "rb") as f:
         params = tomllib.load(f)
     if drone not in params:
         raise KeyError(f"Drone `{drone}` not found in {controller}/params.toml")
     merged = params[drone].get("core", {}) | params[drone].get(fn.__name__, {})
-    valid_args = set(inspect.signature(fn).parameters.keys())
-    return {k: xp.asarray(v, device=device) for k, v in merged.items() if k in valid_args}
+    return to_xp(filter_to_signature(merged, fn), xp=xp, device=device)
 
 
 class Control(str, Enum):

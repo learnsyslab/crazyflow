@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Mapping
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import jax
 import jax.numpy as jnp
@@ -110,10 +111,33 @@ def parametrize(
     """
     params = load_params(fn, drone, xp=xp, device=device)
     xp = np if xp is None else xp
-    kwargs = {
-        k: xp.asarray(v, device=device)
-        for k, v in params.items()
-        if k in inspect.signature(fn).parameters
-        and inspect.signature(fn).parameters[k].kind == inspect.Parameter.KEYWORD_ONLY
-    }
+    fn_params = inspect.signature(fn).parameters
+    fn_kwargs = {k for k, v in fn_params.items() if v.kind == inspect.Parameter.KEYWORD_ONLY}
+    kwargs = {k: xp.asarray(v, device=device) for k, v in params.items() if k in fn_kwargs}
     return partial(fn, **kwargs)
+
+
+def filter_to_signature(params: dict, fn: Callable) -> dict:
+    """Keep only the params accepted by ``fn``.
+
+    Asserts that every keyword-only parameter of ``fn`` (the injectable params, as opposed to the
+    positional runtime inputs) is present in ``params``.
+    """
+    sig = inspect.signature(fn).parameters
+    filtered = {k: v for k, v in params.items() if k in sig}
+    required = {k for k, p in sig.items() if p.kind == inspect.Parameter.KEYWORD_ONLY}
+    missing = required - filtered.keys()
+    assert not missing, f"Missing parameters for {fn.__name__}: {missing}"
+    return filtered
+
+
+def to_xp(*args: Any, xp: ModuleType | None = None, device: Any = None) -> Any:
+    """Convert arrays, dicts etc recursively to the ``xp`` namespace and device."""
+    xp = np if xp is None else xp
+    match args:
+        case [Mapping() as m]:
+            return {k: to_xp(v, xp=xp, device=device) for k, v in m.items()}
+        case [single]:
+            return xp.asarray(single, device=device)
+        case _:
+            return tuple(to_xp(a, xp=xp, device=device) for a in args)

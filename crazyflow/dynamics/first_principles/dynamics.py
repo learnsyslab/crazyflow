@@ -20,13 +20,15 @@ from typing import TYPE_CHECKING
 import casadi as cs
 import jax
 import jax.numpy as jnp
-from array_api_compat import array_namespace, device
+from array_api_compat import array_namespace
+from array_api_compat import device as xp_device
 from flax.struct import dataclass
 from scipy.spatial.transform import Rotation as R
 
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
-from crazyflow.dynamics.utils import rotation, to_xp
+from crazyflow.dynamics.utils import rotation
+from crazyflow.utils import to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -97,12 +99,12 @@ def dynamics(
         More information: <https://ahrs.readthedocs.io/en/latest/filters/angular.html>
     """
     xp = array_namespace(pos)
-    mass, L, prop_inertia, gravity_vec, rpm2thrust, rpm2torque = to_xp(
-        mass, L, prop_inertia, gravity_vec, rpm2thrust, rpm2torque, xp=xp, device=device(pos)
-    )
-    J, J_inv, mixing_matrix, rotor_dyn_coef, drag_matrix = to_xp(
-        J, J_inv, mixing_matrix, rotor_dyn_coef, drag_matrix, xp=xp, device=device(pos)
-    )
+    device = xp_device(pos)
+    mass, L, prop_inertia = to_xp(mass, L, prop_inertia, xp=xp, device=device)
+    gravity_vec, rpm2thrust = to_xp(gravity_vec, rpm2thrust, xp=xp, device=device)
+    rpm2torque, J, J_inv = to_xp(rpm2torque, J, J_inv, xp=xp, device=device)
+    mixing_matrix, rotor_dyn_coef = to_xp(mixing_matrix, rotor_dyn_coef, xp=xp, device=device)
+    drag_matrix = to_xp(drag_matrix, xp=xp, device=device)
     rot = R.from_quat(quat)  # from body to world
     rot_mat = rot.inv().as_matrix()  # from world to body
     # Rotor dynamics

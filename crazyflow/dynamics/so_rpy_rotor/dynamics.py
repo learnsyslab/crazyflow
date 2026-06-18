@@ -27,7 +27,8 @@ from scipy.spatial.transform import Rotation as R
 
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
-from crazyflow.dynamics.utils import rotation, to_xp
+from crazyflow.dynamics.utils import rotation
+from crazyflow.utils import to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -90,12 +91,9 @@ def dynamics(
     # Convert constants to the correct framework and device
     device = xp_device(pos)
     mass, gravity_vec, J, J_inv = to_xp(mass, gravity_vec, J, J_inv, xp=xp, device=device)
-    thrust_time_coef, acc_coef, cmd_f_coef = to_xp(
-        thrust_time_coef, acc_coef, cmd_f_coef, xp=xp, device=device
-    )
-    rpy_coef, rpy_rates_coef, cmd_rpy_coef = to_xp(
-        rpy_coef, rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device
-    )
+    thrust_time_coef, acc_coef = to_xp(thrust_time_coef, acc_coef, xp=xp, device=device)
+    cmd_f_coef, rpy_coef = to_xp(cmd_f_coef, rpy_coef, xp=xp, device=device)
+    rpy_rates_coef, cmd_rpy_coef = to_xp(rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device)
 
     cmd_f = cmd[..., -1]
     cmd_rpy = cmd[..., 0:3]

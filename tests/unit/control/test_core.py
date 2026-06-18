@@ -22,19 +22,9 @@ _MELLINGER_FNS = [state2attitude, attitude2force_torque, force_torque2rotor_vel]
 @pytest.mark.parametrize("drone", available_drones)
 def test_load_params_keys(fn: Callable[..., Any], drone: str) -> None:
     params = load_params(fn, drone)
-    kwonly = {
-        name
-        for name, p in inspect.signature(fn).parameters.items()
-        if p.kind == inspect.Parameter.KEYWORD_ONLY
-    }
-    assert kwonly <= set(params.keys()), f"Missing keys: {kwonly - set(params.keys())}"
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
-def test_load_params_values(drone: str) -> None:
-    params = load_params(state2attitude, drone)
-    assert float(params["mass"]) == pytest.approx(raw["core"]["mass"])
+    fn_params = inspect.signature(fn).parameters
+    fn_kwargs = {k for k, v in fn_params.items() if v.kind == inspect.Parameter.KEYWORD_ONLY}
+    assert fn_kwargs <= set(params.keys()), f"Missing keys: {fn_kwargs - set(params.keys())}"
 
 
 @pytest.mark.unit

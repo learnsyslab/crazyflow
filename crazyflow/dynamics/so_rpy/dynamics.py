@@ -19,13 +19,15 @@ from typing import TYPE_CHECKING
 import casadi as cs
 import jax
 import jax.numpy as jnp
-from array_api_compat import array_namespace, device
+from array_api_compat import array_namespace
+from array_api_compat import device as xp_device
 from flax.struct import dataclass
 from scipy.spatial.transform import Rotation as R
 
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
-from crazyflow.dynamics.utils import rotation, to_xp
+from crazyflow.dynamics.utils import rotation
+from crazyflow.utils import to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -81,10 +83,10 @@ def dynamics(
     """
     xp = array_namespace(pos)
     # Convert parameters to correct xp framework
-    mass, gravity_vec, J, J_inv = to_xp(mass, gravity_vec, J, J_inv, xp=xp, device=device(pos))
-    acc_coef, cmd_f_coef, rpy_coef, rpy_rates_coef, cmd_rpy_coef = to_xp(
-        acc_coef, cmd_f_coef, rpy_coef, rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device(pos)
-    )
+    device = xp_device(pos)
+    mass, gravity_vec, J, J_inv = to_xp(mass, gravity_vec, J, J_inv, xp=xp, device=device)
+    acc_coef, cmd_f_coef, rpy_coef = to_xp(acc_coef, cmd_f_coef, rpy_coef, xp=xp, device=device)
+    rpy_rates_coef, cmd_rpy_coef = to_xp(rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device)
     cmd_f = cmd[..., -1]
     cmd_rpy = cmd[..., 0:3]
     rot = R.from_quat(quat)

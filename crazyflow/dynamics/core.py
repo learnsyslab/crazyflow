@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import tomllib
 from enum import Enum
 from pathlib import Path
@@ -10,7 +9,9 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
 
-from crazyflow.utils import parametrize as parametrize_core
+from crazyflow.drones import load_params as load_physical_params
+from crazyflow.utils import filter_to_signature, to_xp
+from crazyflow.utils import parametrize as _parametrize
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -67,7 +68,7 @@ def parametrize(
     Returns:
         The parametrized dynamics function with all keyword argument only parameters filled in.
     """
-    return parametrize_core(fn, drone, load_params, xp=xp, device=device)
+    return _parametrize(fn, drone, load_params, xp=xp, device=device)
 
 
 def load_params(
@@ -106,21 +107,15 @@ def load_params(
     dynamics = fn.__module__.split(".")[-2]
     if dynamics not in Dynamics:
         raise KeyError(f"Dynamics `{dynamics}` not found. Available dynamics: {tuple(Dynamics)}")
-    xp = np if xp is None else xp
-    with open(Path(__file__).parents[1] / "drones/params.toml", "rb") as f:
-        physical_params = tomllib.load(f)
-    if drone not in physical_params:
-        raise KeyError(f"Drone `{drone}` not found in drones/params.toml")
     with open(Path(__file__).parent / f"{dynamics}/params.toml", "rb") as f:
         dynamics_params = tomllib.load(f)
     if drone not in dynamics_params:
         raise KeyError(f"Drone `{drone}` not found in {dynamics}/params.toml")
-    params = physical_params[drone] | dynamics_params[drone]
+    params = load_physical_params(drone) | dynamics_params[drone]
     # Make sure J_inv does not have a dtype fixed before conversion to xp arrays to avoid fixing it
     # to np.float64 when other frameworks might prefer a different dtype.
     params["J_inv"] = np.linalg.inv(params["J"]).tolist()
-    valid_args = set(inspect.signature(fn).parameters.keys())
-    return {k: xp.asarray(v, device=device) for k, v in params.items() if k in valid_args}
+    return to_xp(filter_to_signature(params, fn), xp=xp, device=device)
 
 
 class Dynamics(str, Enum):
