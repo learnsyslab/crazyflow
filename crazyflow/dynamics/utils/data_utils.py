@@ -1,4 +1,7 @@
-"""This module contains functions to compute derivatives using State Variable Filters."""
+"""Data preprocessing functions for dynamics identification.
+
+Contains helpers to filter states and compute derivatives using State Variable Filters.
+"""
 
 from __future__ import annotations
 

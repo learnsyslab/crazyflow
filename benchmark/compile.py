@@ -4,6 +4,8 @@ import fire
 import jax
 
 from crazyflow import Sim
+from crazyflow.control import Control
+from crazyflow.dynamics import Dynamics
 
 
 def main(cache: bool = False):
@@ -16,7 +18,7 @@ def main(cache: bool = False):
 
     # Time initialization
     start = time.perf_counter()
-    sim = Sim(n_worlds=1, n_drones=1, dynamics="sys_id", control="attitude")
+    sim = Sim(n_worlds=1, n_drones=1, dynamics=Dynamics.so_rpy, control=Control.attitude)
     init_time = time.perf_counter() - start
 
     # Time reset compilation

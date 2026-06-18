@@ -221,6 +221,6 @@ class DroneEnv(VectorEnv):
         pos = jax.random.uniform(key=pos_key, shape=shape, minval=pos_min, maxval=pos_max)
         # Sample initial velocity
         vel = jax.random.uniform(key=vel_key, shape=shape, minval=-1.0, maxval=1.0)
-        # Setting initial ryp_rate when using dynamics.sys_id will not have an impact, so we skip it
+        # Setting initial ryp_rate when using dynamics.so_rpy will not have an impact, so we skip it
         data = data.replace(states=leaf_replace(data.states, mask, pos=pos, vel=vel))
         return data

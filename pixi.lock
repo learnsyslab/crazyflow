@@ -122,6 +122,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/8b/9d/b3589d3877982d4f2329302ef98a8026e7f4443c765c46cfecc8858c6b4b/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/8d/9b/d4b1e644385499c8346fa9b622a3f030dce14cd6ef8a1871c221a17a67e7/prometheus_client-0.25.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8e/65/4bd2abfd4cb6e917b2626de5cbfc034dfc94b74dd95b8272d93f2ad66bed/flax-0.12.7-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/91/4d/2ca3ca9906ce6e05070f431c54d54ccbaf57a980cfa58032d35b0b0ac1f8/pyinstrument-5.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/95/f4/61e6996dd20481ee834f57a8e9dca28b1869366a135e0d42e2aa8493bdd4/nvidia_cufft_cu12-11.4.1.4-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a0/7e/e0a5d44bf070a1ff945050abc02ef1cff5ca9c6ab5dc6a16ab6322593a32/nvidia_cudnn_cu12-9.23.1.3-py3-none-manylinux_2_27_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/ab/8a/18d4ff2c7bd83f30d6924bd4ad97abf418488c3f908dea228d6f0961ad68/ml_collections-1.1.0-py3-none-any.whl
@@ -5266,6 +5267,7 @@ packages:
   - fire ; extra == 'benchmark'
   - matplotlib ; extra == 'benchmark'
   - pandas ; extra == 'benchmark'
+  - pyinstrument ; extra == 'benchmark'
   requires_python: '>=3.11,<3.14'
 - pypi: https://files.pythonhosted.org/packages/01/8e/1e35281b8ab6d5d72ebe9911edcdffa3f36b04ed9d51dec6dd140396e220/scipy-1.17.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
   name: scipy
@@ -6342,6 +6344,30 @@ packages:
   - pre-commit>=3.8.0 ; extra == 'dev'
   - scikit-build-core[pyproject]>=0.11.0 ; extra == 'dev'
   requires_python: '>=3.11'
+- pypi: https://files.pythonhosted.org/packages/91/4d/2ca3ca9906ce6e05070f431c54d54ccbaf57a980cfa58032d35b0b0ac1f8/pyinstrument-5.1.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+  name: pyinstrument
+  version: 5.1.2
+  sha256: 12af1e83795b6c640d657d339014dd1ff718b182dec736d7d1f1d8a97534eb53
+  requires_dist:
+  - pytest ; extra == 'test'
+  - flaky ; extra == 'test'
+  - trio ; extra == 'test'
+  - cffi>=1.17.0 ; extra == 'test'
+  - greenlet>=3 ; extra == 'test'
+  - pytest-asyncio==0.23.8 ; extra == 'test'
+  - ipython ; extra == 'test'
+  - click ; extra == 'bin'
+  - nox ; extra == 'bin'
+  - sphinx==7.4.7 ; extra == 'docs'
+  - myst-parser==3.0.1 ; extra == 'docs'
+  - furo==2024.7.18 ; extra == 'docs'
+  - sphinxcontrib-programoutput==0.17 ; extra == 'docs'
+  - sphinx-autobuild==2024.4.16 ; extra == 'docs'
+  - numpy ; extra == 'examples'
+  - django ; extra == 'examples'
+  - litestar ; extra == 'examples'
+  - typing-extensions ; extra == 'types'
+  requires_python: '>=3.8'
 - pypi: https://files.pythonhosted.org/packages/95/f4/61e6996dd20481ee834f57a8e9dca28b1869366a135e0d42e2aa8493bdd4/nvidia_cufft_cu12-11.4.1.4-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
   name: nvidia-cufft-cu12
   version: 11.4.1.4

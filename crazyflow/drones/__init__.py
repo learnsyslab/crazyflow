@@ -9,10 +9,10 @@ Use ``available_drones`` to enumerate the supported configurations.
 """
 
 # Currently supported platforms:
-# * **cf2x_L250** — Crazyflie 2.x with L250 propellers (31.9 g)
-# * **cf2x_P250** — Crazyflie 2.x with P250 propellers (31.8 g)
-# * **cf2x_T350** — Crazyflie 2.x with T350 propellers (37.9 g)
-# * **cf21B_500** — Crazyflie 2.1 Brushless with 500 propellers (43.4 g)
+# * **cf2x_L250** — Crazyflie 2.x
+# * **cf2x_P250** — Crazyflie 2.x with plus propellers
+# * **cf2x_T350** — Crazyflie 2.x with thrust upgrade kit
+# * **cf21B_500** — Crazyflie 2.1 Brushless with 500 mAh battery
 available_drones: tuple[str, ...] = ("cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500")
 
 __all__ = ["available_drones"]

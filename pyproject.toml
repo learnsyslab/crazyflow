@@ -37,7 +37,7 @@ requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
-benchmark = ["fire", "matplotlib", "pandas"]
+benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
 
 [project.urls]
 Homepage = "https://github.com/learnsyslab/crazyflow"

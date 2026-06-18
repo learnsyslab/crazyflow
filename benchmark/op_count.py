@@ -8,9 +8,8 @@ def main():
 
     compiled_reset = sim._reset.lower(sim.data, sim.default_data, None).compile()
     compiled_step = sim._step.lower(sim.data, 1).compile()
-    op_count_reset = compiled_reset.cost_analysis()["flops"]
-    op_count_step = compiled_step.cost_analysis()["flops"]
-    print(f"Op counts:\n Reset: {op_count_reset}\n Step: {op_count_step}")
+    print(f"Reset cost analysis: {compiled_reset.cost_analysis()}")
+    print(f"Step cost analysis: {compiled_step.cost_analysis()}")
 
 
 if __name__ == "__main__":
