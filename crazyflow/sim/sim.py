@@ -87,9 +87,9 @@ class Sim:
         self.max_visual_geom = 1000
 
         # Initialize MuJoCo world and data
+        self.fused_mjx_model = fused_mjx_model
         self._xml_path = xml_path or Path(__file__).parents[1] / "scene.xml"
-        mjx_model_file_name = f"{drone}{'_fused' if fused_mjx_model else ''}.xml"
-        self.drone_path = Path(__file__).parents[1] / "drones" / mjx_model_file_name
+        self.drone_path = Path(__file__).parents[1] / f"drones/{drone}.xml"
         self.spec = self.build_mjx_spec()
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
@@ -214,7 +214,8 @@ class Sim:
         spec.copy_during_attach = True
         drone_spec = mujoco.MjSpec.from_file(str(self.drone_path))
         frame = spec.worldbody.add_frame(name="world")
-        if (drone_body := drone_spec.body("drone")) is None:
+        name = "drone_fused" if self.fused_mjx_model else "drone"
+        if (drone_body := drone_spec.body(name)) is None:
             raise ValueError("Drone body not found in drone spec")
         # Mocap bodies avoid the nv^2 cost of qM/qLD/efc_J. A single dummy slide joint keeps nv=1 so
         # mjx.kinematics doesn't error on a zero-DOF mjx_model.
@@ -354,8 +355,9 @@ class Sim:
         self, state_freq: int, attitude_freq: int, force_torque_freq: int, rng_key: Array
     ) -> SimData:
         """Initialize the simulation data."""
+        drone_name = "drone_fused" if self.fused_mjx_model else "drone"
         drone_mocap_ids = [
-            self.mj_model.body(f"drone:{i}").mocapid.item() for i in range(self.n_drones)
+            self.mj_model.body(f"{drone_name}:{i}").mocapid.item() for i in range(self.n_drones)
         ]
         N, D = self.n_worlds, self.n_drones
         data = SimData(
