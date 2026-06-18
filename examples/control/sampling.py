@@ -17,8 +17,8 @@ from jax import Array
 from jax.lax import scan
 
 from crazyflow.control import Control
+from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.dynamics.core import load_params
-from crazyflow.dynamics.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.visualize import draw_capsule, draw_line

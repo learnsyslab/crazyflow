@@ -24,7 +24,7 @@ All three stages share the same state convention:
 | `pos` | `(..., 3)` | Current position [m] |
 | `quat` | `(..., 4)` | Current attitude, xyzw |
 | `vel` | `(..., 3)` | Current velocity [m/s] |
-| `cmd` | `(..., 13)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, yaw, rr, pr, yr]` |
+| `cmd` | `(..., 13)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, yaw, avx, avy, avz]` |
 | `pos_err_i` | `(..., 3)` or `None` | Position integral error from the previous call. `None` initialises to zero |
 | `ctrl_freq` | `float` | Control frequency in Hz (default 100) |
 

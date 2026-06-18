@@ -13,7 +13,6 @@ This section is auto-generated from the Crazyflow source code using [mkdocstring
 | `crazyflow.dynamics` | `Dynamics` enum and dynamics implementations |
 | `crazyflow.sim.integration` | `Integrator` enum, Euler, RK4, and symplectic Euler |
 | `crazyflow.sim.sensors` | Raycasting and sensor extraction utilities |
-| `crazyflow.sim.symbolic` | CasADi symbolic model API |
 | `crazyflow.control` | `Control` enum |
 | `crazyflow.control.mellinger` | Mellinger controller data and parameters |
 | `crazyflow.envs` | Gymnasium vectorized environments |

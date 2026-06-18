@@ -138,7 +138,7 @@ def _integrate(
         dt: The time step to integrate over.
 
     Returns:
-        The next position, quaternion, velocity, and roll, pitch, and yaw rates of the drone.
+        The next position, quaternion, velocity, angular velocity, and rotor velocity of the drone.
     """
     next_pos = pos + dpos * dt
     # Prevent NaN gradients by setting extremely small rotations to 0. This should not be necessary
@@ -183,7 +183,7 @@ def _integrate_symplectic(
         dt: The time step to integrate over.
 
     Returns:
-        The next position, quaternion, velocity, and roll, pitch, and yaw rates of the drone.
+        The next position, quaternion, velocity, angular velocity, and rotor velocity of the drone.
     """
     next_vel = vel + dvel * dt
     next_ang_vel = ang_vel + dang_vel * dt

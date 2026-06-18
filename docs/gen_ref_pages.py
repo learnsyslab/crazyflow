@@ -46,7 +46,6 @@ else:
     * [sim.functional](crazyflow/sim/functional.md)
     * [sim.integration](crazyflow/sim/integration.md)
     * [sim.sensors](crazyflow/sim/sensors.md)
-    * [sim.symbolic](crazyflow/sim/symbolic.md)
     * [sim.visualize](crazyflow/sim/visualize.md)
 * Dynamics
     * [dynamics](crazyflow/dynamics/index.md)

@@ -91,7 +91,6 @@ The `Dynamics` enum above is how you select a dynamics *inside the simulator*. T
 - [Batching & domain randomization](batching.md) — evaluating many drones at once and randomizing parameters
 - [Symbolic dynamics](symbolic.md) — CasADi expressions for MPC and estimation
 - [System identification](system-identification.md) — fitting dynamics coefficients from flight data
-- [Transform utilities](transforms.md) — motor/force/PWM and rotation conversions
 
 ## Next steps
 

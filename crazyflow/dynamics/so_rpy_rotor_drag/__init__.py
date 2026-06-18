@@ -10,8 +10,7 @@ first-order lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrus
     \dot{F} &= \frac{1}{\tau}(F_{\mathrm{cmd}} - F), \\
     \dot{\mathbf{p}} &= \mathbf{v}, \\
     \dot{\mathbf{q}} &= \tfrac{1}{2}
-        \begin{bmatrix}0 \\ {}^{\mathcal{B}}\boldsymbol{\omega}\end{bmatrix}
-        \otimes \mathbf{q}, \\
+        \mathbf{q} \otimes \begin{bmatrix} {}^{\mathcal{B}}\boldsymbol{\omega}\\0 \end{bmatrix}, \\
     m\dot{\mathbf{v}} &= m\mathbf{g}
         + (c_{\mathrm{acc}} + c_f F)\,R\,\mathbf{e}_z
         + R\,D_b\,R^{\top}\mathbf{v}, \\

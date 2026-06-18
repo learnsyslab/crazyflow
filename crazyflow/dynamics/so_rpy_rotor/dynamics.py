@@ -142,7 +142,7 @@ def dynamics(
 
 
 def symbolic_dynamics(
-    model_rotor_vel: bool = False,
+    model_rotor_vel: bool = True,
     model_dist_f: bool = False,
     model_dist_t: bool = False,
     *,
@@ -166,7 +166,7 @@ def symbolic_dynamics(
 
     Args:
         model_rotor_vel: If ``True``, the scalar thrust state is included in ``X`` and first-order
-            thrust dynamics are modelled. Defaults to ``False``.
+            thrust dynamics are modelled. Defaults to ``_True``.
         model_dist_f: If ``True``, a 3-D force disturbance is appended to ``X``.
         model_dist_t: If ``True``, a 3-D torque disturbance is appended to ``X``.
         mass: Drone mass in kg.

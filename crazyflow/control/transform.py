@@ -1,14 +1,12 @@
 """Transformations between physical parameters of the quadrotors.
 
-Conversions such as from motor forces to rotor speeds, or from thrust to PWM, are bundled in this
-module.
+Bundles conversions between motor forces, rotor velocities, and PWM commands.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import array_api_extra as xpx
 from array_api_compat import array_namespace
 
 if TYPE_CHECKING:
@@ -30,38 +28,6 @@ def motor_force2rotor_vel(motor_forces: Array, rpm2thrust: Array) -> Array:
         -rpm2thrust[1]
         + xp.sqrt(rpm2thrust[1] ** 2 - 4 * rpm2thrust[2] * (rpm2thrust[0] - motor_forces))
     ) / (2 * rpm2thrust[2])
-
-
-def rotor_vel2body_force(rotor_vel: Array, rpm2thrust: Array) -> Array:
-    """Convert rotor velocities to motor forces."""
-    xp = array_namespace(rotor_vel)
-    body_force = xp.zeros(rotor_vel.shape[:-1] + (3,), dtype=rotor_vel.dtype)
-    body_force = xpx.at(body_force)[..., 2].set(
-        xp.sum(
-            rpm2thrust[..., 0] + rpm2thrust[..., 1] * rotor_vel + rpm2thrust[..., 2] * rotor_vel**2,
-            axis=-1,
-        )
-    )
-    return body_force
-
-
-def rotor_vel2body_torque(
-    rotor_vel: Array, rpm2thrust: Array, rpm2torque: Array, L: float | Array, mixing_matrix: Array
-) -> Array:
-    """Convert rotor velocities to motor torques."""
-    xp = array_namespace(rotor_vel)
-    forces = rpm2thrust[..., 0] + rpm2thrust[..., 1] * rotor_vel + rpm2thrust[..., 2] * rotor_vel**2
-    torques_xy = (
-        xp.stack([xp.zeros_like(forces), xp.zeros_like(forces), forces])
-        @ mixing_matrix
-        * xp.stack([L, L, 0])
-    )
-    torques = (
-        rpm2torque[..., 0] + rpm2torque[..., 1] * rotor_vel + rpm2torque[..., 2] * rotor_vel**2
-    )
-    torques_z = xp.stack([xp.zeros_like(torques), xp.zeros_like(torques), torques])
-    body_torque = torques_xy + torques_z
-    return body_torque
 
 
 def force2pwm(thrust: Array | float, thrust_max: Array | float, pwm_max: Array | float) -> Array:

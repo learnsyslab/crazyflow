@@ -6,12 +6,7 @@ import numpy as np
 import pytest
 
 from crazyflow.control.core import load_params
-from crazyflow.control.transform import (
-    force2pwm,
-    motor_force2rotor_vel,
-    pwm2force,
-    rotor_vel2body_force,
-)
+from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 
 
 @pytest.fixture(scope="module")
@@ -49,18 +44,3 @@ def test_motor_force2rotor_vel_positive(core_params: dict[str, Any]) -> None:
     rpm2thrust = core_params["rpm2thrust"]
     forces = np.linspace(0.02, 0.12, 10)
     assert np.all(motor_force2rotor_vel(forces, rpm2thrust) > 0)
-
-
-@pytest.mark.unit
-def test_rotor_vel2body_force_shape(core_params: dict[str, Any]) -> None:
-    rpm2thrust = core_params["rpm2thrust"]
-    assert rotor_vel2body_force(np.full(4, 10_000.0), rpm2thrust).shape == (3,)
-    assert rotor_vel2body_force(np.full((3, 2, 4), 10_000.0), rpm2thrust).shape == (3, 2, 3)
-
-
-@pytest.mark.unit
-def test_rotor_vel2body_force_z_axis_only(core_params: dict[str, Any]) -> None:
-    rpm2thrust = core_params["rpm2thrust"]
-    body_force = rotor_vel2body_force(np.full(4, 10_000.0), rpm2thrust)
-    assert np.allclose(body_force[:2], 0.0)
-    assert body_force[2] > 0.0

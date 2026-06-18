@@ -15,5 +15,5 @@ from crazyflow.dynamics.core import parametrize
 @pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
 @pytest.mark.parametrize("drone", available_drones)
 def test_dynamics_parametrization(dynamics_name: str, dynamics: Callable, drone: str):
-    """TODO."""
+    """Check that we can parametrize all available dynamics with all drones."""
     parametrize(dynamics, drone)

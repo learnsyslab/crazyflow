@@ -1,5 +1,3 @@
-from typing import Literal
-
 import jax
 import jax.numpy as jnp
 import mujoco
@@ -20,7 +18,7 @@ class LandingEnv(DroneEnv):
         self,
         num_envs: int = 1,
         max_episode_time: float = 10.0,
-        dynamics: Literal["so_rpy", "first_principles"] | Dynamics = Dynamics.so_rpy,
+        dynamics: Dynamics = Dynamics.so_rpy,
         freq: int = 500,
         device: str = "cpu",
     ):

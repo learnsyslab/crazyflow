@@ -12,7 +12,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from crazyflow import Sim
-from crazyflow.dynamics.transform import motor_force2rotor_vel
+from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim.pipeline import insert_fn_after, prepend_fn
 from crazyflow.sim.visualize import draw_line, draw_points
 

@@ -1,6 +1,6 @@
 import warnings
 from functools import partial
-from typing import Callable, Literal
+from typing import Callable
 
 import jax
 import jax.numpy as jnp
@@ -64,7 +64,7 @@ class DroneEnv(VectorEnv):
         *,
         num_envs: int = 1,
         max_episode_time: float = 10.0,
-        dynamics: Literal["so_rpy", "first_principles"] | Dynamics = Dynamics.so_rpy,
+        dynamics: Dynamics = Dynamics.so_rpy,
         drone: str = "cf2x_L250",
         freq: int = 500,
         device: str = "cpu",

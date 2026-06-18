@@ -31,8 +31,7 @@ The rigid-body equations of motion are:
 \begin{aligned}
     \dot{\mathbf{p}} &= \mathbf{v}, \\
     \dot{\mathbf{q}} &= \tfrac{1}{2}
-        \begin{bmatrix}0 \\ {}^{\mathcal{B}}\boldsymbol{\omega}\end{bmatrix}
-        \otimes \mathbf{q}, \\
+        \mathbf{q} \otimes \begin{bmatrix} {}^{\mathcal{B}}\boldsymbol{\omega}\\0 \end{bmatrix}, \\
     m\dot{\mathbf{v}} &= m\mathbf{g}
         + R\,{}^{\mathcal{B}}\mathbf{f}_t
         + R\,{}^{\mathcal{B}}\mathbf{f}_a, \\

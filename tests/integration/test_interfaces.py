@@ -6,8 +6,8 @@ from scipy.spatial.transform import Rotation as R
 from crazyflow.control import parametrize
 from crazyflow.control.control import Control
 from crazyflow.control.mellinger import state2attitude
+from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.dynamics.core import load_params
-from crazyflow.dynamics.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim
 
 
@@ -91,7 +91,6 @@ def test_swarm_control(dynamics: Dynamics):
 @pytest.mark.integration
 @pytest.mark.parametrize("dynamics", Dynamics)
 def test_yaw_rotation(dynamics: Dynamics):
-    # TODO: Enable yaw rotations once the models are better calibrated
     if dynamics != Dynamics.first_principles:
         pytest.skip(f"Dynamics mode {dynamics} currently does not support yaw rotation")
 
