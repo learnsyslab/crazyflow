@@ -5,11 +5,12 @@ from __future__ import annotations
 import inspect
 import tomllib
 from enum import Enum
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
+
+from crazyflow.utils import parametrize as parametrize_core
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -66,27 +67,12 @@ def parametrize(
     Returns:
         The parametrized dynamics function with all keyword argument only parameters filled in.
     """
-    try:
-        xp = np if xp is None else xp
-        dynamics = fn.__module__.split(".")[-2]
-        sig = inspect.signature(fn)
-        kwonly_params = [
-            name
-            for name, param in sig.parameters.items()
-            if param.kind == inspect.Parameter.KEYWORD_ONLY
-        ]
-        params = load_params(dynamics, drone, xp=xp)
-        params = {k: xp.asarray(v, device=device) for k, v in params.items() if k in kwonly_params}
-    except KeyError as e:
-        raise KeyError(
-            f"Dynamics `{dynamics}` does not exist in the parameter registry for drone `{drone}`"
-        ) from e
-    except ValueError as e:
-        raise ValueError(f"Drone `{drone}` not supported for dynamics `{dynamics}`") from e
-    return partial(fn, **params)
+    return parametrize_core(fn, drone, load_params, xp=xp, device=device)
 
 
-def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict:
+def load_params(
+    fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
+) -> dict:
     """Load and merge physical and dynamics-specific parameters for a drone configuration.
 
     Reads parameters from two TOML files:
@@ -100,11 +86,12 @@ def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict
     from ``J`` and added to the result.
 
     Args:
-        dynamics: Name of the dynamics sub-package, e.g. ``"first_principles"``, ``"so_rpy"``,
-            ``"so_rpy_rotor"``, or ``"so_rpy_rotor_drag"``.
+        fn: The dynamics function for which to load parameters.
         drone: Name of the drone configuration, e.g. ``"cf2x_L250"``. Must exist as a section in
             both TOML files.
         xp: Array API module used to convert parameter values. If ``None``, NumPy is used.
+        device: The device to use for the arrays. If ``None``, the device is inferred from the xp
+            module.
 
     Returns:
         A flat dict mapping parameter names to arrays (or scalars) in the requested array namespace.
@@ -115,6 +102,10 @@ def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict
         KeyError: If ``drone`` is not found in either TOML file, or if ``dynamics`` does not
             correspond to a known sub-package.
     """
+    assert isinstance(fn, Callable), f"Expected a function, got {type(fn)}"
+    dynamics = fn.__module__.split(".")[-2]
+    if dynamics not in Dynamics:
+        raise KeyError(f"Dynamics `{dynamics}` not found. Available dynamics: {tuple(Dynamics)}")
     xp = np if xp is None else xp
     with open(Path(__file__).parents[1] / "drones/params.toml", "rb") as f:
         physical_params = tomllib.load(f)
@@ -128,8 +119,8 @@ def load_params(dynamics: str, drone: str, xp: ModuleType | None = None) -> dict
     # Make sure J_inv does not have a dtype fixed before conversion to xp arrays to avoid fixing it
     # to np.float64 when other frameworks might prefer a different dtype.
     params["J_inv"] = np.linalg.inv(params["J"]).tolist()
-    params = {k: xp.asarray(v) for k, v in params.items()}  # if k in fields
-    return params
+    valid_args = set(inspect.signature(fn).parameters.keys())
+    return {k: xp.asarray(v, device=device) for k, v in params.items() if k in valid_args}
 
 
 class Dynamics(str, Enum):

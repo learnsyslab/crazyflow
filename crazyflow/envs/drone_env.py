@@ -11,8 +11,8 @@ from gymnasium.vector.utils import batch_space
 from jax import Array
 from numpy.typing import NDArray
 
-from crazyflow.control.control import Control
-from crazyflow.control.core import load_fn_params
+from crazyflow.control import Control
+from crazyflow.control.core import load_params
 from crazyflow.control.mellinger import force_torque2rotor_vel
 from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
@@ -33,7 +33,7 @@ def action_space(control_type: Control, drone: str) -> spaces.Box:
     """
     match control_type:
         case Control.attitude:
-            params = load_fn_params(force_torque2rotor_vel, drone)
+            params = load_params(force_torque2rotor_vel, drone)
             thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),

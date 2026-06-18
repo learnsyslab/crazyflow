@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import inspect
 import tomllib
-from functools import partial
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
+import jax
 import numpy as np
+from jax import Array
+
+from crazyflow.utils import parametrize as parametrize_core
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -47,42 +51,10 @@ def parametrize(
     Returns:
         The parametrized controller function with all keyword argument only parameters filled in.
     """
-    try:
-        params = load_fn_params(fn, drone, xp=xp, device=device)
-    except KeyError as e:
-        controller = fn.__module__.split(".")[-2]
-        raise KeyError(
-            f"Controller `{controller}.{fn.__name__}` not found for drone `{drone}`"
-        ) from e
-    return partial(fn, **params)
+    return parametrize_core(fn, drone, load_params, xp=xp, device=device)
 
 
-def load_params(controller: str, drone: str) -> dict[str, dict]:
-    """Load the raw parameter table for a controller and drone.
-
-    Reads ``crazyflow/control/<controller>/params.toml`` and returns the drone's table, nested by
-    section (``"core"`` and one per controller function). Use
-    [load_fn_params][crazyflow.control.core.load_fn_params] to select and convert the parameters a
-    specific controller function accepts.
-
-    Args:
-        controller: Name of the controller sub-package, e.g. ``"mellinger"``.
-        drone: Name of the drone configuration, e.g. ``"cf2x_L250"``.
-
-    Returns:
-        The raw, section-nested parameter dict for the drone.
-
-    Raises:
-        KeyError: If ``drone`` is not found in the params.toml file.
-    """
-    with open(Path(__file__).parent / f"{controller}/params.toml", "rb") as f:
-        params = tomllib.load(f)
-    if drone not in params:
-        raise KeyError(f"Drone `{drone}` not found in {controller}/params.toml")
-    return params[drone]
-
-
-def load_fn_params(
+def load_params(
     fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> dict[str, Array]:
     """Load the parameters a specific controller function accepts.
@@ -99,8 +71,67 @@ def load_fn_params(
     Returns:
         A flat dict mapping parameter names to arrays in the requested array namespace.
     """
+    assert isinstance(fn, Callable), f"Expected a function, got {type(fn)}"
+    controller = fn.__module__.split(".")[-2]
+    params_path = Path(__file__).parent / f"{controller}/params.toml"
+    if not params_path.exists():
+        raise KeyError(f"`{controller}` not found. Available controllers: {tuple(Control)}")
     xp = np if xp is None else xp
-    drone_params = load_params(fn.__module__.split(".")[-2], drone)
-    merged = drone_params.get("core", {}) | drone_params.get(fn.__name__, {})
-    accepted = set(inspect.signature(fn).parameters.keys())
-    return {k: xp.asarray(v, device=device) for k, v in merged.items() if k in accepted}
+    with open(params_path, "rb") as f:
+        params = tomllib.load(f)
+    if drone not in params:
+        raise KeyError(f"Drone `{drone}` not found in {controller}/params.toml")
+    merged = params[drone].get("core", {}) | params[drone].get(fn.__name__, {})
+    valid_args = set(inspect.signature(fn).parameters.keys())
+    return {k: xp.asarray(v, device=device) for k, v in merged.items() if k in valid_args}
+
+
+class Control(str, Enum):
+    """Control type of the simulated onboard controller."""
+
+    state = "state"
+    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
+    
+    Note:
+        Recommended frequency is >=20 Hz.
+
+    Warning:
+        Currently, we only use positions, velocities, and yaw. The rest of the state is ignored.
+        This is subject to change in the future.
+    """
+    attitude = "attitude"
+    """Attitude control takes [roll, pitch, yaw, collective thrust].
+
+    Note:
+        Recommended frequency is >=100 Hz.
+    """
+    force_torque = "force_torque"
+    """Force and torque control takes [fc, tx, ty, tz].
+
+    Note:
+        Recommended frequency is >=500 Hz.
+    """
+    rotor_vel = "rotor_vel"
+    """Rotor velocity control takes [w1, w2, w3, w4] in RPMs.
+
+    Note:
+        Recommended frequency is >=500 Hz.
+    """
+    default = attitude
+
+
+@jax.jit
+def controllable(step: Array, freq: int, control_steps: Array, control_freq: int) -> Array:
+    """Check which worlds can currently update their controllers.
+
+    Args:
+        step: The current step of the simulation.
+        freq: The frequency of the simulation.
+        control_steps: The steps at which the controllers were last updated.
+        control_freq: The frequency of the controllers.
+
+    Returns:
+        A boolean mask of shape (n_worlds,) that is True at the worlds where the controllers can be
+        updated.
+    """
+    return ((step - control_steps) >= (freq / control_freq)) | (control_steps == -1)

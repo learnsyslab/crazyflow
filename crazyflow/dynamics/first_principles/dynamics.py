@@ -322,7 +322,7 @@ class Params:
     @staticmethod
     def create(n_worlds: int, n_drones: int, drone: str, device: Device) -> Params:
         """Create a default set of parameters for the simulation."""
-        p = load_params("first_principles", drone)
+        p = load_params(dynamics, drone)
         J = jax.device_put(jnp.tile(p["J"][None, None, :, :], (n_worlds, n_drones, 1, 1)), device)
         return Params(
             mass=jnp.full((n_worlds, n_drones, 1), p["mass"], device=device),

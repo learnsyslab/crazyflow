@@ -6,12 +6,13 @@ import numpy as np
 import pytest
 
 from crazyflow.control.core import load_params
+from crazyflow.control.mellinger import state2attitude
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 
 
 @pytest.fixture(scope="module")
 def core_params() -> dict[str, Any]:
-    return {k: np.asarray(v) for k, v in load_params("mellinger", "cf2x_L250")["core"].items()}
+    return {k: np.asarray(v) for k, v in load_params(state2attitude, "cf2x_L250")["core"].items()}
 
 
 @pytest.mark.unit

@@ -3,11 +3,10 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import parametrize
-from crazyflow.control.control import Control
-from crazyflow.control.mellinger import state2attitude
+from crazyflow.control import Control, parametrize
+from crazyflow.control.core import load_params
+from crazyflow.control.mellinger import force_torque2rotor_vel, state2attitude
 from crazyflow.control.transform import motor_force2rotor_vel
-from crazyflow.dynamics.core import load_params
 from crazyflow.sim import Dynamics, Sim
 
 
@@ -57,8 +56,9 @@ def test_attitude_interface(dynamics: Dynamics):
 @pytest.mark.integration
 def test_rotor_vel_interface():
     sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
-    params = load_params("first_principles", "cf2x_L250")
-    max_rpm = motor_force2rotor_vel(np.array([params["thrust_max"]]), params["rpm2thrust"])[0]
+    thrust_max = load_params(state2attitude, sim.drone)["thrust_max"]
+    rpm2thrust = load_params(force_torque2rotor_vel, sim.drone)["rpm2thrust"]
+    max_rpm = motor_force2rotor_vel(np.array([thrust_max]), rpm2thrust)[0]
 
     sim.data = sim.data.replace(
         states=sim.data.states.replace(pos=sim.data.states.pos.at[..., 2].set(0.5))

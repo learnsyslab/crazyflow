@@ -13,7 +13,7 @@ from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 
 import crazyflow.sim.functional as F
-from crazyflow.control.control import Control
+from crazyflow.control import Control
 from crazyflow.control.mellinger import (
     control_attitude2force_torque,
     control_commit_attitude,

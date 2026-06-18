@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import jax.numpy as jnp
 
 from crazyflow.control import Control
-from crazyflow.control.control import controllable as _controllable
+from crazyflow.control.core import controllable as _controllable
 from crazyflow.utils import to_device
 
 if TYPE_CHECKING:

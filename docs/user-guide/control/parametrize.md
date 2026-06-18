@@ -77,23 +77,14 @@ rpyt, _ = ctrl(pos, quat, vel, cmd)
 
 ## Loading raw parameters
 
-Use [`load_fn_params`][crazyflow.control.core.load_fn_params] to inspect or override the values that `parametrize` would bind for a specific controller function:
-
-```python
-from crazyflow.control.core import load_fn_params
-from crazyflow.control.mellinger import state2attitude
-
-params = load_fn_params(state2attitude, "cf2x_L250")
-float(params["mass"])  # 0.029
-```
-
-[`load_params`][crazyflow.control.core.load_params] returns the raw, section-nested parameter table for a controller, without filtering to a specific function's signature. This is useful when you need parameters like `rpm2thrust` that are not accepted by a particular stage:
+Use [`load_params`][crazyflow.control.core.load_params] to inspect or override the values that `parametrize` would bind for a specific controller function:
 
 ```python
 from crazyflow.control.core import load_params
+from crazyflow.control.mellinger import state2attitude
 
-core = load_params("mellinger", "cf2x_L250")["core"]
-core["L"]  # arm length [m]
+params = load_params(state2attitude, "cf2x_L250")
+float(params["mass"])  # 0.029
 ```
 
 ## Switching array backends

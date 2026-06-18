@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from crazyflow.control import parametrize
-from crazyflow.control.core import load_fn_params
+from crazyflow.control.core import load_params
 from crazyflow.control.mellinger import (
     attitude2force_torque,
     force_torque2rotor_vel,
@@ -100,7 +100,7 @@ def test_state2attitude_integral_error_accumulation(drone: str) -> None:
     # A constant position error must cause the integral error to accumulate
     # linearly until it would exceed int_err_max (clipped by the controller).
     controller = parametrize(state2attitude, drone)
-    params = load_fn_params(state2attitude, drone)
+    params = load_params(state2attitude, drone)
     pos = np.zeros(3)
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)

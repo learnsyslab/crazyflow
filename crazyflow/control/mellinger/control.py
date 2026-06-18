@@ -19,8 +19,7 @@ from array_api_compat import array_namespace
 from flax.struct import dataclass, field
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control.control import controllable
-from crazyflow.control.core import load_fn_params
+from crazyflow.control.core import controllable, load_params
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 from crazyflow.utils import leaf_replace
 
@@ -334,7 +333,7 @@ class MellingerStateData:
         cmd = jnp.zeros((n_worlds, n_drones, 13), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         pos_err_i = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        params = load_fn_params(state2attitude, drone, xp=jnp, device=device)
+        params = load_params(state2attitude, drone, xp=jnp, device=device)
         return MellingerStateData(
             cmd=cmd, staged_cmd=cmd, steps=steps, freq=freq, pos_err_i=pos_err_i, params=params
         )
@@ -368,7 +367,7 @@ class MellingerAttitudeData:
         cmd = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        params = load_fn_params(attitude2force_torque, drone, xp=jnp, device=device)
+        params = load_params(attitude2force_torque, drone, xp=jnp, device=device)
         return MellingerAttitudeData(
             cmd=cmd,
             staged_cmd=cmd,
@@ -402,7 +401,7 @@ class MellingerForceTorqueData:
     ) -> MellingerForceTorqueData:
         zero_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = load_fn_params(force_torque2rotor_vel, drone, xp=jnp, device=device)
+        params = load_params(force_torque2rotor_vel, drone, xp=jnp, device=device)
         return MellingerForceTorqueData(
             cmd=zero_4d, staged_cmd=zero_4d, steps=steps, freq=freq, params=params
         )

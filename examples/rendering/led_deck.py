@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crazyflow.control.control import Control
+from crazyflow.control import Control
 from crazyflow.sim import Sim
 from crazyflow.sim.visualize import change_material
 

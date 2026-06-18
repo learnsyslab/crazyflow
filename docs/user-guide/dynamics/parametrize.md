@@ -106,8 +106,8 @@ from crazyflow.dynamics import available_dynamics, parametrize
 
 list(available_dynamics)  # ['first_principles', 'so_rpy', 'so_rpy_rotor', 'so_rpy_rotor_drag']
 
-fn = available_dynamics["so_rpy_rotor_drag"]
-dynamics = parametrize(fn, drone="cf2x_T350")
+dynamics = available_dynamics["so_rpy_rotor_drag"]
+parametrized_dynamics = parametrize(dynamics, drone="cf2x_T350")
 ```
 
 ## Loading raw parameters
@@ -117,7 +117,7 @@ If you need the parameter values directly — for example, to pass them to [`sym
 ```python
 from crazyflow.dynamics.core import load_params
 
-params = load_params("first_principles", "cf2x_L250")
+params = load_params(dynamics, "cf2x_L250")
 params["mass"]  # 0.0319
 params["rpm2thrust"]  # array([...])
 ```

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import inspect
 from functools import partial
 from pathlib import Path
-from typing import TypeVar
+from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax import Array
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
@@ -21,6 +26,8 @@ def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
 
 
 T = TypeVar("T")  # PyTree type
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 def pytree_replace(tree: T, new_tree: T, mask: Array | None = None) -> T:
@@ -80,3 +87,33 @@ def enable_cache(
     jax.config.update("jax_persistent_cache_min_compile_time_secs", min_compile_time_secs)
     if enable_xla_caches:
         jax.config.update("jax_persistent_cache_enable_xla_caches", "all")
+
+
+def parametrize(
+    fn: Callable[P, R],
+    drone: str,
+    load_params: Callable[..., dict],
+    xp: ModuleType | None = None,
+    device: str | None = None,
+) -> Callable[P, R]:
+    """Parametrize a function with the default parameters for a drone.
+
+    Args:
+        fn: The function to parametrize.
+        drone: The drone to use.
+        load_params: The function to load the parameters for the given drone.
+        xp: The array API module to use. If not provided, numpy is used.
+        device: The device to use. If none, the device is inferred from the xp module.
+
+    Returns:
+        The parametrized function with all keyword only arguments filled in.
+    """
+    params = load_params(fn, drone, xp=xp, device=device)
+    xp = np if xp is None else xp
+    kwargs = {
+        k: xp.asarray(v, device=device)
+        for k, v in params.items()
+        if k in inspect.signature(fn).parameters
+        and inspect.signature(fn).parameters[k].kind == inspect.Parameter.KEYWORD_ONLY
+    }
+    return partial(fn, **kwargs)

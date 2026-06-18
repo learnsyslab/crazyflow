@@ -19,6 +19,7 @@ from jax.lax import scan
 from crazyflow.control import Control
 from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.dynamics.core import load_params
+from crazyflow.dynamics.first_principles import dynamics
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.visualize import draw_capsule, draw_line
@@ -226,7 +227,7 @@ def main() -> None:
     sim.max_visual_geom = 100_000  # To be able to show all rollouts
     sim.reset()
     start_pos = lissajous_reference(0.0)["pos"]
-    drone_params = load_params("first_principles", DRONE)
+    drone_params = load_params(dynamics, DRONE)
     hover_thrust_value = np.asarray(drone_params["mass"] * 9.81, dtype=np.float32)
     hover_rotor_vel = motor_force2rotor_vel(
         np.full(4, hover_thrust_value / 4.0, dtype=np.float32), drone_params["rpm2thrust"]
