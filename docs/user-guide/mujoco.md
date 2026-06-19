@@ -43,7 +43,7 @@ The difference between the two is purely visual. The fused body consists of a si
 
 Custom geometry (gates, obstacles, walls, or any MJCF body) can be added by editing `sim.spec` and calling `sim.build_mjx()`. The new geometry is available for collision and rendering but has no effect on the drone dynamics, which are computed independently in JAX.
 
-```{ .python notest }
+```{ .python }
 import mujoco
 from crazyflow.sim import Sim
 
@@ -100,11 +100,11 @@ After `sim.step()` or `sim.reset()`, `mjx_synced` is set to `False`. The `sim.re
 
 These run only once per render or contact call, regardless of how many dynamics steps were taken since the last sync.
 
-```{ .python notest }
+```{ .python continuation }
 for i in range(10):
-    sim.step(5)          # JAX dynamics only, mjx_synced = False
+    sim.step(5)                       # JAX dynamics only, mjx_synced = False
     if i % 5 == 0:
-        sim.render()     # syncs once: kinematics + camlight + collision
+        sim.render(mode="rgb_array")  # syncs once: kinematics + camlight + collision
 ```
 
 ## Advanced: the sync flag and avoiding redundant MJX calls
@@ -113,18 +113,18 @@ for i in range(10):
 
 This means the order of calls matters. Grouping all rendering and contact queries together after a step lets them share a single sync:
 
-```{ .python notest }
+```{ .python continuation }
 sim.step(5)
-contacts = sim.contacts()   # sync runs here
-sim.render()                # flag already set, no second sync
+contacts = sim.contacts()     # sync runs here
+sim.render(mode="rgb_array")  # flag already set, no second sync
 ```
 
 Interleaving a step between them forces two syncs:
 
-```{ .python notest }
-contacts = sim.contacts()   # sync runs here
-sim.step(5)                 # flag cleared
-sim.render()                # sync runs again
+```{ .python continuation }
+contacts = sim.contacts()     # sync runs here
+sim.step(5)                   # flag cleared
+sim.render(mode="rgb_array")  # sync runs again
 ```
 
 ## Advanced: fusing mjx_data into a contact check function
@@ -135,8 +135,11 @@ The solution is to **close over** `mjx_data` rather than pass it as an argument.
 
 The drone racing environment in [lsy_drone_racing](https://github.com/learnsyslab/lsy_drone_racing) uses this pattern to build a contact check function:
 
-```{ .python }
+```{ .python continuation }
+from jax import Array
+
 from crazyflow.sim.sim import sync_sim2mjx
+from crazyflow.sim.data import SimData
 
 _mjx_data = sim.mjx_data   # captured in closure
 
