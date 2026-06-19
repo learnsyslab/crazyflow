@@ -61,6 +61,9 @@ def dynamics(
 ) -> tuple[Array, Array, Array, Array, Array | None]:
     """Fitted linear, second order rpy dynamics with thrust dynamics.
 
+    Converts the state to Euler angles, evaluates ``dynamics_euler``, maps the derivatives back, and
+    adds the force/torque disturbances.
+
     Args:
         pos: Position of the drone (m).
         quat: Quaternion of the drone (xyzw).
@@ -85,44 +88,37 @@ def dynamics(
         cmd_rpy_coef: Coefficient for the roll pitch yaw command dynamics (1/s).
 
     Returns:
-        tuple[Array, Array, Array, Array, Array | None]: _description_
+        The derivatives (pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot).
     """
     xp = array_namespace(pos)
-    # Convert constants to the correct framework and device
+    # Convert parameters to correct xp framework
     device = xp_device(pos)
-    mass, gravity_vec, J, J_inv = to_xp(mass, gravity_vec, J, J_inv, xp=xp, device=device)
-    thrust_time_coef, acc_coef = to_xp(thrust_time_coef, acc_coef, xp=xp, device=device)
-    cmd_f_coef, rpy_coef = to_xp(cmd_f_coef, rpy_coef, xp=xp, device=device)
-    rpy_rates_coef, cmd_rpy_coef = to_xp(rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device)
+    mass, J, J_inv = to_xp(mass, J, J_inv, xp=xp, device=device)
 
-    cmd_f = cmd[..., -1]
-    cmd_rpy = cmd[..., 0:3]
+    # Convert to the native Euler-angle state, evaluate the core dynamics, then map back
     rot = R.from_quat(quat)
-    euler_angles = rot.as_euler("xyz")
-
-    # Note that we are abusing the rotor_vel state as the thrust
-    if rotor_vel is None:
-        warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
-        rotor_vel, rotor_vel_dot = cmd_f[..., None], None
-    else:
-        rotor_vel_dot = 1 / thrust_time_coef * (cmd_f[..., None] - rotor_vel)
-
-    forces_motor = rotor_vel[..., 0]
-    thrust = acc_coef + cmd_f_coef * forces_motor
-
-    drone_z_axis = rot.as_matrix()[..., -1]
-
-    pos_dot = vel
-    vel_dot = 1.0 / mass * thrust[..., None] * drone_z_axis + gravity_vec
-    if dist_f is not None:
-        # Adding force disturbances to the state
-        vel_dot = vel_dot + dist_f / mass
-    vel_dot = xp.asarray(vel_dot)
-
-    # Rotational equation of motion
-    quat_dot = rotation.ang_vel2quat_dot(quat, ang_vel)
+    rpy = rot.as_euler("xyz")
     rpy_rates = rotation.ang_vel2rpy_rates(quat, ang_vel)
-    rpy_rates_dot = rpy_coef * euler_angles + rpy_rates_coef * rpy_rates + cmd_rpy_coef * cmd_rpy
+    pos_dot, _, vel_dot, rpy_rates_dot, rotor_vel_dot = dynamics_euler(
+        pos,
+        rpy,
+        vel,
+        rpy_rates,
+        cmd,
+        rotor_vel,
+        mass=mass,
+        gravity_vec=gravity_vec,
+        thrust_time_coef=thrust_time_coef,
+        acc_coef=acc_coef,
+        cmd_f_coef=cmd_f_coef,
+        rpy_coef=rpy_coef,
+        rpy_rates_coef=rpy_rates_coef,
+        cmd_rpy_coef=cmd_rpy_coef,
+    )
+
+    if dist_f is not None:
+        vel_dot = vel_dot + dist_f / mass  # Adding force disturbances to the state
+    quat_dot = rotation.ang_vel2quat_dot(quat, ang_vel)
     ang_vel_dot = rotation.rpy_rates_deriv2ang_vel_deriv(quat, rpy_rates, rpy_rates_dot)
     if dist_t is not None:
         # adding torque disturbances to the state
@@ -137,6 +133,47 @@ def dynamics(
         ang_vel_dot = (J_inv @ torque[..., None])[..., 0]
 
     return pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot
+
+
+def dynamics_euler(
+    pos: Array,
+    rpy: Array,
+    vel: Array,
+    rpy_rates: Array,
+    cmd: Array,
+    rotor_vel: Array | None = None,
+    *,
+    mass: float,
+    gravity_vec: Array,
+    thrust_time_coef: Array,
+    acc_coef: Array,
+    cmd_f_coef: Array,
+    rpy_coef: Array,
+    rpy_rates_coef: Array,
+    cmd_rpy_coef: Array,
+) -> tuple[Array, Array, Array, Array, Array | None]:
+    """Core fitted second-order rpy and thrust dynamics in Euler-angle coordinates."""
+    xp = array_namespace(pos)
+    device = xp_device(pos)
+    mass, gravity_vec = to_xp(mass, gravity_vec, xp=xp, device=device)
+    thrust_time_coef, acc_coef = to_xp(thrust_time_coef, acc_coef, xp=xp, device=device)
+    cmd_f_coef, rpy_coef = to_xp(cmd_f_coef, rpy_coef, xp=xp, device=device)
+    rpy_rates_coef, cmd_rpy_coef = to_xp(rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device)
+    cmd_f = cmd[..., -1]
+    cmd_rpy = cmd[..., 0:3]
+    # Note that we are abusing the rotor_vel state as the thrust
+    if rotor_vel is None:
+        warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
+        rotor_vel, rotor_vel_dot = cmd_f[..., None], None
+    else:
+        rotor_vel_dot = 1 / thrust_time_coef * (cmd_f[..., None] - rotor_vel)
+    forces_motor = rotor_vel[..., 0]
+    thrust = acc_coef + cmd_f_coef * forces_motor
+    drone_z_axis = R.from_euler("xyz", rpy).as_matrix()[..., -1]
+    pos_dot = vel
+    vel_dot = 1.0 / mass * thrust[..., None] * drone_z_axis + gravity_vec
+    rpy_rates_dot = rpy_coef * rpy + rpy_rates_coef * rpy_rates + cmd_rpy_coef * cmd_rpy
+    return pos_dot, rpy_rates, vel_dot, rpy_rates_dot, rotor_vel_dot
 
 
 def symbolic_dynamics(

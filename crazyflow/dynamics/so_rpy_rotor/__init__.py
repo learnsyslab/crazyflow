@@ -9,8 +9,6 @@ state is the current thrust in Newtons (not motor RPMs).
 \begin{aligned}
     \dot{F} &= \frac{1}{\tau}(F_{\mathrm{cmd}} - F), \\
     \dot{\mathbf{p}} &= \mathbf{v}, \\
-    \dot{\mathbf{q}} &= \tfrac{1}{2}
-        \mathbf{q} \otimes \begin{bmatrix} {}^{\mathcal{B}}\boldsymbol{\omega}\\0 \end{bmatrix}, \\
     m\dot{\mathbf{v}} &= m\mathbf{g}
         + (c_{\mathrm{acc}} + c_f F)\,R\,\mathbf{e}_z, \\
     \ddot{\boldsymbol{\psi}} &=
@@ -21,8 +19,11 @@ state is the current thrust in Newtons (not motor RPMs).
 \]
 
 where \(\tau\) is the thrust time constant, \(\boldsymbol{\psi} = [\phi,\theta,\psi]^{\top}\) are
-roll/pitch/yaw angles extracted from \(\mathbf{q}\), and
-\(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world frame.
+the roll/pitch/yaw angles with rates \(\dot{\boldsymbol{\psi}}\), and
+\(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\boldsymbol{\psi})\) is the rotation from body to world frame.
+
+This is the native Euler-angle form. For how the simulation integrates this state in quaternion +
+angular velocity coordinates, see [so_rpy][crazyflow.dynamics.so_rpy].
 """
 
 from crazyflow.dynamics.so_rpy_rotor.dynamics import (

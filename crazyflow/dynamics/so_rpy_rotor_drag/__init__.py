@@ -9,8 +9,6 @@ first-order lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrus
 \begin{aligned}
     \dot{F} &= \frac{1}{\tau}(F_{\mathrm{cmd}} - F), \\
     \dot{\mathbf{p}} &= \mathbf{v}, \\
-    \dot{\mathbf{q}} &= \tfrac{1}{2}
-        \mathbf{q} \otimes \begin{bmatrix} {}^{\mathcal{B}}\boldsymbol{\omega}\\0 \end{bmatrix}, \\
     m\dot{\mathbf{v}} &= m\mathbf{g}
         + (c_{\mathrm{acc}} + c_f F)\,R\,\mathbf{e}_z
         + R\,D_b\,R^{\top}\mathbf{v}, \\
@@ -22,9 +20,12 @@ first-order lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrus
 \]
 
 where \(\tau\) is the thrust time constant, \(\boldsymbol{\psi} = [\phi,\theta,\psi]^{\top}\) are
-roll/pitch/yaw angles extracted from \(\mathbf{q}\),
-\(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\mathbf{q})\) is the rotation from body to world frame, and
-\(D_b\) is the diagonal body-frame aerodynamic drag matrix.
+the roll/pitch/yaw angles with rates \(\dot{\boldsymbol{\psi}}\),
+\(R = {}^{\mathcal{I}}R_{\mathcal{B}}(\boldsymbol{\psi})\) is the rotation from body to world frame,
+and \(D_b\) is the diagonal body-frame aerodynamic drag matrix.
+
+This is the native Euler-angle form. For how the simulation integrates this state in quaternion +
+angular velocity coordinates, see [so_rpy][crazyflow.dynamics.so_rpy].
 """
 
 from crazyflow.dynamics.so_rpy_rotor_drag.dynamics import (
