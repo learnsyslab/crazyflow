@@ -27,6 +27,18 @@ The scene is built programmatically from MJCF (MuJoCo's XML format) at `Sim` con
 
 The spec is accessible as `sim.spec` before compilation, and `sim.mj_model` / `sim.mjx_model` after.
 
+## Fused drone model (`fused_mjx_model`)
+
+Each drone MJCF defines two bodies. `drone` has separate visual meshes for the PCB, motors, propellers, LEDs, and battery. `drone_fused` bakes the visuals into a single mesh. Passing `fused_mjx_model=True` to `Sim` selects the fused body:
+
+```{ .python }
+from crazyflow.sim import Sim
+
+sim = Sim(n_worlds=1, n_drones=1, fused_mjx_model=True)
+```
+
+The difference between the two is purely visual. The fused body consists of a single geom with one mesh, which shrinks its memory footprint. The cost is visual detail. Use it for large swarms or headless runs, and keep the default for detailed rendering.
+
 ## Adding objects to the scene
 
 Custom geometry (gates, obstacles, walls, or any MJCF body) can be added by editing `sim.spec` and calling `sim.build_mjx()`. The new geometry is available for collision and rendering but has no effect on the drone dynamics, which are computed independently in JAX.
@@ -123,7 +135,7 @@ The solution is to **close over** `mjx_data` rather than pass it as an argument.
 
 The drone racing environment in [lsy_drone_racing](https://github.com/learnsyslab/lsy_drone_racing) uses this pattern to build a contact check function:
 
-```{ .python notest }
+```{ .python }
 from crazyflow.sim.sim import sync_sim2mjx
 
 _mjx_data = sim.mjx_data   # captured in closure

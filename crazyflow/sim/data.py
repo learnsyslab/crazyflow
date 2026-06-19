@@ -29,7 +29,7 @@ class SimState:
     vel: Array  # (N, M, 3)
     """Velocity of the drone's center of mass in the world frame."""
     ang_vel: Array  # (N, M, 3)
-    """Angular velocity of the drone's center of mass in the world frame."""
+    """Angular velocity of the drone in the body frame."""
     force: Array  # (N, M, 3)  # CoM force
     """Force applied to the drone's center of mass in the world frame."""
     torque: Array  # (N, M, 3)  # CoM torque

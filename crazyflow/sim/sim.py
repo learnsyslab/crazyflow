@@ -52,6 +52,17 @@ def requires_mujoco_sync(fn: Callable[Params, Return]) -> Callable[Params, Retur
 
 
 class Sim:
+    """Crazyflow simulation.
+
+    Used both through its object-oriented methods (:meth:`step`, :meth:`reset`, the ``*_control``
+    setters) and as the builder for the functional API in :mod:`crazyflow.sim.functional`, which
+    operates on the ``sim.data`` and pipelines constructed here.
+
+    The simulation is always batched. Every quantity in ``sim.data`` has a leading
+    ``(n_worlds, n_drones, ...)`` shape, even for a single world and drone. ``n_worlds`` indexes
+    parallel copies of the scene and ``n_drones`` the drones within each world.
+    """
+
     def __init__(
         self,
         n_worlds: int = 1,
@@ -69,6 +80,26 @@ class Sim:
         rng_key: int = 0,
         fused_mjx_model: bool = False,
     ):
+        """Build the scene and the step and reset pipelines, and allocate the batched sim data.
+
+        Args:
+            n_worlds: Number of parallel worlds to simulate.
+            n_drones: Number of drones per world.
+            drone: Name of the drone.
+            dynamics: Dynamics used to advance the drone state.
+            control: Control interface exposed to the user.
+            integrator: Integration scheme for the dynamics.
+            freq: Dynamics step frequency in Hz.
+            state_freq: Frequency in Hz at which the state controller runs.
+            attitude_freq: Frequency in Hz at which the attitude controller runs.
+            force_torque_freq: Frequency in Hz at which the force/torque controller runs.
+            device: Device to place the simulation data on (e.g. ``"cpu"`` or ``"gpu"``).
+            xml_path: Path to a custom scene XML. Defaults to ``crazyflow/scene.xml``.
+            rng_key: Seed for the JAX rng key.
+            fused_mjx_model: If True, use the ``drone_fused`` body whose visual geometry is fused
+                into a single mesh. This shrinks the MJX model and reduces its memory footprint at
+                the cost of visual detail.
+        """
         assert Dynamics(dynamics) in Dynamics, f"Dynamics mode {dynamics} not implemented"
         assert Control(control) in Control, f"Control mode {control} not implemented"
         if dynamics != Dynamics.first_principles:

@@ -115,5 +115,3 @@ Choose based on which physical effects you need to capture:
 - **`so_rpy_rotor_drag`** — adds `drag_xy_coef` and `drag_z_coef`. Best accuracy at higher speeds where aerodynamic drag is significant.
 
 ---
-
-For lower-level helpers — working directly with motor forces, PWM values, or angular velocity representations — see [Transform utilities](transforms.md).
