@@ -16,7 +16,6 @@ theme:
     - content.code.annotate
     - navigation.footer
     - navigation.indexes
-    - navigation.sections
     - navigation.tabs
     - navigation.top
     - navigation.tracking
@@ -49,8 +48,20 @@ nav:
     - Simulator Overview: user-guide/sim-overview.md
     - Object-Oriented API: user-guide/oo-api.md
     - Functional API: user-guide/functional-api.md
-    - Physics Models: user-guide/physics-models.md
-    - Control Modes: user-guide/control-modes.md
+    - Dynamics:
+      - user-guide/dynamics/index.md
+      - Dynamics functions: user-guide/dynamics/dynamics-functions.md
+      - Parametrization: user-guide/dynamics/parametrize.md
+      - Batching & domain randomization: user-guide/dynamics/batching.md
+      - Symbolic dynamics: user-guide/dynamics/symbolic.md
+      - System identification: user-guide/dynamics/system-identification.md
+    - Control Modes:
+      - user-guide/control/index.md
+      - Mellinger controller: user-guide/control/mellinger.md
+      - Parametrization: user-guide/control/parametrize.md
+      - Integral errors: user-guide/control/integral-errors.md
+      - Batching: user-guide/control/batching.md
+      - JIT compilation: user-guide/control/jit.md
     - Pipelines: user-guide/pipelines.md
     - Visualization: user-guide/visualization.md
     - MuJoCo Integration: user-guide/mujoco.md

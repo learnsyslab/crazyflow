@@ -30,14 +30,14 @@ dependencies = [
     "flax",
     "ml_collections",
     "casadi",
-    "drone-models==0.1.0",             # from PyPI (regular install) or submodules folder (pixi install)
-    "drone-controllers==0.2.0",        # from PyPI (regular install) or submodules folder (pixi install)
+    "array-api-compat",
+    "array-api-extra",
 ]
 requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
-benchmark = ["fire", "matplotlib", "pandas"]
+benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
 
 [project.urls]
 Homepage = "https://github.com/learnsyslab/crazyflow"
@@ -51,6 +51,11 @@ version = { attr = "crazyflow.__version__" }
 
 [tool.setuptools.package-data]
 crazyflow = ["scene.xml"]
+"crazyflow.drones" = ["*.xml", "params.toml", "assets/*/*.stl"]
+"crazyflow.dynamics.first_principles" = ["params.toml"]
+"crazyflow.dynamics.so_rpy" = ["params.toml"]
+"crazyflow.dynamics.so_rpy_rotor" = ["params.toml"]
+"crazyflow.dynamics.so_rpy_rotor_drag" = ["params.toml"]
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "render"]
@@ -124,8 +129,6 @@ ruff = "*"
 
 [tool.pixi.pypi-dependencies]
 crazyflow = { path = "./", editable = true }
-drone-models = { path = "./submodules/drone-models", editable = true }
-drone-controllers = { path = "./submodules/drone-controllers", editable = true }
 
 [tool.pixi.feature.gpu]
 platforms = ["linux-64"]

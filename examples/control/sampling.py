@@ -13,13 +13,13 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 import jax
 import jax.numpy as jnp
 import numpy as np
-from drone_models.core import load_params
-from drone_models.transform import motor_force2rotor_vel
 from jax import Array
 from jax.lax import scan
 
 from crazyflow.control import Control
-from crazyflow.sim import Physics, Sim
+from crazyflow.control.transform import motor_force2rotor_vel
+from crazyflow.drones import load_params
+from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.visualize import draw_capsule, draw_line
 
@@ -31,7 +31,7 @@ except RuntimeError:
     DEVICE_CONTROLLER = "cpu"
 
 # Simulation configuration
-DRONE_MODEL = "cf21B_500"
+DRONE = "cf21B_500"
 DURATION = 10.0
 FPS = 60
 RENDER = True
@@ -142,7 +142,7 @@ def rollout_sim(
         quat=rollout_data.states.quat.at[...].set(obs["quat"]),
         vel=rollout_data.states.vel.at[...].set(obs["vel"]),
         ang_vel=rollout_data.states.ang_vel.at[...].set(obs["ang_vel"]),
-        # The reduced model stores collective thrust in its rotor_vel state.
+        # The reduced dynamics store collective thrust in its rotor_vel state.
         rotor_vel=rollout_data.states.rotor_vel.at[...].set(obs["collective_thrust"]),
     )
     data = rollout_data.replace(states=states)
@@ -222,16 +222,11 @@ def main() -> None:
     obstacles = obstacle_grid()
 
     # Set up the main sim
-    sim = Sim(
-        n_worlds=1,
-        drone_model=DRONE_MODEL,
-        physics=Physics.first_principles,
-        control=Control.attitude,
-    )
+    sim = Sim(n_worlds=1, drone=DRONE, dynamics=Dynamics.first_principles, control=Control.attitude)
     sim.max_visual_geom = 100_000  # To be able to show all rollouts
     sim.reset()
     start_pos = lissajous_reference(0.0)["pos"]
-    drone_params = load_params("first_principles", DRONE_MODEL)
+    drone_params = load_params(DRONE)
     hover_thrust_value = np.asarray(drone_params["mass"] * 9.81, dtype=np.float32)
     hover_rotor_vel = motor_force2rotor_vel(
         np.full(4, hover_thrust_value / 4.0, dtype=np.float32), drone_params["rpm2thrust"]
@@ -249,8 +244,8 @@ def main() -> None:
     rollout_simulator = Sim(
         n_worlds=N_SAMPLES,
         device=controller_device.platform,
-        drone_model=DRONE_MODEL,
-        physics=Physics.so_rpy_rotor_drag,
+        drone=DRONE,
+        dynamics=Dynamics.so_rpy_rotor_drag,
         control=Control.attitude,
         freq=rollout_freq,
         attitude_freq=rollout_freq,
@@ -303,7 +298,7 @@ def main() -> None:
             "quat": sim.data.states.quat[0, 0],
             "vel": sim.data.states.vel[0, 0],
             "ang_vel": sim.data.states.ang_vel[0, 0],
-            # Thrust is not observable and difficult to estimate, so use the thrust model.
+            # Thrust is not observable and difficult to estimate, so use the thrust dynamics.
             "collective_thrust": thrust_estimate,
         }
         action, key, mean_controls, best_positions, sampled_positions = control(

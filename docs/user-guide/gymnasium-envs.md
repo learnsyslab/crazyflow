@@ -38,9 +38,9 @@ All environments accept these common arguments:
 |---|---|---|
 | `num_envs` | 1 | Number of parallel environments |
 | `max_episode_time` | 10.0 | Episode length before truncation, seconds |
-| `physics` | `Physics.so_rpy` | Physics model |
-| `drone_model` | `"cf2x_L250"` | Drone configuration |
-| `freq` | 500 | Physics frequency, Hz |
+| `dynamics` | `Dynamics.so_rpy` | Dynamics |
+| `drone` | `"cf2x_L250"` | Drone configuration |
+| `freq` | 500 | Dynamics frequency, Hz |
 | `device` | `"cpu"` | `"cpu"` or `"gpu"` |
 | `reset_randomization` | `None` | Optional `(SimData, SimData, mask) → SimData` function applied at reset (base `DroneEnv` only) |
 

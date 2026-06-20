@@ -10,18 +10,18 @@ The `Sim` class is the main entry point. It provides a Python-level control loop
 All configuration is fixed at construction time.
 
 ```python
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.sim.integration import Integrator
 from crazyflow.control import Control
 
 sim = Sim(
     n_worlds=1,
     n_drones=1,
-    drone_model="cf2x_L250",       # Crazyflie 2.x with L250 props
-    physics=Physics.first_principles,
+    drone="cf2x_L250",
+    dynamics=Dynamics.first_principles,
     control=Control.state,
     integrator=Integrator.rk4,
-    freq=500,                       # physics update rate, Hz
+    freq=500,                       # dynamics update rate, Hz
     state_freq=100,                 # state controller rate, Hz
     attitude_freq=500,              # attitude controller rate, Hz
     device="cpu",
@@ -35,11 +35,11 @@ Key constructor arguments:
 |---|---|---|
 | `n_worlds` | 1 | Number of independent parallel environments |
 | `n_drones` | 1 | Drones per world |
-| `drone_model` | `"cf2x_L250"` | Drone configuration (see `drone_models.available_drones`) |
-| `physics` | `Physics.default` | Physics model |
+| `drone` | `"cf2x_L250"` | Drone configuration (see `crazyflow.available_drones`) |
+| `dynamics` | `Dynamics.default` | Dynamics |
 | `control` | `Control.default` | Control mode |
 | `integrator` | `Integrator.default` | Numerical integrator |
-| `freq` | 500 | Physics frequency, Hz |
+| `freq` | 500 | Dynamics frequency, Hz |
 | `device` | `"cpu"` | `"cpu"` or `"gpu"` |
 
 ## Control methods
@@ -72,10 +72,10 @@ Commands roll, pitch, yaw setpoints (rad) and a collective thrust (N). This leve
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(n_worlds=1, n_drones=1, control=Control.attitude, physics=Physics.so_rpy)
+sim = Sim(n_worlds=1, n_drones=1, control=Control.attitude, dynamics=Dynamics.so_rpy)
 sim.reset()
 
 # [roll, pitch, yaw, collective_thrust_N]
@@ -88,14 +88,14 @@ sim.step(sim.freq // sim.control_freq)
 
 ### Force-torque control
 
-Direct force and torque input, useful for testing dynamics or custom controllers. Requires `Physics.first_principles`.
+Direct force and torque input, useful for testing dynamics or custom controllers. Requires `Dynamics.first_principles`.
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(n_worlds=1, n_drones=1, control=Control.force_torque, physics=Physics.first_principles)
+sim = Sim(n_worlds=1, n_drones=1, control=Control.force_torque, dynamics=Dynamics.first_principles)
 sim.reset()
 
 # [collective_force_N, torque_x_Nm, torque_y_Nm, torque_z_Nm]
@@ -108,14 +108,14 @@ sim.step(1)
 
 ### Rotor velocity control
 
-The lowest level: directly command each motor's RPM. Requires `Physics.first_principles`.
+The lowest level: directly command each motor's RPM. Requires `Dynamics.first_principles`.
 
 ```python
 import numpy as np
-from crazyflow.sim import Sim, Physics
+from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(n_worlds=1, n_drones=1, control=Control.rotor_vel, physics=Physics.first_principles)
+sim = Sim(n_worlds=1, n_drones=1, control=Control.rotor_vel, dynamics=Dynamics.first_principles)
 sim.reset()
 
 # [rpm_motor_0, rpm_motor_1, rpm_motor_2, rpm_motor_3]
@@ -127,7 +127,7 @@ sim.step(1)
 
 ## Stepping and resetting
 
-`sim.step(n_steps)` advances the simulation by `n_steps` physics ticks. On each tick, the full step pipeline runs, including the control stack. Controllers fire at their configured rate (e.g. the state controller at `state_freq`, the attitude controller at `attitude_freq`), not on every physics tick. Between controller ticks, the previously staged command is held.
+`sim.step(n_steps)` advances the simulation by `n_steps` dynamics ticks. On each tick, the full step pipeline runs, including the control stack. Controllers fire at their configured rate (e.g. the state controller at `state_freq`, the attitude controller at `attitude_freq`), not on every dynamics tick. Between controller ticks, the previously staged command is held.
 
 Passing more steps to a single `step(n_steps)` call is more efficient than multiple `step(1)` calls: XLA compiles the full loop into a single kernel. If you have staged a control command and do not need to set a new one, you can advance the simulation by any number of steps and the controllers will continue firing at the correct rate.
 
@@ -144,7 +144,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=4, n_drones=1, control=Control.state)
 sim.reset()  # reset all worlds
 
-# Stage a command and advance 50 physics steps (controllers fire at their rate)
+# Stage a command and advance 50 dynamics steps (controllers fire at their rate)
 cmd = np.zeros((4, 1, 13), dtype=np.float32)
 cmd[..., 2] = 0.5
 sim.state_control(cmd)

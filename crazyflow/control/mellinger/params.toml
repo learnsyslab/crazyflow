@@ -1,0 +1,131 @@
+[cf2x_L250]
+[cf2x_L250.core]
+mass = 0.029  # The controller is using the wrong mass by default
+mass_thrust = 132000
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
+torque_pwm_max = [32000.0, 32000.0, 32000.0]
+L = 0.03253
+rpm2thrust = [0.0, -5.382196214637237e-7, 2.4582929831265485e-10]
+rpm2torque = [0.0, 1.410454111996297e-9, 1.4592584373980652e-12] 
+thrust2torque = 0.007350862856566459
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+gravity_vec = [0.0, 0.0, -9.81]
+
+[cf2x_L250.state2attitude]
+kp = [0.4, 0.4, 1.25]
+kd = [0.2, 0.2, 0.5]
+ki = [0.05, 0.05, 0.05]
+int_err_max = [2.0, 2.0, 0.4]
+
+[cf2x_L250.attitude2force_torque]
+kR = [70000.0, 70000.0, 60000.0]
+kw = [20000.0, 20000.0, 12000.0]
+ki_m = [0.0, 0.0, 500.0]
+kd_omega = [200.0, 200.0, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]
+
+[cf2x_P250]
+[cf2x_P250.core]
+mass = 0.029  # The controller is using the wrong mass by default
+mass_thrust = 132000
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
+torque_pwm_max = [32000.0, 32000.0, 32000.0]
+L = 0.03253
+rpm2thrust = [0.0, -3.6200226530383495e-7, 1.6060924304100328e-10] # Index is order
+rpm2torque = [0.0, -2.2665265829562245e-9, 1.1149485566919186e-12] # Index is order
+thrust2torque = 0.0069928948992470565
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+gravity_vec = [0.0, 0.0, -9.81]
+
+[cf2x_P250.state2attitude]
+kp = [0.4, 0.4, 1.25]
+kd = [0.2, 0.2, 0.5]
+ki = [0.05, 0.05, 0.05]
+int_err_max = [2.0, 2.0, 0.4]
+
+[cf2x_P250.attitude2force_torque]
+kR = [70000.0, 70000.0, 60000.0]
+kw = [20000.0, 20000.0, 12000.0]
+ki_m = [0.0, 0.0, 500.0]
+kd_omega = [200.0, 200.0, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]
+
+[cf2x_T350]
+[cf2x_T350.core]
+mass = 0.0325  # The controller is using the wrong mass by default
+mass_thrust = 132000
+pwm_min = 7000
+pwm_max = 65535
+thrust_min = 0.01922636758983749  # in N per motor
+thrust_max = 0.18  # in N per motor
+torque_pwm_max = [32000.0, 32000.0, 32000.0]
+L = 0.03253
+rpm2thrust = [0.0, -7.167227176573658e-7, 2.9401303690194613e-10] # Index is order
+rpm2torque = [0.0, 5.815894847811497e-10, 1.331813874166509e-12] # Index is order
+thrust2torque = 0.005355990836477486
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+gravity_vec = [0.0, 0.0, -9.81]
+
+[cf2x_T350.state2attitude]
+kp = [0.4, 0.4, 1.25]
+kd = [0.2, 0.2, 0.5]
+ki = [0.05, 0.05, 0.05]
+int_err_max = [2.0, 2.0, 0.4]
+
+[cf2x_T350.attitude2force_torque]
+kR = [70000.0, 70000.0, 60000.0]
+kw = [20000.0, 20000.0, 12000.0]
+ki_m = [0.0, 0.0, 500.0]
+kd_omega = [200.0, 200.0, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]
+
+[cf21B_500]
+[cf21B_500.core]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 0.0393  # The controller is using the wrong mass by default
+L = 0.035355
+rpm2thrust = [0.0, -3.133427287299859e-7, 4.407354891648379e-10]
+rpm2torque = [0.0, 1.65886356219615e-9, 2.4693477924534137e-12]
+thrust2torque = 0.00593893393599368
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+pwm_min = 7000.0
+pwm_max = 65535.0
+thrust_min = 0.02136263065537499 # in N per motor
+thrust_max = 0.2 # in N per motor
+mass_thrust = 132000
+torque_pwm_max = [32000.0, 32000.0, 32000.0]
+
+[cf21B_500.state2attitude]
+kp = [0.4, 0.4, 1.25]
+kd = [0.2, 0.2, 0.5]
+ki = [0.05, 0.05, 0.05]
+int_err_max = [2.0, 2.0, 0.4]
+
+[cf21B_500.attitude2force_torque]
+kR = [70000.0, 70000.0, 60000.0]
+kw = [20000.0, 20000.0, 12000.0]
+ki_m = [0.0, 0.0, 500.0]
+kd_omega = [200.0, 200.0, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]

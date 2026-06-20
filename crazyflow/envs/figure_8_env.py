@@ -1,5 +1,3 @@
-from typing import Literal
-
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -7,9 +5,9 @@ from gymnasium import spaces
 from gymnasium.vector.utils import batch_space
 from jax import Array
 
+from crazyflow.dynamics import Dynamics
 from crazyflow.envs.drone_env import DroneEnv
 from crazyflow.sim.data import SimData
-from crazyflow.sim.physics import Physics
 from crazyflow.sim.visualize import draw_line, draw_points
 from crazyflow.utils import leaf_replace
 
@@ -30,8 +28,8 @@ class FigureEightEnv(DroneEnv):
         *,
         num_envs: int = 1,
         max_episode_time: float = 10.0,
-        physics: Literal["so_rpy", "first_principles"] | Physics = Physics.so_rpy,
-        drone_model: str = "cf2x_L250",
+        dynamics: Dynamics = Dynamics.so_rpy,
+        drone: str = "cf2x_L250",
         freq: int = 500,
         device: str = "cpu",
     ):
@@ -43,16 +41,16 @@ class FigureEightEnv(DroneEnv):
             trajectory_time: Total time for completing the figure-eight trajectory in seconds.
             num_envs: Number of environments to run in parallel.
             max_episode_time: Maximum episode time in seconds.
-            physics: Physics backend to use.
-            drone_model: Drone model of the environment.
+            dynamics: Dynamics backend to use.
+            drone: Drone of the environment.
             freq: Frequency of the simulation.
             device: Device to use for the simulation.
         """
         super().__init__(
             num_envs=num_envs,
             max_episode_time=max_episode_time,
-            physics=physics,
-            drone_model=drone_model,
+            dynamics=dynamics,
+            drone=drone,
             freq=freq,
             device=device,
         )

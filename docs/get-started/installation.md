@@ -17,7 +17,7 @@ Select your installation method from the tabs below, then read the notes under e
 === "pixi"
 
     ```bash
-    git clone --recurse-submodules git@github.com:learnsyslab/crazyflow.git
+    git clone https://github.com/learnsyslab/crazyflow.git
     cd crazyflow
     pixi shell
     ```
@@ -25,7 +25,7 @@ Select your installation method from the tabs below, then read the notes under e
 === "pixi + tests"
 
     ```bash
-    git clone --recurse-submodules git@github.com:learnsyslab/crazyflow.git
+    git clone https://github.com/learnsyslab/crazyflow.git
     cd crazyflow
     pixi shell -e tests
     ```
@@ -41,7 +41,7 @@ JAX defaults to CPU-only execution. The `gpu` extra swaps in `jax[cuda12]`, enab
 
 ## Developer install
 
-[Pixi](https://pixi.sh/) creates a fully reproducible environment. This variant installs `crazyflow`, `drone_models`, and `drone_controllers` in editable mode from the `submodules/` folder. Any source change takes effect immediately without reinstalling. Recommended for contributors and researchers who modify the simulator.
+[Pixi](https://pixi.sh/) creates a fully reproducible environment. This variant installs `crazyflow` in editable mode. Any source change takes effect immediately without reinstalling. Recommended for contributors and researchers who modify the simulator.
 
 ## Testing
 

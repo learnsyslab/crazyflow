@@ -5,16 +5,16 @@ import jax.numpy as jnp
 import pytest
 from jax import Array
 
+from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.data import Control, SimData
-from crazyflow.sim.physics import Physics
 
 
 @pytest.mark.skip(reason="State needs SVD in from_matrix, which is not differentiable.")
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_state_cmd_gradients(physics: Physics):
-    sim = Sim(physics=physics, control=Control.state, freq=500)
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_state_cmd_gradients(dynamics: Dynamics):
+    sim = Sim(dynamics=dynamics, control=Control.state, freq=500)
     sim_step = sim._step
 
     def step(cmd: Array, data: SimData) -> Array:
@@ -34,9 +34,9 @@ def test_state_cmd_gradients(physics: Physics):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_attitude_cmd_gradients(physics: Physics):
-    sim = Sim(physics=physics, control=Control.attitude, freq=500)
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_attitude_cmd_gradients(dynamics: Dynamics):
+    sim = Sim(dynamics=dynamics, control=Control.attitude, freq=500)
 
     def step(cmd: Array, data: SimData) -> Array:
         data = data.replace(
@@ -56,7 +56,7 @@ def test_attitude_cmd_gradients(physics: Physics):
 
 @pytest.mark.unit
 def test_force_torque_cmd_gradients():
-    sim = Sim(physics=Physics.first_principles, control=Control.force_torque, freq=500)
+    sim = Sim(dynamics=Dynamics.first_principles, control=Control.force_torque, freq=500)
 
     def step(cmd: Array, data: SimData) -> Array:
         data = data.replace(

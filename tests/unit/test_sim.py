@@ -14,7 +14,7 @@ from jax import Array
 
 from crazyflow.control import Control
 from crazyflow.exception import ConfigError
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
 from crazyflow.sim.sim import sync_sim2mjx
 from crazyflow.sim.visualize import change_material
@@ -50,23 +50,23 @@ def array_compare_assert(x: Array, y: Array, value: bool = True, name: str | Non
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.parametrize("control", Control)
 @pytest.mark.parametrize("n_worlds", [1, 2])
-def test_sim_init(physics: Physics, device: str, control: Control, n_worlds: int):
+def test_sim_init(dynamics: Dynamics, device: str, control: Control, n_worlds: int):
     n_drones = 1
 
-    if physics != Physics.first_principles:
+    if dynamics != Dynamics.first_principles:
         if control in (Control.force_torque, Control.rotor_vel):
             with pytest.raises(ConfigError):
-                Sim(n_worlds=n_worlds, physics=physics, device=device, control=control)
+                Sim(n_worlds=n_worlds, dynamics=dynamics, device=device, control=control)
             return
 
-    sim = Sim(n_worlds=n_worlds, physics=physics, device=device, control=control)
+    sim = Sim(n_worlds=n_worlds, dynamics=dynamics, device=device, control=control)
     assert sim.n_worlds == n_worlds
     assert sim.n_drones == n_drones
     assert sim.device == jax.devices(device)[0]
-    assert sim.physics == physics
+    assert sim.dynamics == dynamics
 
     # Test state buffer shapes
     array_meta_assert(sim.data.states.pos, (n_worlds, n_drones, 3), device, "pos")
@@ -98,12 +98,12 @@ def test_sim_init(physics: Physics, device: str, control: Control, n_worlds: int
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.parametrize("n_worlds", [1, 2])
 @pytest.mark.parametrize("n_drones", [1, 3])
-def test_reset(device: str, physics: Physics, n_worlds: int, n_drones: int):
+def test_reset(device: str, dynamics: Dynamics, n_worlds: int, n_drones: int):
     """Test that reset without mask resets all worlds to default state."""
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=physics, device=device)
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, device=device)
 
     # Modify states
     data = sim.data
@@ -136,10 +136,10 @@ def test_reset(device: str, physics: Physics, n_worlds: int, n_drones: int):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_reset_masked(device: str, physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_reset_masked(device: str, dynamics: Dynamics):
     """Test that reset with mask only resets specified worlds."""
-    sim = Sim(n_worlds=2, n_drones=1, physics=physics, device=device)
+    sim = Sim(n_worlds=2, n_drones=1, dynamics=dynamics, device=device)
 
     # Modify states
     data = sim.data
@@ -182,14 +182,16 @@ def test_reset_masked(device: str, physics: Physics):
 @pytest.mark.unit
 @pytest.mark.parametrize("n_worlds", [1, 2])
 @pytest.mark.parametrize("n_drones", [1, 3])
-@pytest.mark.parametrize("physics", Physics)
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.parametrize("control", Control)
-def test_sim_step(n_worlds: int, n_drones: int, physics: Physics, control: Control, device: str):
-    if physics != Physics.first_principles:
+def test_sim_step(n_worlds: int, n_drones: int, dynamics: Dynamics, control: Control, device: str):
+    if dynamics != Dynamics.first_principles:
         if control in (Control.force_torque, Control.rotor_vel):
-            pytest.skip(f"{control} is not supported with non-first-principles physics")
+            pytest.skip(f"{control} is not supported with non-first-principles dynamics")
 
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=physics, device=device, control=control)
+    sim = Sim(
+        n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, device=device, control=control
+    )
     sim.step(2)
 
 
@@ -290,7 +292,7 @@ def test_render_rgb_array(device: str):
 
 @pytest.mark.unit
 def test_device(device: str):
-    sim = Sim(n_worlds=2, physics=Physics.so_rpy, device=device)
+    sim = Sim(n_worlds=2, dynamics=Dynamics.so_rpy, device=device)
     sim.step()
     assert sim.data.states.pos.device == jax.devices(device)[0]
 
@@ -299,7 +301,7 @@ def test_device(device: str):
 @pytest.mark.parametrize("n_worlds", [1, 2])
 @pytest.mark.parametrize("n_drones", [1, 3])
 def test_sync_shape_consistency(device: str, n_drones: int, n_worlds: int):
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=Physics.so_rpy, device=device)
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=Dynamics.so_rpy, device=device)
     qpos_shape, qvel_shape = sim.mjx_data.qpos.shape, sim.mjx_data.qvel.shape
     _, mjx_data = sync_sim2mjx(sim.data, sim.mjx_data, sim.mjx_model)
     assert mjx_data.qpos.shape == qpos_shape, "sync_sim2mjx() should not change qpos shape"
@@ -307,11 +309,11 @@ def test_sync_shape_consistency(device: str, n_drones: int, n_worlds: int):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_control_frequency(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_control_frequency(dynamics: Dynamics):
     # Create two sims with different frequencies
-    sim_500 = Sim(freq=500, physics=physics, control="state")
-    sim_1000 = Sim(freq=1000, physics=physics, control="state")
+    sim_500 = Sim(freq=500, dynamics=dynamics, control="state")
+    sim_1000 = Sim(freq=1000, dynamics=dynamics, control="state")
 
     # Set same initial state and controls
     cmd = np.zeros((1, 1, 13))  # Single world, single drone, state control
@@ -369,14 +371,14 @@ def test_seed_reset():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_floor_penetration(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_floor_penetration(dynamics: Dynamics):
     """Test that drones cannot penetrate the floor (z < 0.01).
 
     We don't test for mujoco, as mujoco uses collisions by default and will let the drone bounce on
     the floor.
     """
-    sim = Sim(physics=physics, control=Control.attitude, freq=500, device="cpu")
+    sim = Sim(dynamics=dynamics, control=Control.attitude, freq=500, device="cpu")
     sim.reset()
     # Command to fall: zero thrust and attitude that points downward
     attitude_cmd = np.zeros((1, 1, 4))  # [roll, pitch, yaw, thrust]
@@ -395,9 +397,9 @@ def test_floor_penetration(physics: Physics):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_contacts(physics: Physics):
-    sim = Sim(physics=physics, control=Control.attitude, freq=500, device="cpu")
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_contacts(dynamics: Dynamics):
+    sim = Sim(dynamics=dynamics, control=Control.attitude, freq=500, device="cpu")
     sim.reset()
     sim.step(10)  # Make sure the drone is on the ground
     contacts = sim.contacts()
@@ -409,7 +411,7 @@ def test_contacts(physics: Physics):
 @pytest.mark.parametrize("control", Control)
 def test_data_committed(control: Control, device: str):
     # Check that the data is committed to the device we chose
-    sim = Sim(physics=Physics.first_principles, control=control, freq=500, device=device)
+    sim = Sim(dynamics=Dynamics.first_principles, control=control, freq=500, device=device)
 
     def assert_committed(obj0: Array | Any, path: str = "data"):
         if isinstance(obj0, jnp.ndarray):
@@ -434,9 +436,9 @@ def test_data_committed(control: Control, device: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_compile(physics: Physics, device: str):
-    sim = Sim(physics=physics, control=Control.state, freq=500, device=device)
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_compile(dynamics: Dynamics, device: str):
+    sim = Sim(dynamics=dynamics, control=Control.state, freq=500, device=device)
     # Make sure we don't recompile the step function after the first call
     sim.step(1)
     sim.step(1)
@@ -445,9 +447,9 @@ def test_compile(physics: Physics, device: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("physics", Physics)
-def test_scan_results(physics: Physics):
-    sim = Sim(n_worlds=2, n_drones=3, physics=physics, control=Control.state, device="cpu")
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_scan_results(dynamics: Dynamics):
+    sim = Sim(n_worlds=2, n_drones=3, dynamics=dynamics, control=Control.state, device="cpu")
     sim.reset()
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
     cmd[..., :3] = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
@@ -466,13 +468,13 @@ def test_scan_results(physics: Physics):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone_model", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
+@pytest.mark.parametrize("drone", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
 @pytest.mark.parametrize("mat_name", ["led_top", "led_bot"])
-def test_change_material(device: str, drone_model: str, mat_name: str):
+def test_change_material(device: str, drone: str, mat_name: str):
     """change_material should broadcast RGBA/emission and update MuJoCo materials appropriately."""
     n_drones = 2
 
-    sim = Sim(n_drones=n_drones, drone_model=drone_model, device=device)
+    sim = Sim(n_drones=n_drones, drone=drone, device=device)
 
     drone_ids = np.array([0, 1], dtype=int)
     rgba = 0.42 * np.ones((n_drones, 4), dtype=float)
@@ -526,9 +528,9 @@ def test_build_data(control: Control):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone_model", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
-def test_fused_model(device: str, drone_model: str):
-    sim = Sim(drone_model=drone_model, fused_mjx_model=True, device=device)
+@pytest.mark.parametrize("drone", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
+def test_fused_model(device: str, drone: str):
+    sim = Sim(drone=drone, fused_mjx_model=True, device=device)
     sim.reset()
     sim.step(1)
     sim.close()
