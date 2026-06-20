@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crazyflow.control.control import Control
+from crazyflow.control import Control
 from crazyflow.sim import Sim
 from crazyflow.sim.visualize import change_material
 
@@ -42,7 +42,7 @@ def main():
             tmp.flush()
             tmp_path = Path(tmp.name)
 
-        sim = Sim(n_drones=25, drone_model="cf21B_500", control=Control.state, xml_path=tmp_path)
+        sim = Sim(n_drones=25, drone="cf21B_500", control=Control.state, xml_path=tmp_path)
         fps = 60
         cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))
         cmd[..., 3] = sim.data.params.mass[0, 0, 0] * 9.81

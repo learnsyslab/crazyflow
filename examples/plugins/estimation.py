@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 import jax
 import jax.numpy as jnp
 import numpy as np
-from drone_models.transform import motor_force2rotor_vel
 
 from crazyflow import Sim
+from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim.pipeline import insert_fn_after, prepend_fn
 from crazyflow.sim.visualize import draw_line, draw_points
 
@@ -170,7 +170,7 @@ def main(noisy: bool = False, render: bool = True) -> None:
     prepend_fn(sim.step_pipeline, simulate_uwb)
     insert_fn_after(sim.step_pipeline, "simulate_uwb", estimate_state)
     insert_fn_after(sim.step_pipeline, "estimate_state", use_estimate_for_control)
-    insert_fn_after(sim.step_pipeline, "step_force_torque_controller", restore_ground_truth)
+    insert_fn_after(sim.step_pipeline, "force_torque_controller", restore_ground_truth)
     sim.build_default_data()
     sim.build_step_fn()
 

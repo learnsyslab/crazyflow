@@ -34,6 +34,10 @@ else:
         with mkdocs_gen_files.open(full_doc_path, "w") as fd:
             ident = ".".join(parts)
             fd.write(f"::: {ident}\n")
+            # Dynamics is re-exported by crazyflow.sim for convenience but documented under
+            # crazyflow.dynamics. Filter it out here so it is not rendered on both pages.
+            if ident == "crazyflow.sim":
+                fd.write('    options:\n      filters: ["!^Dynamics$"]\n')
 
         mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
@@ -44,14 +48,23 @@ else:
     * [sim](crazyflow/sim/index.md)
     * [sim.data](crazyflow/sim/data.md)
     * [sim.functional](crazyflow/sim/functional.md)
-    * [sim.physics](crazyflow/sim/physics.md)
     * [sim.integration](crazyflow/sim/integration.md)
     * [sim.sensors](crazyflow/sim/sensors.md)
-    * [sim.symbolic](crazyflow/sim/symbolic.md)
     * [sim.visualize](crazyflow/sim/visualize.md)
+* Dynamics
+    * [dynamics](crazyflow/dynamics/index.md)
+    * [dynamics.core](crazyflow/dynamics/core.md)
+    * [dynamics.first_principles](crazyflow/dynamics/first_principles/index.md)
+    * [dynamics.so_rpy](crazyflow/dynamics/so_rpy/index.md)
+    * [dynamics.so_rpy_rotor](crazyflow/dynamics/so_rpy_rotor/index.md)
+    * [dynamics.so_rpy_rotor_drag](crazyflow/dynamics/so_rpy_rotor_drag/index.md)
+    * [dynamics.symbols](crazyflow/dynamics/symbols.md)
 * Control
     * [control](crazyflow/control/index.md)
-    * [control.mellinger](crazyflow/control/mellinger.md)
+    * [control.core](crazyflow/control/core.md)
+    * [control.transform](crazyflow/control/transform.md)
+    * [control.mellinger](crazyflow/control/mellinger/index.md)
+    * [control.mellinger.control](crazyflow/control/mellinger/control.md)
 * Environments
     * [envs](crazyflow/envs/index.md)
     * [envs.drone_env](crazyflow/envs/drone_env.md)

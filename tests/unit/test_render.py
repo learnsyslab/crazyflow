@@ -10,7 +10,7 @@ from crazyflow import Sim
 @pytest.mark.render
 @skip_if_headless
 def test_render_camera_selection_from_name(cam_name: str):
-    sim = Sim(drone_model="cf21B_500", n_drones=2)
+    sim = Sim(drone="cf21B_500", n_drones=2)
     cam_id = mujoco.mj_name2id(sim.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, cam_name)
     sim.render(mode="human", camera=cam_name)
     viewer_cam = sim.viewer.viewer.cam
@@ -24,7 +24,7 @@ def test_render_camera_selection_from_name(cam_name: str):
 @pytest.mark.render
 @skip_if_headless
 def test_render_camera_selection_from_id(cam_id: int):
-    sim = Sim(drone_model="cf21B_500", n_drones=2)
+    sim = Sim(drone="cf21B_500", n_drones=2)
     sim.render(mode="human", camera=cam_id)
     viewer_cam = sim.viewer.viewer.cam
     assert viewer_cam.type == mujoco.mjtCamera.mjCAMERA_FIXED, "Camera type was not set to FIXED"
@@ -36,7 +36,7 @@ def test_render_camera_selection_from_id(cam_id: int):
 @pytest.mark.render
 @skip_if_headless
 def test_render_free_camera():
-    sim = Sim(drone_model="cf21B_500", n_drones=2)
+    sim = Sim(drone="cf21B_500", n_drones=2)
     sim.render(mode="human")
     viewer_cam = sim.viewer.viewer.cam
     assert viewer_cam.type == mujoco.mjtCamera.mjCAMERA_FREE, "Camera type was not set to FREE"

@@ -13,13 +13,11 @@ from crazyflow.control.mellinger import (
     MellingerForceTorqueData,
     MellingerStateData,
 )
-from crazyflow.sim.physics import (
-    FirstPrinciplesData,
-    Physics,
-    SoRpyData,
-    SoRpyRotorData,
-    SoRpyRotorDragData,
-)
+from crazyflow.dynamics import Dynamics
+from crazyflow.dynamics.first_principles import Params as FirstPrinciplesParams
+from crazyflow.dynamics.so_rpy import Params as SoRpyParams
+from crazyflow.dynamics.so_rpy_rotor import Params as SoRpyRotorParams
+from crazyflow.dynamics.so_rpy_rotor_drag import Params as SoRpyRotorDragParams
 
 
 @dataclass
@@ -31,7 +29,7 @@ class SimState:
     vel: Array  # (N, M, 3)
     """Velocity of the drone's center of mass in the world frame."""
     ang_vel: Array  # (N, M, 3)
-    """Angular velocity of the drone's center of mass in the world frame."""
+    """Angular velocity of the drone in the body frame."""
     force: Array  # (N, M, 3)  # CoM force
     """Force applied to the drone's center of mass in the world frame."""
     torque: Array  # (N, M, 3)  # CoM torque
@@ -118,7 +116,7 @@ class SimControls:
         n_worlds: int,
         n_drones: int,
         control: Control,
-        drone_model: str,
+        drone: str,
         state_freq: int | None,
         attitude_freq: int | None,
         force_torque_freq: int | None,
@@ -128,14 +126,12 @@ class SimControls:
         rotor_vel = jnp.zeros((n_worlds, n_drones, 4), device=device)
         match control:
             case Control.state:
-                state = MellingerStateData.create(
-                    n_worlds, n_drones, state_freq, drone_model, device
-                )
+                state = MellingerStateData.create(n_worlds, n_drones, state_freq, drone, device)
                 attitude = MellingerAttitudeData.create(
-                    n_worlds, n_drones, attitude_freq, drone_model, device
+                    n_worlds, n_drones, attitude_freq, drone, device
                 )
                 force_torque = MellingerForceTorqueData.create(
-                    n_worlds, n_drones, force_torque_freq, drone_model, device
+                    n_worlds, n_drones, force_torque_freq, drone, device
                 )
                 return SimControls(
                     mode=control,
@@ -146,10 +142,10 @@ class SimControls:
                 )
             case Control.attitude:
                 attitude = attitude = MellingerAttitudeData.create(
-                    n_worlds, n_drones, attitude_freq, drone_model, device
+                    n_worlds, n_drones, attitude_freq, drone, device
                 )
                 force_torque = MellingerForceTorqueData.create(
-                    n_worlds, n_drones, force_torque_freq, drone_model, device
+                    n_worlds, n_drones, force_torque_freq, drone, device
                 )
                 return SimControls(
                     mode=control,
@@ -160,7 +156,7 @@ class SimControls:
                 )
             case Control.force_torque:
                 force_torque = MellingerForceTorqueData.create(
-                    n_worlds, n_drones, force_torque_freq, drone_model, device
+                    n_worlds, n_drones, force_torque_freq, drone, device
                 )
                 return SimControls(
                     mode=control,
@@ -189,20 +185,20 @@ class SimParams(typing.Protocol):
 
     @staticmethod
     def create(
-        n_worlds: int, n_drones: int, physics: Physics, drone_model: str, device: Device
+        n_worlds: int, n_drones: int, dynamics: Dynamics, drone: str, device: Device
     ) -> SimParams:
         """Create a default set of parameters for the simulation."""
-        match physics:
-            case Physics.first_principles:
-                return FirstPrinciplesData.create(n_worlds, n_drones, drone_model, device)
-            case Physics.so_rpy:
-                return SoRpyData.create(n_worlds, n_drones, drone_model, device)
-            case Physics.so_rpy_rotor:
-                return SoRpyRotorData.create(n_worlds, n_drones, drone_model, device)
-            case Physics.so_rpy_rotor_drag:
-                return SoRpyRotorDragData.create(n_worlds, n_drones, drone_model, device)
+        match dynamics:
+            case Dynamics.first_principles:
+                return FirstPrinciplesParams.create(n_worlds, n_drones, drone, device)
+            case Dynamics.so_rpy:
+                return SoRpyParams.create(n_worlds, n_drones, drone, device)
+            case Dynamics.so_rpy_rotor:
+                return SoRpyRotorParams.create(n_worlds, n_drones, drone, device)
+            case Dynamics.so_rpy_rotor_drag:
+                return SoRpyRotorDragParams.create(n_worlds, n_drones, drone, device)
             case _:
-                raise ValueError(f"Physics mode {physics} not implemented")
+                raise ValueError(f"Dynamics mode {dynamics} not implemented")
 
 
 @dataclass
@@ -222,7 +218,7 @@ class SimCore:
     rng_key: Array  # (N, 1)
     """Random number generator key for the simulation."""
     mjx_synced: Array  # (1,)
-    """Whether the simulation data is synchronized with the MuJoCo model."""
+    """Whether the simulation data is synchronized with the MuJoCo mjx_data."""
 
     @staticmethod
     def create(

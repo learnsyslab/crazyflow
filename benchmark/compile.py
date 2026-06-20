@@ -4,6 +4,8 @@ import fire
 import jax
 
 from crazyflow import Sim
+from crazyflow.control import Control
+from crazyflow.dynamics import Dynamics
 
 
 def main(cache: bool = False):
@@ -16,7 +18,7 @@ def main(cache: bool = False):
 
     # Time initialization
     start = time.perf_counter()
-    sim = Sim(n_worlds=1, n_drones=1, physics="sys_id", control="attitude")
+    sim = Sim(n_worlds=1, n_drones=1, dynamics=Dynamics.so_rpy, control=Control.attitude)
     init_time = time.perf_counter() - start
 
     # Time reset compilation
@@ -29,7 +31,7 @@ def main(cache: bool = False):
     sim._step.lower(sim.data, 1).compile()
     step_time = time.perf_counter() - start
 
-    print(f"Simulation startup times | {sim.physics} | {sim.control}")
+    print(f"Simulation startup times | {sim.dynamics} | {sim.control}")
     print(f"Initialization: {init_time:.2f}s")
     print(f"Reset: {reset_time:.2f}s")
     print(f"Step: {step_time:.2f}s")

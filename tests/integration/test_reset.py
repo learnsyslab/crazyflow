@@ -4,14 +4,14 @@ import pytest
 
 import crazyflow  # noqa: F401, register gymnasium envs
 from crazyflow.control import Control
-from crazyflow.sim import Physics, Sim
+from crazyflow.sim import Dynamics, Sim
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_reset_during_simulation(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_reset_during_simulation(dynamics: Dynamics):
     """Test reset behavior during an active simulation."""
-    sim = Sim(physics=physics, control=Control.attitude)
+    sim = Sim(dynamics=dynamics, control=Control.attitude)
     # Run simulation
     n_steps = 3
     random_cmds = np.random.rand(n_steps, 1, 1, 4)
@@ -36,11 +36,11 @@ def test_reset_during_simulation(physics: Physics):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("physics", Physics)
-def test_reset_multi_world(physics: Physics):
+@pytest.mark.parametrize("dynamics", Dynamics)
+def test_reset_multi_world(dynamics: Dynamics):
     """Test reset behavior with multiple worlds."""
     n_worlds, n_drones = 2, 2
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=physics, control=Control.attitude)
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, control=Control.attitude)
 
     n_steps = 3
     random_cmds = np.random.rand(n_steps, n_worlds, n_drones, 4)
