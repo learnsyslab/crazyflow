@@ -100,7 +100,7 @@ After `sim.step()` or `sim.reset()`, `mjx_synced` is set to `False`. The `sim.re
 
 These run only once per render or contact call, regardless of how many dynamics steps were taken since the last sync.
 
-```{ .python continuation }
+```{ .python notest }
 for i in range(10):
     sim.step(5)                       # JAX dynamics only, mjx_synced = False
     if i % 5 == 0:
@@ -113,7 +113,7 @@ for i in range(10):
 
 This means the order of calls matters. Grouping all rendering and contact queries together after a step lets them share a single sync:
 
-```{ .python continuation }
+```{ .python notest }
 sim.step(5)
 contacts = sim.contacts()     # sync runs here
 sim.render(mode="rgb_array")  # flag already set, no second sync
@@ -121,7 +121,7 @@ sim.render(mode="rgb_array")  # flag already set, no second sync
 
 Interleaving a step between them forces two syncs:
 
-```{ .python continuation }
+```{ .python notest }
 contacts = sim.contacts()     # sync runs here
 sim.step(5)                   # flag cleared
 sim.render(mode="rgb_array")  # sync runs again
@@ -135,7 +135,7 @@ The solution is to **close over** `mjx_data` rather than pass it as an argument.
 
 The drone racing environment in [lsy_drone_racing](https://github.com/learnsyslab/lsy_drone_racing) uses this pattern to build a contact check function:
 
-```{ .python continuation }
+```{ .python notest }
 from jax import Array
 
 from crazyflow.sim.sim import sync_sim2mjx
