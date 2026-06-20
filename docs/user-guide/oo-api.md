@@ -17,7 +17,7 @@ from crazyflow.control import Control
 sim = Sim(
     n_worlds=1,
     n_drones=1,
-    drone="cf2x_L250",       # Crazyflie 2.x with L250 props
+    drone="cf2x_L250",
     dynamics=Dynamics.first_principles,
     control=Control.state,
     integrator=Integrator.rk4,

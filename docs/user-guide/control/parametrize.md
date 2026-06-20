@@ -55,10 +55,10 @@ The following configurations ship with pre-fitted parameters:
 
 | `drone` | Platform |
 |---|---|
-| `"cf2x_L250"` | Crazyflie 2.x, L250 props |
-| `"cf2x_P250"` | Crazyflie 2.x, P250 props |
-| `"cf2x_T350"` | Crazyflie 2.x, T350 props |
-| `"cf21B_500"` | Crazyflie 2.1 Brushless, 500 props |
+| `"cf2x_L250"` | Crazyflie 2.x |
+| `"cf2x_P250"` | Crazyflie 2.x, plus propellers |
+| `"cf2x_T350"` | Crazyflie 2.x, thrust upgrade kit |
+| `"cf21B_500"` | Crazyflie 2.1 Brushless |
 
 Pass the drone name as a plain string:
 
