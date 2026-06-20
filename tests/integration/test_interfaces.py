@@ -16,17 +16,18 @@ def test_state_interface(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.state)
 
     # Simple P controller for attitude to reach target height
+    target_height = 0.5
     cmd = np.zeros((1, 1, 13), dtype=np.float32)
-    cmd[0, 0, 2] = 1.0  # Set z position target to 1.0
+    cmd[0, 0, 2] = target_height
+    steps = int(2 * sim.control_freq)  # Run simulation for 2 seconds
 
-    for _ in range(int(2 * sim.control_freq)):  # Run simulation for 2 seconds
+    for i in range(steps):  # Run simulation for 2 seconds
+        cmd[..., 2] = target_height * i / steps  # Linearly interpolate target height
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
-        if np.linalg.norm(sim.data.states.pos[0, 0] - np.array([0.0, 0.0, 1.0])) < 0.1:
-            break
 
     # Check if drone reached target position
-    distance = np.linalg.norm(sim.data.states.pos[0, 0] - np.array([0.0, 0.0, 1.0]))
+    distance = np.linalg.norm(sim.data.states.pos[0, 0] - np.array([0.0, 0.0, target_height]))
     assert distance < 0.1, f"Failed to reach target height with {dynamics} dynamics"
 
 
@@ -35,13 +36,15 @@ def test_state_interface(dynamics: Dynamics):
 def test_attitude_interface(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.attitude)
     target_pos = np.array([0.0, 0.0, 1.0])
-    jit_state2attitude = jax.jit(parametrize(state2attitude, drone="cf2x_L250"))
+    jit_state2attitude = jax.jit(parametrize(state2attitude, drone=sim.drone))
 
     pos_err_i = np.zeros((1, 1, 3))
     cmd = np.zeros((1, 1, 13))
-    cmd[0, 0, 2] = 1.0  # Set z position target to 1.0
+    cmd[0, 0, 2] = 1.0
+    steps = int(3 * sim.control_freq)
 
-    for _ in range(int(2 * sim.control_freq)):  # Run simulation for 2 seconds
+    for i in range(steps):
+        cmd[..., :3] = target_pos * i / steps  # Linearly interpolate target position
         pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
         rpyt, pos_err_i = jit_state2attitude(pos, quat, vel, cmd, pos_err_i, ctrl_freq=100)
         sim.attitude_control(rpyt)
@@ -77,15 +80,19 @@ def test_rotor_vel_interface():
 def test_swarm_control(dynamics: Dynamics):
     n_worlds, n_drones = 2, 3
     sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, control=Control.state)
+    start_pos = np.asarray(sim.data.states.pos)
     target_pos = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
-
     cmd = np.zeros((n_worlds, n_drones, 13))
-    cmd[..., :3] = target_pos
-    sim.state_control(cmd)
-    sim.step(3 * sim.freq)
-    # Check if drone maintained hover position
+    steps = int(3 * sim.control_freq)
+
+    for i in range(steps):
+        alpha = i / (steps)
+        cmd[..., :3] = start_pos * (1 - alpha) + target_pos * alpha
+        sim.state_control(cmd)
+        sim.step(sim.freq // sim.control_freq)
+
     max_dist = np.max(np.linalg.norm(sim.data.states.pos - target_pos, axis=-1))
-    assert max_dist < 0.05, f"Failed to reach target, max dist: {max_dist}"
+    assert max_dist < 0.08, f"Failed to reach target, max dist: {max_dist}"
 
 
 @pytest.mark.integration

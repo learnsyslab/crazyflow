@@ -67,7 +67,7 @@ class Sim:
         self,
         n_worlds: int = 1,
         n_drones: int = 1,
-        drone: str = "cf2x_L250",
+        drone: str = "cf21B_500",
         dynamics: Dynamics = Dynamics.default,
         control: Control = Control.default,
         integrator: Integrator = Integrator.default,
