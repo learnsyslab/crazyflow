@@ -79,7 +79,7 @@ def test_rotor_vel_interface():
 @pytest.mark.parametrize("dynamics", Dynamics)
 def test_swarm_control(dynamics: Dynamics):
     n_worlds, n_drones = 2, 3
-    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, physics=physics, control=Control.state)
+    sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, control=Control.state)
     start_pos = np.asarray(sim.data.states.pos)
     target_pos = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
     cmd = np.zeros((n_worlds, n_drones, 13))
