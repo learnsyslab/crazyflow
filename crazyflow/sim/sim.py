@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from functools import partial, wraps
 from pathlib import Path
@@ -221,7 +223,10 @@ class Sim:
         self.mj_data.qpos[:] = self.mjx_data.qpos[world, :]
         self.mj_data.mocap_pos[:] = self.mjx_data.mocap_pos[world, :]
         self.mj_data.mocap_quat[:] = self.mjx_data.mocap_quat[world, :]
-        mujoco.mj_forward(self.mj_model, self.mj_data)
+        # mj_forward raises on contacts between two static bodies (e.g. drones welded to the world).
+        # We only need poses/lights for rendering
+        mujoco.mj_kinematics(self.mj_model, self.mj_data)
+        mujoco.mj_camlight(self.mj_model, self.mj_data)
         return self.viewer.render(mode)
 
     def seed(self, seed: int):
@@ -248,8 +253,12 @@ class Sim:
         name = "drone_fused" if self.fused_mjx_model else "drone"
         if (drone_body := drone_spec.body(name)) is None:
             raise ValueError("Drone body not found in drone spec")
+        drone_body.mocap = True
+        frame.attach_body(drone_body, "", ":0")  # Attach a single drone, then stamp out the swarm.
+        spec = self._replicate_drone(spec, f"{name}:0", drone_spec.meshdir)
         # Mocap bodies avoid the nv^2 cost of qM/qLD/efc_J. A single dummy slide joint keeps nv=1 so
-        # mjx.kinematics doesn't error on a zero-DOF mjx_model.
+        # mjx.kinematics doesn't error on a zero-DOF mjx_model. Added after _replicate_drone because
+        # to_xml() drops this geom-less body's mass/inertia (the result would fail to recompile).
         dummy = spec.worldbody.add_body()
         dummy.name = "_dummy"
         dummy.mass = 1e-6
@@ -257,19 +266,63 @@ class Sim:
         dummy_joint = dummy.add_joint()
         dummy_joint.name = "_dummy_joint"
         dummy_joint.type = mujoco.mjtJoint.mjJNT_SLIDE
-        drone_body.mocap = True
-        for i in range(self.n_drones):
-            frame.attach_body(drone_body, "", f":{i}")
         return spec
+
+    def _replicate_drone(
+        self, spec: mujoco.MjSpec, drone0_body: str, drone_meshdir: str
+    ) -> mujoco.MjSpec:
+        """Stamp the single attached drone body into ``n_drones`` instances by cloning its XML.
+
+        Avoids the O(n_drones^2) cost and per-instance mesh copies of repeated ``attach_body``.
+        Only element ``name``s are suffixed ``:0`` -> ``:i``, so meshes and static materials stay
+        shared. Dynamic materials are duplicated per drone.
+        """
+        # Name prefixes of the drone's "dynamic" materials which get per-copy materials
+        _DYN_MATERIAL = ("led",)
+        # Absolute meshdir so the serialized mesh file paths resolve when re-parsed from a string.
+        spec.meshdir = str((self.drone_path.parent / drone_meshdir).resolve())
+        root = ET.fromstring(spec.to_xml())
+        asset = root.find("asset")
+        body0 = root.find(f".//body[@name='{drone0_body}']")
+        frame = next(p for p in root.iter() if body0 in p)  # the body lives under the attach frame
+        dynamic = [m for m in asset.findall("material") if m.get("name").startswith(_DYN_MATERIAL)]
+        for i in range(1, self.n_drones):
+            body = copy.deepcopy(body0)
+            for el in body.iter():  # suffix unique names + dynamic-material refs. keep shared refs
+                if (name := el.get("name", "")).endswith(":0"):
+                    el.set("name", f"{name[:-2]}:{i}")
+                if (mat := el.get("material", "")).startswith(_DYN_MATERIAL):
+                    el.set("material", f"{mat[:-2]}:{i}")
+            frame.append(body)
+            for material in dynamic:
+                clone = copy.deepcopy(material)
+                clone.set("name", f"{material.get('name')[:-2]}:{i}")
+                asset.append(clone)
+        new_spec = mujoco.MjSpec.from_string(ET.tostring(root, encoding="unicode"))
+        new_spec.copy_during_attach = True  # write-only, re-apply after from_string() drops it
+        return new_spec
 
     def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Any, Model, Data]:
         """Build the MuJoCo model and data structures for the simulation."""
         mj_model = spec.compile()
+        self._unweld_drones(mj_model)
         mj_data = mujoco.MjData(mj_model)
         mjx_model = mjx.put_model(mj_model, device=self.device)
         mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
         mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
         return mj_model, mj_data, mjx_model, mjx_data
+
+    def _unweld_drones(self, mj_model: mujoco.MjModel):
+        """Relabel each drone as its own weld root so collisions are detected natively.
+
+        Drones are mocap bodies, so MuJoCo welds them all to the world (``weldid == 0``). MJX skips
+        collisions within a weld tree, leading to no drone contact being generated. A distinct weld
+        id per drone re-enables drone-drone/-floor/-object contacts without explicit ``<pair>``s.
+        """
+        base = "drone_fused" if self.fused_mjx_model else "drone"
+        for i in range(self.n_drones):
+            body_id = mj_model.body(f"{base}:{i}").id
+            mj_model.body_weldid[body_id] = body_id  # Each drone becomes its own weld root
 
     def build_step_fn(self) -> Callable[[SimData, int], SimData]:
         """Setup the chain of functions that are called in Sim.step().
@@ -544,11 +597,12 @@ def increment_steps(data: SimData) -> SimData:
 @jax.jit
 def contacts(geom_start: int, geom_count: int, data: Data) -> Array:
     """Filter contacts from MuJoCo data."""
-    geom1_valid = data.contact.geom1 >= geom_start
-    geom1_valid &= data.contact.geom1 < geom_start + geom_count
-    geom2_valid = data.contact.geom2 >= geom_start
-    geom2_valid &= data.contact.geom2 < geom_start + geom_count
-    return (data.contact.dist < 0) & (geom1_valid | geom2_valid)
+    contact = data._impl.contact
+    geom1_valid = contact.geom1 >= geom_start
+    geom1_valid &= contact.geom1 < geom_start + geom_count
+    geom2_valid = contact.geom2 >= geom_start
+    geom2_valid &= contact.geom2 < geom_start + geom_count
+    return (contact.dist < 0) & (geom1_valid | geom2_valid)
 
 
 @jax.jit
