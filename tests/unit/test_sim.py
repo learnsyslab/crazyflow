@@ -16,7 +16,7 @@ from crazyflow.control import Control
 from crazyflow.exception import ConfigError
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
-from crazyflow.sim.sim import sync_sim2mjx
+from crazyflow.sim.sim import sync_sim2mjx, use_box_collision
 from crazyflow.sim.visualize import change_material
 
 if TYPE_CHECKING:
@@ -403,8 +403,114 @@ def test_contacts(dynamics: Dynamics):
     sim.reset()
     sim.step(10)  # Make sure the drone is on the ground
     contacts = sim.contacts()
+    # The contact buffer must contain the drone-floor contact
+    assert contacts.shape[-1] > 0, "Contact buffer should not be empty"
     assert jnp.all(contacts), "Drone should be in contact with the floor"
     sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("box_collision", [False, True])
+def test_contacts_between_drones(box_collision: bool):
+    """Two overlapping drones must register a contact.
+
+    Drones are mocap bodies that are all welded to the world. MuJoCo/MJX filter out collisions
+    between geoms welded into the same kinematic tree, so without explicit contact pairs no
+    drone-drone contact is ever generated.
+    """
+    sim = Sim(n_drones=2, control=Control.attitude, freq=500, device="cpu")
+    if box_collision:
+        use_box_collision(sim, True)
+    sim.reset()
+    states = sim.data.states
+    # Place both drones at the same position above the floor
+    pos = states.pos.at[:, 1, :].set(states.pos[:, 0, :]).at[..., 2].set(1.0)
+    sim.data = sim.data.replace(states=states.replace(pos=pos))
+    sim.data = sim.data.replace(core=sim.data.core.replace(mjx_synced=False))
+    assert jnp.any(sim.contacts("drone:0")), "Overlapping drones should be in contact"
+    assert jnp.any(sim.contacts("drone:1")), "Overlapping drones should be in contact"
+    sim.close()
+
+
+def _attach_obstacle(sim: Sim, pos: list[float], mocap: bool):
+    """Attach the minimal obstacle to the sim at ``pos``, mirroring downstream track loading."""
+    OBSTACLE_XML = """
+    <mujoco>
+    <worldbody>
+        <body name="obstacle">
+        <geom name="obstacle" type="box" size="0.1 0.1 0.1"/>
+        </body>
+    </worldbody>
+    </mujoco>
+    """
+    obstacle_spec = mujoco.MjSpec.from_string(OBSTACLE_XML)
+    frame = sim.spec.worldbody.add_frame()
+    obstacle = frame.attach_body(obstacle_spec.body("obstacle"), "", ":0")
+    obstacle.pos = pos
+    obstacle.mocap = mocap  # Mocap bodies (like the gates) are still welded to the world
+    sim.build_mjx()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mocap", [True, False])
+def test_contacts_with_obstacle(mocap: bool):
+    """A drone placed inside an obstacle must register a contact.
+
+    Covers both a mocap obstacle (attached like the gates) and a static one. Both are welded to the
+    world just like the drones, so the collision is only detected if explicit contact pairs are
+    generated.
+    """
+    obstacle_pos = [0.0, 0.0, 1.0]
+    sim = Sim(control=Control.attitude, freq=500, device="cpu")
+    _attach_obstacle(sim, obstacle_pos, mocap=mocap)
+    sim.reset()
+    states = sim.data.states
+    pos = states.pos.at[..., :].set(jnp.array(obstacle_pos))
+    sim.data = sim.data.replace(states=states.replace(pos=pos))
+    sim.data = sim.data.replace(core=sim.data.core.replace(mjx_synced=False))
+    assert jnp.any(sim.contacts("drone:0")), "Drone should collide with the obstacle"
+    sim.close()
+
+
+@pytest.mark.unit
+def test_spec_copy_during_attach():
+    """sim.spec must copy bodies on attach so the same source body can be attached repeatedly."""
+    sim = Sim(n_drones=1, device="cpu")
+    box = mujoco.MjSpec.from_string('<mujoco><worldbody><body name="box"/></worldbody></mujoco>')
+    frame = sim.spec.worldbody.add_frame()
+    for i in range(2):  # copy_during_attach=False would move "box" out, returning None next lookup
+        frame.attach_body(box.body("box"), "", f":{i}")
+    sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("fused", [False, True])
+@pytest.mark.parametrize("n_drones", [3, 17])
+def test_drone_meshes_shared(n_drones: int, fused: bool):
+    """The drone's visual meshes are shared across instances, not copied per drone.
+
+    Regression test for per-drone mesh duplication: ``attach_body`` copies the drone meshes for
+    every instance, which makes ``compile()`` memory and time grow linearly with ``n_drones``. With
+    sharing, the compiled mesh count is independent of the number of drones.
+    """
+    single = Sim(n_drones=1, fused_mjx_model=fused, device="cpu")
+    multi = Sim(n_drones=n_drones, fused_mjx_model=fused, device="cpu")
+    n_single, n_multi = single.mj_model.nmesh, multi.mj_model.nmesh
+    assert n_single > 0, "expected the drone to define visual meshes"
+    assert n_multi == n_single, f"mismatched mesh count: {single=} vs {multi=} for {n_drones=}"
+    # Every drone is still present as a distinct mocap body with the ``{body}:{i}`` naming.
+    assert multi.mj_model.nmocap == n_drones
+    body = "drone_fused" if fused else "drone"
+    ids = {multi.mj_model.body(f"{body}:{i}").id for i in range(n_drones)}
+    assert len(ids) == n_drones, "each drone must be a distinct body"
+    # Materials, unlike meshes, are kept per drone so each drone owns a distinct ``{mat}:{i}``
+    mat_ids = {
+        mujoco.mj_name2id(multi.mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"led_bot:{i}")
+        for i in range(n_drones)
+    }
+    assert -1 not in mat_ids and len(mat_ids) == n_drones, "each drone needs its own material"
+    single.close()
+    multi.close()
 
 
 @pytest.mark.unit
@@ -477,20 +583,20 @@ def test_change_material(device: str, drone: str, mat_name: str):
     sim = Sim(n_drones=n_drones, drone=drone, device=device)
 
     drone_ids = np.array([0, 1], dtype=int)
-    rgba = 0.42 * np.ones((n_drones, 4), dtype=float)
-    emission = 0.42 * np.ones((n_drones,), dtype=float)
+    # Distinct values per drone to assert that each material gets its own value
+    rgba = np.stack([0.42 * np.ones(4), 0.73 * np.ones(4)])
+    emission = np.array([0.42, 0.73])
 
     change_material(sim, mat_name=mat_name, drone_ids=drone_ids, rgba=rgba, emission=emission)
 
     mj_model = sim.mj_model
     mat0 = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"{mat_name}:0")
     mat1 = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"{mat_name}:1")
-    expected_rgba = 0.42 * np.ones((4,), dtype=float)
-    expected_emission = 0.42
-    np.testing.assert_allclose(mj_model.mat_rgba[mat0], expected_rgba)
-    np.testing.assert_allclose(mj_model.mat_rgba[mat1], expected_rgba)
-    assert mj_model.mat_emission[mat0] == pytest.approx(expected_emission)
-    assert mj_model.mat_emission[mat1] == pytest.approx(expected_emission)
+    assert mat0 != mat1, "drones must not share the same material asset"
+    np.testing.assert_allclose(mj_model.mat_rgba[mat0], rgba[0])
+    np.testing.assert_allclose(mj_model.mat_rgba[mat1], rgba[1])
+    assert mj_model.mat_emission[mat0] == pytest.approx(emission[0])
+    assert mj_model.mat_emission[mat1] == pytest.approx(emission[1])
 
 
 @pytest.mark.unit
