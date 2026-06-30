@@ -8,6 +8,7 @@ These runnable examples cover control, JAX transformations, pipeline extensions,
 
 A single drone commanded to hold a fixed height using state control. This is the minimal end-to-end loop: create a `Sim`, reset it, apply a state command, and step forward.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/control/hover.py"
 ```
@@ -22,6 +23,7 @@ python examples/control/hover.py
 
 Commanding roll, pitch, yaw, and collective thrust directly. This level bypasses the Mellinger position loop and is typical for RL agents that output attitude targets.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/control/attitude.py"
 ```
@@ -42,6 +44,7 @@ python examples/control/sampling.py
 
 Because the simulator is built entirely from JAX operations, `jax.grad` can differentiate through it. Starting the drone above the target height keeps it away from the floor, so the floor-clipping stage never fires and gradients flow freely through the entire trajectory.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/jax/gradient.py"
 ```
@@ -52,6 +55,7 @@ Because the simulator is built entirely from JAX operations, `jax.grad` can diff
 
 Randomizing mass and inertia through the reset pipeline. An optional mask limits randomization to selected worlds.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/plugins/randomize.py"
 ```
@@ -66,6 +70,7 @@ python examples/plugins/randomize.py
 
 Inserting a random external force and torque into the step pipeline. The disturbance fires on every dynamics tick, so the drone fights wind-like perturbations.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/plugins/disturbance.py"
 ```
@@ -80,6 +85,7 @@ Offscreen rendering returns RGB and depth images on every frame. The FPV camera 
   <img src="../img/examples/cameras.gif" alt="RGB and depth camera outputs from a Crazyflow drone simulation">
 </figure>
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/rendering/cameras.py"
 ```
@@ -98,6 +104,7 @@ python examples/rendering/cameras.py
   <img src="../img/examples/led_decks.png" alt="Crazyflow drones with runtime-controlled LED deck materials">
 </figure>
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/rendering/led_deck.py"
 ```
@@ -121,6 +128,7 @@ The default collision geometry is a sphere around the drone frame. `use_box_coll
   </figure>
 </div>
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/contacts/contacts.py"
 ```
@@ -131,6 +139,7 @@ The default collision geometry is a sphere around the drone frame. `use_box_coll
 
 `render_depth` fires rays from a camera and returns per-pixel distances. This is faster than full RGB rendering and useful for obstacle sensing or depth-based controllers.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/rendering/raycasting.py"
 ```
@@ -145,6 +154,7 @@ python examples/rendering/raycasting.py
 
 Evaluating a random policy in the figure-8 environment. The env wraps `Sim` behind the standard Gymnasium `VectorEnv` interface.
 
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }
 --8<-- "examples/environments/figure8.py"
 ```

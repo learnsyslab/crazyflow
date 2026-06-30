@@ -75,6 +75,7 @@ sim.reset()
 
 Loading from a file works identically:
 
+<!-- notest: reads external asset assets/gate.xml -->
 ```{ .python notest }
 import mujoco
 gate_spec = mujoco.MjSpec.from_file("assets/gate.xml")
@@ -100,6 +101,7 @@ After `sim.step()` or `sim.reset()`, `mjx_synced` is set to `False`. The `sim.re
 
 These run only once per render or contact call, regardless of how many dynamics steps were taken since the last sync.
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 for i in range(10):
     sim.step(5)                       # JAX dynamics only, mjx_synced = False
@@ -113,6 +115,7 @@ for i in range(10):
 
 This means the order of calls matters. Grouping all rendering and contact queries together after a step lets them share a single sync:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 sim.step(5)
 contacts = sim.contacts()     # sync runs here
@@ -121,6 +124,7 @@ sim.render(mode="rgb_array")  # flag already set, no second sync
 
 Interleaving a step between them forces two syncs:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 contacts = sim.contacts()     # sync runs here
 sim.step(5)                   # flag cleared
@@ -135,11 +139,15 @@ The solution is to **close over** `mjx_data` rather than pass it as an argument.
 
 The drone racing environment in [lsy_drone_racing](https://github.com/learnsyslab/lsy_drone_racing) uses this pattern to build a contact check function:
 
-```{ .python notest }
+```python
 from jax import Array
 
+from crazyflow.sim import Sim
 from crazyflow.sim.sim import sync_sim2mjx
 from crazyflow.sim.data import SimData
+
+sim = Sim(n_worlds=1, n_drones=1)
+sim.reset()
 
 _mjx_data = sim.mjx_data   # captured in closure
 
@@ -148,6 +156,8 @@ def check_contacts(sim_data: SimData, obstacle_mocap_pos: Array) -> Array:
     mjx_data = _mjx_data.replace(mocap_pos=obstacle_mocap_pos)
     _, mjx_data = sync_sim2mjx(sim_data, mjx_data, sim.mjx_model)
     return mjx_data._impl.contact.dist < 0
+
+in_contact = check_contacts(sim.data, sim.mjx_data.mocap_pos)
 ```
 
 `_mjx_data` is fused into the closure and compiled as a constant. Only `sim_data` and the obstacle positions cross the JIT boundary at runtime — a much smaller pytree than passing the full `mjx_data`.

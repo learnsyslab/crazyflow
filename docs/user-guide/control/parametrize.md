@@ -91,6 +91,7 @@ float(params["mass"])  # 0.029
 
 By default parameters are stored as NumPy arrays. Pass `xp` to convert them upfront, which avoids per-call conversion overhead in frameworks like PyTorch or JAX:
 
+<!-- notest: requires torch (not a dependency) -->
 ```{ .python notest }
 import torch
 from crazyflow.control import parametrize

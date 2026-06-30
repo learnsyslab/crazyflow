@@ -34,18 +34,16 @@ def parametrize(
         device: The device to use. If None, the device is inferred from the xp module.
 
     Example:
-        ```python
-        import numpy as np
-        from crazyflow.control import parametrize
-        from crazyflow.control.mellinger import state2attitude
+    ```python
+    import numpy as np
+    from crazyflow.control import parametrize
+    from crazyflow.control.mellinger import state2attitude
 
-        ctrl = parametrize(state2attitude, "cf2x_L250")
-        pos = np.zeros(3)
-        quat = np.array([0.0, 0.0, 0.0, 1.0])
-        vel = np.zeros(3)
-        cmd = np.zeros(13)
-        rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
-        ```
+    ctrl = parametrize(state2attitude, "cf2x_L250")
+    pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
+    vel, cmd = np.zeros(3), np.zeros(13)
+    rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
+    ```
 
     Returns:
         The parametrized controller function with all keyword argument only parameters filled in.

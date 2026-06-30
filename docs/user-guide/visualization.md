@@ -21,6 +21,7 @@ Crazyflow supports onscreen interactive rendering and offscreen RGB/depth captur
 | `"depth_array"` | `(H, W) float32` | Offscreen depth frame in metres |
 | `"rgbd_tuple"` | `(rgb, depth)` | Both channels as a tuple |
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 sim.render()                                   # interactive window
 rgb = sim.render(mode="rgb_array")             # numpy array (H, W, 3)
@@ -33,6 +34,7 @@ sim.close()                                    # close the viewer
 
 Pass a camera name or integer ID to select which camera to render from. The default (`camera=-1`) uses the free camera. Each drone ships with a first-person view camera named `fpv_cam:<drone_index>`:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 sim.render(camera="fpv_cam:0")   # first-person view from drone 0
 sim.render(camera=0)             # camera by integer ID
@@ -42,6 +44,7 @@ sim.render(camera=0)             # camera by integer ID
 
 For obstacle sensing or perception-based controllers, `render_depth` fires a ray from each camera pixel and returns per-pixel distances — faster than full RGB rendering because it skips lighting and colour computation:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 import jax.numpy as jnp
 from crazyflow.sim.sensors import build_render_depth_fn, render_depth
@@ -64,6 +67,7 @@ dist = render_fn(sim)
 
 `change_material` updates the RGBA colour and emission intensity of any named material on any subset of drones without rebuilding the model:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 import numpy as np
 from crazyflow.sim.visualize import change_material
@@ -77,6 +81,7 @@ sim.render()
 
 `sim.render()` always renders a single world at a time. Pass `world=<index>` to choose which one:
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 sim.render(world=0)   # default
 sim.render(world=3)   # render world 3

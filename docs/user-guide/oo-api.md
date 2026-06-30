@@ -186,6 +186,7 @@ pos_w0_d1 = sim.data.states.pos[0, 1]  # (3,)
 
 `sim.render()` opens an interactive MuJoCo viewer or returns an image array for offscreen rendering.
 
+<!-- notest: requires rendering -->
 ```{ .python notest }
 sim.render()                          # interactive window, world 0
 sim.render(mode="rgb_array")          # returns (H, W, 3) uint8

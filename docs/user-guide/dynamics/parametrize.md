@@ -37,6 +37,7 @@ If your drone is not listed, you can identify the parameters from flight data us
 
 By default, `parametrize` stores parameters as NumPy arrays. For frameworks that would otherwise need to convert those arrays on every call — such as PyTorch, where NumPy arrays must become tensors — passing `xp` converts the parameters upfront. The backend of the outputs is always inferred from whatever arrays you pass in at call time.
 
+<!-- notest: requires torch (not a dependency) -->
 ```{ .python notest }
 import torch
 import jax.numpy as jnp
@@ -49,6 +50,7 @@ dynamics_jax = parametrize(dynamics, drone="cf2x_L250", xp=jnp)
 
 You can also specify a compute device — for example, to move JAX parameters to GPU at construction time:
 
+<!-- notest: requires a GPU -->
 ```{ .python notest }
 import jax
 import jax.numpy as jnp
