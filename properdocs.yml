@@ -125,9 +125,9 @@ extra_javascript:
   - javascripts/mathjax.js
   - javascripts/showcase.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
-  - https://cdn.jsdelivr.net/npm/vega@5
-  - https://cdn.jsdelivr.net/npm/vega-lite@5
-  - https://cdn.jsdelivr.net/npm/vega-embed@6
+  - https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js
+  - https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js
+  - https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js
 
 extra_css:
   - stylesheets/extra.css
