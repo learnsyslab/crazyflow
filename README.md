@@ -50,12 +50,20 @@ pip install crazyflow           # CPU
 pip install "crazyflow[gpu]"    # GPU (Linux x86-64, CUDA 12)
 ```
 
-Developer install with editable submodules ([pixi](https://pixi.sh/) required):
+Developer install with editable install ([pixi](https://pixi.sh/) recommended):
 
 ```bash
-git clone --recurse-submodules https://github.com/learnsyslab/crazyflow.git
+git clone https://github.com/learnsyslab/crazyflow.git
 cd crazyflow
 pixi shell
+```
+
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+git clone https://github.com/learnsyslab/crazyflow.git
+cd crazyflow
+uv sync          # core + dev tooling (tests, docs, ruff)
 ```
 
 ## Performance

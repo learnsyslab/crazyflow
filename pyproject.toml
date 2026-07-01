@@ -43,6 +43,33 @@ benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
 Homepage = "https://github.com/learnsyslab/crazyflow"
 Repository = "https://github.com/learnsyslab/crazyflow"
 
+# Dependency groups for uv-based developer workflows. These mirror the pixi features below
+# ([tool.pixi.feature.*]). `uv sync` installs the `dev` group by default. pixi ignores this table.
+[dependency-groups]
+tests = [
+    "pytest>=8.4.1",
+    "pytest-timeout>=2.1.0",
+    "array-api-strict>=2.4.1",
+    "matplotlib",
+    "pytest-markdown-docs",
+]
+docs = [
+    "properdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocs-autorefs>=1.2.0",
+    "mkdocstrings[python]>=0.26.0",
+    "mkdocs-gen-files>=0.5.0",
+    "mkdocs-literate-nav>=0.6.0",
+    "mkdocs-section-index>=0.3.0",
+    "mkdocs-charts-plugin>=0.0.10",
+]
+dist = ["build>=1.3", "twine>=6.0"]
+dev = [
+    "ruff",
+    { include-group = "tests" },
+    { include-group = "docs" },
+]
+
 [tool.setuptools.packages]
 find = {include = ["crazyflow*"]}
 
