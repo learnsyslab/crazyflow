@@ -48,12 +48,12 @@ def dynamics_features(dynamics: Callable) -> dict[str, bool]:
               ``ValueError``.
 
     Example:
-        ```python
-        from crazyflow.dynamics import dynamics_features
-        from crazyflow.dynamics.first_principles import dynamics
+    ```python
+    from crazyflow.dynamics import dynamics_features
+    from crazyflow.dynamics.first_principles import dynamics
 
-        dynamics_features(dynamics)  # {'rotor_dynamics': True}
-        ```
+    dynamics_features(dynamics)  # {'rotor_dynamics': True}
+    ```
     """
     if hasattr(dynamics, "func"):  # Is a partial function
         return dynamics_features(dynamics.func)

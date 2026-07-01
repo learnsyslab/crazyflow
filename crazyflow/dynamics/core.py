@@ -55,15 +55,19 @@ def parametrize(
         device: The device to use. If none, the device is inferred from the xp module.
 
     Example:
-        ```{ .python notest }
-        from crazyflow.dynamics.core import parametrize
-        from crazyflow.dynamics.first_principles import dynamics
+    ```python
+    import numpy as np
+    from crazyflow.dynamics.core import parametrize
+    from crazyflow.dynamics.first_principles import dynamics
 
-        dynamics_fn = parametrize(dynamics, drone="cf2x_L250")
-        pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot = dynamics_fn(
-            pos=pos, quat=quat, vel=vel, ang_vel=ang_vel, cmd=cmd, rotor_vel=rotor_vel
-        )
-        ```
+    dynamics_fn = parametrize(dynamics, drone="cf2x_L250")
+    pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
+    vel, ang_vel = np.zeros(3), np.zeros(3)
+    rotor_vel, cmd = np.zeros(4), np.zeros(4)
+    pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot = dynamics_fn(
+        pos=pos, quat=quat, vel=vel, ang_vel=ang_vel, cmd=cmd, rotor_vel=rotor_vel
+    )
+    ```
 
     Returns:
         The parametrized dynamics function with all keyword argument only parameters filled in.

@@ -4,30 +4,6 @@ The object-oriented API is convenient for scripting, but it relies on Python-lev
 
 The functional API addresses this by expressing the same operations as pure functions that take `SimData` and return updated `SimData`. There is no hidden state, so JAX can trace, compile, and differentiate through arbitrary compositions of these functions.
 
-## What does not work inside JAX transformations
-
-The object-oriented `Sim` methods mutate `sim.data` in place through Python calls. JAX cannot trace through Python-level state mutations, so these methods cannot be used inside `jax.jit`, `jax.grad`, or `jax.lax.scan`:
-
-```{ .python notest }
-import jax
-import jax.numpy as jnp
-from crazyflow.sim import Sim
-from crazyflow.control import Control
-
-sim = Sim(control=Control.attitude)
-sim.reset()
-
-@jax.jit
-def broken(cmd):
-    sim.attitude_control(cmd)  # mutates sim.data — JAX traces the ops but leaks the tracer
-    sim.step(1)
-    return sim.data.states.pos  # sim.data now holds a leaked tracer; accessing it outside JIT raises UnexpectedTracerError
-```
-
-## What does work
-
-The purely functional counterpart passes `SimData` explicitly and returns updated `SimData`. Every operation is a plain JAX function with no Python-level mutation, so the full simulation pipeline is traceable by any JAX transformation:
-
 ```python
 import jax
 import jax.numpy as jnp

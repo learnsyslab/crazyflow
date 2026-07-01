@@ -20,6 +20,7 @@ After `preprocessing` + [`derivatives_svf`][crazyflow.dynamics.utils.data_utils.
 
 ## Full pipeline
 
+<!-- notest: requires flight-log data -->
 ```{ .python notest }
 from crazyflow.dynamics.utils.data_utils import preprocessing, derivatives_svf
 from crazyflow.dynamics.utils.identification import sys_id_translation, sys_id_rotation
@@ -61,6 +62,7 @@ See [`sys_id_translation`][crazyflow.dynamics.utils.identification.sys_id_transl
 
 To check that the identified parameters generalise to unseen flight regimes, collect a second dataset of different trajectories and pass it as `data_validation`. RMSE and R² are then reported on both the training data and the validation data.
 
+<!-- notest: requires flight-log data -->
 ```{ .python notest }
 # Preprocess the validation dataset independently — it must come from
 # different trajectories, not a split of the same recording.
@@ -97,6 +99,7 @@ cmd_rpy_coef     = [196.18, 196.18, 390.27]     # from rot_params["cmd_rpy_coef"
 
 Once the entry is in the TOML file, load the dynamics as usual:
 
+<!-- notest: example drone not in params.toml -->
 ```{ .python notest }
 from crazyflow.dynamics import parametrize
 from crazyflow.dynamics.so_rpy_rotor_drag import dynamics
