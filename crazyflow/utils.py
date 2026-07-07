@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 from collections.abc import Mapping
 from functools import partial
 from pathlib import Path
@@ -77,12 +78,17 @@ def to_device(data: Array, device: str) -> Array:
 
 
 def enable_cache(
-    cache_path: Path = Path("/tmp/jax_cache"),
+    cache_path: Path | None = None,
     min_entry_size_bytes: int = -1,
     min_compile_time_secs: int = 0,
     enable_xla_caches: bool = False,
 ):
-    """Enable JAX cache."""
+    """Enable JAX cache with the requested settings.
+
+    Cache path is user-dependent to avoid permission issues on multi-user machines.
+    """
+    if cache_path is None:
+        cache_path = Path(f"/tmp/jax_cache-{os.getuid()}")
     jax.config.update("jax_compilation_cache_dir", str(cache_path))
     jax.config.update("jax_persistent_cache_min_entry_size_bytes", min_entry_size_bytes)
     jax.config.update("jax_persistent_cache_min_compile_time_secs", min_compile_time_secs)

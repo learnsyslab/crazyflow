@@ -12,14 +12,19 @@ from scipy.spatial.transform import Rotation as R
 
 splax = pytest.importorskip("splax", reason="the splat modules require the optional splats extra")
 
-from crazyflow.sim import Sim
-from crazyflow.sim.sensors.splat import (
+from crazyflow.sim import Sim  # noqa: E402
+from crazyflow.sim.sensors.splat import (  # noqa: E402
     build_render_splat_fn,
     camera_intrinsics,
     render_splat_rgb,
     viewmats,
 )
-from crazyflow.sim.splat import SPLAT_KEYS, SPLAT_SLICES_KEY, SplatViewer, attach_splats
+from crazyflow.sim.splat import (  # noqa: E402
+    SPLAT_KEYS,
+    SPLAT_SLICES_KEY,
+    SplatViewer,
+    attach_splats,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

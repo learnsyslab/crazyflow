@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
 from crazyflow.sim import Sim
-from crazyflow.sim.sensors import build_render_depth_fn, render_depth
+from crazyflow.sim.sensors.depth import build_render_depth_fn, render_depth
 
 
 def main(plot: bool = False):

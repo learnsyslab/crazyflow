@@ -15,7 +15,7 @@ import logging
 import time
 
 import numpy as np
-from splax import fetch
+from splax.io import fetch
 
 from crazyflow.sim import Sim
 from crazyflow.sim.splat import SplatViewer, attach_splats
