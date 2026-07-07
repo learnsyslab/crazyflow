@@ -224,8 +224,9 @@ class Sim:
         self.mj_data.mocap_pos[:] = self.mjx_data.mocap_pos[world, :]
         self.mj_data.mocap_quat[:] = self.mjx_data.mocap_quat[world, :]
         # mj_forward raises on contacts between two static bodies (e.g. drones welded to the world).
-        # We only need poses/lights for rendering
+        # We only need poses, cameras and lights for rendering
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
+        mujoco.mj_comPos(self.mj_model, self.mj_data)
         mujoco.mj_camlight(self.mj_model, self.mj_data)
         return self.viewer.render(mode)
 
