@@ -110,7 +110,7 @@ def state2attitude(
     # Taking the dot product of the last axis:
     current_thrust = xp.vecdot(target_thrust, z_axis, axis=-1)
     # l. 207 Calculate axis [zB_des]
-    z_axis_desired = target_thrust / xp.linalg.vector_norm(target_thrust)
+    z_axis_desired = target_thrust / xp.linalg.vector_norm(target_thrust, axis=-1, keepdims=True)
     # l. 210 [xC_des]
     # x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
     x_c_des_x = xp.cos(desired_yaw)
@@ -119,7 +119,7 @@ def state2attitude(
     x_c_des = xp.stack((x_c_des_x, x_c_des_y, x_c_des_z), axis=-1)
     # [yB_des]
     y_axis_desired = xp.linalg.cross(z_axis_desired, x_c_des)
-    y_axis_desired = y_axis_desired / xp.linalg.vector_norm(y_axis_desired)
+    y_axis_desired = y_axis_desired / xp.linalg.vector_norm(y_axis_desired, axis=-1, keepdims=True)
     # [xB_des]
     x_axis_desired = xp.linalg.cross(y_axis_desired, z_axis_desired)
     # converting desired axis to rotation matrix and then to RPY.
@@ -128,7 +128,10 @@ def state2attitude(
     # decouple the attitude controller from the state controller. We therefore stop here and
     # continue the computation in the attitude2force_torque controller. The conversion to RPY is
     # necessary to pass the command to the attitude2force_torque controller in the correct format.
-    command_RPY = R.from_matrix(matrix).as_euler("xyz", degrees=False)
+    #
+    # safety: assume_valid is okay here because we just constructed the rotation matrix from
+    # orthonormal vectors
+    command_RPY = R.from_matrix(matrix, assume_valid=True).as_euler("xyz", degrees=False)
     # l. 283 [control_thrust]
     # The firmware returns thrust in PWM, but we want to stay in SI units. The conversion from
     # thrust to PWM uses a mass_thrust parameter, which is a constant converting thrust values to
