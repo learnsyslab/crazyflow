@@ -49,7 +49,10 @@ else:
     * [sim.data](crazyflow/sim/data.md)
     * [sim.functional](crazyflow/sim/functional.md)
     * [sim.integration](crazyflow/sim/integration.md)
-    * [sim.sensors](crazyflow/sim/sensors.md)
+    * [sim.sensors](crazyflow/sim/sensors/index.md)
+    * [sim.sensors.depth](crazyflow/sim/sensors/depth.md)
+    * [sim.sensors.splat](crazyflow/sim/sensors/splat.md)
+    * [sim.splat](crazyflow/sim/splat.md)
     * [sim.visualize](crazyflow/sim/visualize.md)
 * Dynamics
     * [dynamics](crazyflow/dynamics/index.md)

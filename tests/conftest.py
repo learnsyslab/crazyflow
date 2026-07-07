@@ -1,11 +1,14 @@
 import os
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["SCIPY_ARRAY_API"] = "1"
 
 import jax
 import pytest
 
-jax.config.update("jax_compilation_cache_dir", "/tmp/jax_cache")
+# The cache dir is per-user. A shared dir like /tmp/jax_cache breaks on multi-user machines, since
+# jax hard-fails on GPU autotune cache writes when another user owns the directory.
+jax.config.update("jax_compilation_cache_dir", f"/tmp/jax_cache-{os.getuid()}")
 jax.config.update("jax_persistent_cache_min_entry_size_bytes", -1)
 jax.config.update("jax_persistent_cache_min_compile_time_secs", 0)
 # Do not enable XLA caches, crashes PyTest

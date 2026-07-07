@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from crazyflow.sim import Sim
-from crazyflow.sim.sensors import _camera_rays, build_render_depth_fn, render_depth
+from crazyflow.sim.sensors.depth import _camera_rays, build_render_depth_fn, render_depth
 
 
 @pytest.mark.unit
