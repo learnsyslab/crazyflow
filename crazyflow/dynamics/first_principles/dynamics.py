@@ -139,7 +139,6 @@ def dynamics(
     rotor_vel_dot_rads = (
         rotor_vel_dot * rpm_to_rad if rotor_vel_dot is not None else xp.zeros_like(rotor_vel)
     )
-
     torque_inertia = prop_inertia * xp.stack(
         [
             ang_vel[..., 1] * xp.sum(mixing_matrix[..., -1, :] * rotor_vel_rads, axis=-1),
@@ -261,7 +260,6 @@ def symbolic_dynamics(
     rpm_to_rad = 2 * cs.pi / 60
     rotor_vel_rads = symbols.rotor_vel * rpm_to_rad
     rotor_vel_dot_rads = rotor_vel_dot * rpm_to_rad if model_rotor_vel else symbols.rotor_vel * 0.0
-
     torque_inertia = prop_inertia * cs.vertcat(
         symbols.ang_vel[1] * cs.sum(mixing_matrix[-1, :] * rotor_vel_rads),
         -symbols.ang_vel[0] * cs.sum(mixing_matrix[-1, :] * rotor_vel_rads),
