@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
 import numpy as np
 from splax.io import fetch
@@ -21,19 +22,19 @@ from crazyflow.sim import Sim
 from crazyflow.sim.splat import SplatViewer, attach_splats
 
 logger = logging.getLogger(__name__)
-ASSETS_URL = "https://github.com/learnsyslab/crazyflow/releases/download/assets-v1"
+ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 
 def control(t: float) -> np.ndarray:
     cmd = np.zeros((1, 1, 13))
-    cmd[..., :3] = [0.5 * (np.cos(t) - 1), 0.5 * np.sin(t), 0.3 + 0.2 * np.sin(0.5 * t)]
+    cmd[..., :3] = [0.5 * (np.cos(t) - 1), 0.5 * np.sin(t), 1.0 + 0.2 * np.sin(0.5 * t)]
     return cmd
 
 
 def main():
-    scene = fetch(f"{ASSETS_URL}/hall.ply")
-    drone = fetch(f"{ASSETS_URL}/drone.ply")
     sim = Sim(control="state")
+    scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
+    drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
     attach_splats(sim, scene=scene, drone=drone)
     viewer = SplatViewer(sim)
 

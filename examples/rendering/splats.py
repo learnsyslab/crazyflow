@@ -6,18 +6,17 @@ Requires splax and a CUDA-capable GPU because the splat camera sensor uses splax
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mujoco
 import numpy as np
-from splax.io import fetch, load_ply
+from splax.io import fetch
 
 from crazyflow.sim import Sim
 from crazyflow.sim.sensors.splat import render_splat_rgb
 from crazyflow.sim.splat import attach_splats
 
-ASSETS_URL = "https://github.com/learnsyslab/crazyflow/releases/download/assets-v1"
+ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 
 def control(t: float) -> np.ndarray:
@@ -28,13 +27,10 @@ def control(t: float) -> np.ndarray:
 
 def main(show_plot: bool = False):
     """Render splats into a matplotlib window."""
-    root = Path(__file__).parents[3] / "splax/data/scenes"
-    # TODO: switch to remote fetch
-    # scene = fetch(f"{ASSETS_URL}/hall.ply")
-    # drone = fetch(f"{ASSETS_URL}/drone.ply")
-
     sim = Sim(control="state", device="gpu")
-    attach_splats(sim, scene=root / "room.ply", drone=root / "drone.ply")
+    scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
+    drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
+    attach_splats(sim, scene=scene, drone=drone)
 
     duration = 3
     fps = 30
@@ -60,7 +56,7 @@ def main(show_plot: bool = False):
             rgb = np.asarray(render_splat_rgb(sim, camera=camera, resolution=resolution))[0]
             im.set_data(rgb)
             fig.canvas.draw_idle()
-            plt.pause(1 / fps)
+            plt.pause(1e-12)
         plt.close(fig)
     sim.close()
 
