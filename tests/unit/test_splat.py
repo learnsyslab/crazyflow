@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import mujoco
 import numpy as np
 import pytest
 from conftest import available_backends
@@ -133,18 +132,22 @@ def test_render_splat_requires_gpu(tmp_path: Path):
 @requires_gpu
 def test_render_splat_rgb(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
-    camera = mujoco.mj_name2id(sim.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, "track_cam:0")
-    img = np.asarray(render_splat_rgb(sim, camera=camera, resolution=(32, 24)))
-    assert img.shape == (2, 24, 32, 3)
+    # Every drone's fpv camera renders into a (n_worlds, n_drones, H, W, 3) stack
+    img = np.asarray(render_splat_rgb(sim, resolution=(32, 24)))
+    assert img.shape == (2, 2, 24, 32, 3)
     assert np.all(np.isfinite(img))
     assert img.max() > 0.0, "Nothing is visible in the image"
-    # The compiled variant renders the same image
-    render_fn = build_render_splat_fn(sim, camera=camera, resolution=(32, 24))
+    # Selecting a single drone drops the drone axis and matches that slice of the full stack
+    one = np.asarray(render_splat_rgb(sim, drones=1, resolution=(32, 24)))
+    assert one.shape == (2, 24, 32, 3)
+    assert np.allclose(one, img[:, 1], atol=1e-5)
+    # The compiled variant renders the same images
+    render_fn = build_render_splat_fn(sim, resolution=(32, 24))
     assert np.allclose(img, np.asarray(render_fn(sim)), atol=1e-5)
-    # Excluding the drone changes the image
-    excl = np.asarray(render_splat_rgb(sim, camera=camera, resolution=(32, 24), exclude_drone=0))
+    # Hiding each drone from its own camera changes the images
+    excl = np.asarray(render_splat_rgb(sim, resolution=(32, 24), exclude_self=True))
     assert not np.allclose(img, excl)
 
 

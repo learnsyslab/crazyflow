@@ -38,7 +38,7 @@ requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
 benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
-splats = ["splax[viewer] @ git+https://github.com/amacati/splax"]
+splats = ["splax[viewer] @ git+https://github.com/amacati/splax@ed666be0fcaa4dedab9129b8021e9e05ccad1dde"]
 
 [project.urls]
 Homepage = "https://github.com/learnsyslab/crazyflow"
@@ -161,7 +161,7 @@ crazyflow = { path = "./", editable = true }
 
 # splax requires CUDA jax, which has no osx-arm64 wheels, so splats are linux-only by default
 [tool.pixi.target.linux-64.pypi-dependencies]
-splax = { git = "https://github.com/amacati/splax", extras = ["viewer"] }
+splax = { git = "https://github.com/amacati/splax", rev = "ed666be0fcaa4dedab9129b8021e9e05ccad1dde", extras = ["viewer"] }
 
 [tool.pixi.feature.gpu]
 platforms = ["linux-64"]

@@ -61,21 +61,22 @@ See `examples/rendering/splat_viewer.py` for a complete viewer demo.
 
 ## Camera sensor
 
-`render_splat_rgb` from `crazyflow.sim.sensors.splat` renders RGB images from any model camera, batched over all worlds. It uses splax's CUDA rasterizer, so the simulation must run on the GPU. Scene gaussians stay static. Each drone's gaussians follow its current pose via splax's dynamic transforms, without copying the splat buffer.
+`render_splat_rgb` from `crazyflow.sim.sensors.splat` renders RGB images from any model camera, batched over all worlds and drones. It uses splax's CUDA rasterizer, so the simulation must run on the GPU. Scene gaussians stay static. Each drone's gaussians follow its current pose via splax's dynamic transforms, without copying the splat buffer.
 
 <!-- notest: requires splax and a CUDA GPU -->
 ```{ .python notest }
 from crazyflow.sim.sensors.splat import build_render_splat_fn, render_splat_rgb
 
-sim = Sim(n_worlds=4, device="gpu")
+sim = Sim(n_worlds=4, n_drones=2, device="gpu")
 attach_splats(sim, scene=scene, drone=drone)
-imgs = render_splat_rgb(sim, camera=0, resolution=(320, 240))  # (4, 240, 320, 3) in [0, 1]
+imgs = render_splat_rgb(sim, resolution=(320, 240))  # (4, 2, 240, 320, 3) in [0, 1]
+imgs = render_splat_rgb(sim, drones=0, resolution=(320, 240))  # single drone: (4, 240, 320, 3)
 
 # Bake camera intrinsics and splat metadata into a compiled function for better performance
-render_fn = build_render_splat_fn(sim, camera=0, resolution=(320, 240))
+render_fn = build_render_splat_fn(sim, resolution=(320, 240))
 imgs = render_fn(sim)
 ```
 
-`exclude_drone` hides one drone's splat from the image, e.g. the drone carrying the camera. Depth images are not supported yet.
+`exclude_self=True` hides each drone's own splat from its own camera, so a drone sees the others but not itself. Depth images are not supported yet.
 
-See `examples/rendering/splats.py` for a matplotlib-based camera sensor demo.
+See `examples/rendering/splat_camera.py` for a matplotlib-based camera sensor demo.
