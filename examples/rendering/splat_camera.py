@@ -9,6 +9,7 @@ import logging
 import os
 
 os.environ["SCIPY_ARRAY_API"] = "1"
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 import matplotlib.pyplot as plt
 import numpy as np
