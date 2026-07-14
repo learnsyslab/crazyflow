@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.17.0",
-    "jax>=0.7.0",        # 0.5.3 and 0.6.0 have a bug that causes resets to not work properly.
+    "jax>=0.7.0,!=0.10.2", # 0.10.2 XLA:GPU miscompiles for larger swarms. See https://github.com/jax-ml/jax/issues/39157
     "mujoco>=3.3.0",
     "mujoco-mjx>=3.3.0",
     "gymnasium[mujoco]>=1.2.0",
