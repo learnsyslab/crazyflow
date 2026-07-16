@@ -17,6 +17,8 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 # splax rasterizes with warp, which needs GPU memory outside JAX's pool. Disable JAX preallocation
@@ -116,6 +118,15 @@ def benchmark(
     scene = fetch(f"{ASSETS_URL}/{scene_ply}")
     drone = fetch(f"{ASSETS_URL}/{drone_ply}")
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_file = Path(__file__).parent / "data" / f"benchmark_results_{timestamp}.csv"
+    csv_file.parent.mkdir(exist_ok=True)
+    with open(csv_file, "w", newline="") as f:
+        f.write(
+            "test_type,n_drones,n_worlds,n_steps,total_time_s,avg_step_time_s,"
+            "fps,real_time_factor,device\n"
+        )
+
     print(
         f"\nSplat rendering benchmark, resolution {resolution[0]}x{resolution[1]}, {n_frames} "
         f"frames per rollout"
@@ -159,12 +170,20 @@ def benchmark(
             images_per_s = n_frames * n_worlds / rollout_s
             print(f"{n_worlds:>10} {rollout_s:>12.4f} {frame_ms:>12.4f} {images_per_s:>14.3e}")
             sim.close()
+
+            real_time_factor = (n_frames / fps) * n_worlds / rollout_s
+            with open(csv_file, "a", newline="") as f:
+                f.write(
+                    f"splat,{sim.n_drones},{n_worlds},{n_frames},{rollout_s},"
+                    f"{rollout_s / n_frames},{images_per_s},{real_time_factor},gpu\n"
+                )
         except (JaxRuntimeError, MemoryError) as e:
             print(f"{n_worlds:>10}   out of memory, stopping ({type(e).__name__})")
             break
 
     print("-" * 80)
     print("fps is total images rendered per second across all parallel worlds.\n")
+    print(f"Benchmark results saved to {csv_file}")
 
 
 if __name__ == "__main__":
