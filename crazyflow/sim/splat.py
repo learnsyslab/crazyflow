@@ -136,7 +136,7 @@ class SplatViewer:
         """
         if self._n_drones == 0:
             return
-        pos, quat = _drone_mocap_poses(sim, world)
+        pos, quat = self._drone_mocap_poses(sim, world)
         for i in range(self._n_drones):
             self.viewer.update_pose(f"drone:{i}", pos[i], quat[i])
 
@@ -144,11 +144,11 @@ class SplatViewer:
         """Shut down the web server."""
         self.viewer.close()
 
-
-@requires_mujoco_sync
-def _drone_mocap_poses(sim: Sim, world: int) -> tuple[NDArray, NDArray]:
-    """Drone mocap positions and wxyz quaternions of one world, synced with the MuJoCo data."""
-    ids = sim.data.core.drone_mocap_ids
-    pos = np.asarray(sim.mjx_data.mocap_pos[world, ids])
-    quat = np.asarray(sim.mjx_data.mocap_quat[world, ids])  # MuJoCo mocap quats are already wxyz
-    return pos, quat
+    @staticmethod
+    @requires_mujoco_sync
+    def _drone_mocap_poses(sim: Sim, world: int) -> tuple[NDArray, NDArray]:
+        """Drone mocap positions and wxyz quaternions of one world, synced with the MuJoCo data."""
+        ids = sim.data.core.drone_mocap_ids
+        pos = np.asarray(sim.mjx_data.mocap_pos[world, ids])
+        quat = np.asarray(sim.mjx_data.mocap_quat[world, ids])  # MuJoCo quats are already wxyz
+        return pos, quat
