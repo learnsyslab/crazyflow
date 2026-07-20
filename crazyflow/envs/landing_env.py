@@ -39,7 +39,7 @@ class LandingEnv(DroneEnv):
     def render(self):
         if self.sim.viewer is not None:
             self.sim.viewer.viewer.add_marker(
-                type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                type=mujoco.mjtGeom.mjGEOM_SPHERE,  # ty: ignore[unresolved-attribute]
                 size=np.array([0.02, 0.02, 0.02]),
                 pos=np.array(self._goal[0]),
                 rgba=np.array([1, 0, 0, 0.5]),

@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from functools import partial, wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Concatenate, ParamSpec, TypeVar
 
 import jax
 import jax.numpy as jnp
@@ -27,7 +27,7 @@ from crazyflow.dynamics.first_principles import sim_dynamics as first_principles
 from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
 from crazyflow.dynamics.so_rpy_rotor import sim_dynamics as so_rpy_rotor_dynamics
 from crazyflow.dynamics.so_rpy_rotor_drag import sim_dynamics as so_rpy_rotor_drag_dynamics
-from crazyflow.exception import ConfigError, NotInitializedError
+from crazyflow.exception import ConfigError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
@@ -41,11 +41,13 @@ Params = ParamSpec("Params")  # Represents arbitrary parameters
 Return = TypeVar("Return")  # Represents the return type
 
 
-def requires_mujoco_sync(fn: Callable[Params, Return]) -> Callable[Params, Return]:
+def requires_mujoco_sync(
+    fn: Callable[Concatenate[Sim, Params], Return],
+) -> Callable[Concatenate[Sim, Params], Return]:
     """Decorator to ensure that the simulation data is synchronized with the MuJoCo mjx data."""
 
     @wraps(fn)
-    def wrapper(sim: Sim, *args: Any, **kwargs: Any) -> SimData:
+    def wrapper(sim: Sim, *args: Params.args, **kwargs: Params.kwargs) -> Return:
         if not sim.data.core.mjx_synced:
             sim.data, sim.mjx_data = sync_sim2mjx(sim.data, sim.mjx_data, sim.mjx_model)
         return fn(sim, *args, **kwargs)
@@ -107,7 +109,7 @@ class Sim:
         if dynamics != Dynamics.first_principles:
             if control in (Control.force_torque, Control.rotor_vel):
                 raise ConfigError(f"Control mode {control} requires first principles dynamics")
-        if freq > 10_000 and not jax.config.jax_enable_x64:
+        if freq > 10_000 and not jax.config.read("jax_enable_x64"):
             raise ConfigError("High frequency simulations require double precision mode")
         self.dynamics = dynamics
         self.control = control
@@ -195,7 +197,7 @@ class Sim:
     ) -> NDArray | None:
         if self.viewer is None:
             if isinstance(camera, str):
-                cam_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
+                cam_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, camera)  # ty: ignore[unresolved-attribute]
                 assert cam_id > -1, f"Camera name '{camera}' not found in the model."
             elif isinstance(camera, int):
                 cam_id = camera
@@ -218,16 +220,16 @@ class Sim:
                 # Render one frame to force mj to create the viewer
                 self.viewer.render(mode)
                 self.viewer.viewer.cam.fixedcamid = cam_id
-                self.viewer.viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
+                self.viewer.viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED  # ty: ignore[unresolved-attribute]
 
         self.mj_data.qpos[:] = self.mjx_data.qpos[world, :]
         self.mj_data.mocap_pos[:] = self.mjx_data.mocap_pos[world, :]
         self.mj_data.mocap_quat[:] = self.mjx_data.mocap_quat[world, :]
         # mj_forward raises on contacts between two static bodies (e.g. drones welded to the world).
         # We only need poses, cameras and lights for rendering
-        mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        mujoco.mj_comPos(self.mj_model, self.mj_data)
-        mujoco.mj_camlight(self.mj_model, self.mj_data)
+        mujoco.mj_kinematics(self.mj_model, self.mj_data)  # ty: ignore[unresolved-attribute]
+        mujoco.mj_comPos(self.mj_model, self.mj_data)  # ty: ignore[unresolved-attribute]
+        mujoco.mj_camlight(self.mj_model, self.mj_data)  # ty: ignore[unresolved-attribute]
         return self.viewer.render(mode)
 
     def seed(self, seed: int):
@@ -243,13 +245,13 @@ class Sim:
             self.viewer.close()
         self.viewer = None
 
-    def build_mjx_spec(self) -> mujoco.MjSpec:
+    def build_mjx_spec(self) -> mujoco.MjSpec:  # ty: ignore[unresolved-attribute]
         """Build the MuJoCo mjx_model specification for the simulation."""
         assert self._xml_path.exists(), f"Model file {self._xml_path} does not exist"
-        spec = mujoco.MjSpec.from_file(str(self._xml_path))
+        spec = mujoco.MjSpec.from_file(str(self._xml_path))  # ty: ignore[unresolved-attribute]
         spec.option.timestep = 1 / self.freq
         spec.copy_during_attach = True
-        drone_spec = mujoco.MjSpec.from_file(str(self.drone_path))
+        drone_spec = mujoco.MjSpec.from_file(str(self.drone_path))  # ty: ignore[unresolved-attribute]
         frame = spec.worldbody.add_frame(name="world")
         name = "drone_fused" if self.fused_mjx_model else "drone"
         if (drone_body := drone_spec.body(name)) is None:
@@ -266,12 +268,15 @@ class Sim:
         dummy.inertia = jnp.full(3, 1e-9)
         dummy_joint = dummy.add_joint()
         dummy_joint.name = "_dummy_joint"
-        dummy_joint.type = mujoco.mjtJoint.mjJNT_SLIDE
+        dummy_joint.type = mujoco.mjtJoint.mjJNT_SLIDE  # ty: ignore[unresolved-attribute]
         return spec
 
     def _replicate_drone(
-        self, spec: mujoco.MjSpec, drone0_body: str, drone_meshdir: str
-    ) -> mujoco.MjSpec:
+        self,
+        spec: mujoco.MjSpec,  # ty: ignore[unresolved-attribute]
+        drone0_body: str,
+        drone_meshdir: str,
+    ) -> mujoco.MjSpec:  # ty: ignore[unresolved-attribute]
         """Stamp the single attached drone body into ``n_drones`` instances by cloning its XML.
 
         Avoids the O(n_drones^2) cost and per-instance mesh copies of repeated ``attach_body``.
@@ -285,8 +290,11 @@ class Sim:
         root = ET.fromstring(spec.to_xml())
         asset = root.find("asset")
         body0 = root.find(f".//body[@name='{drone0_body}']")
+        assert asset is not None and body0 is not None, "Failed to find asset or body in the XML"
         frame = next(p for p in root.iter() if body0 in p)  # the body lives under the attach frame
-        dynamic = [m for m in asset.findall("material") if m.get("name").startswith(_DYN_MATERIAL)]
+        dynamic = [
+            m for m in asset.findall("material") if m.get("name", "").startswith(_DYN_MATERIAL)
+        ]
         for i in range(1, self.n_drones):
             body = copy.deepcopy(body0)
             for el in body.iter():  # suffix unique names + dynamic-material refs. keep shared refs
@@ -297,23 +305,23 @@ class Sim:
             frame.append(body)
             for material in dynamic:
                 clone = copy.deepcopy(material)
-                clone.set("name", f"{material.get('name')[:-2]}:{i}")
+                clone.set("name", f"{material.get('name', '')[:-2]}:{i}")
                 asset.append(clone)
-        new_spec = mujoco.MjSpec.from_string(ET.tostring(root, encoding="unicode"))
+        new_spec = mujoco.MjSpec.from_string(ET.tostring(root, encoding="unicode"))  # ty: ignore[unresolved-attribute]
         new_spec.copy_during_attach = True  # write-only, re-apply after from_string() drops it
         return new_spec
 
-    def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Any, Model, Data]:
+    def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Any, Model, Data]:  # ty: ignore[unresolved-attribute]
         """Build the MuJoCo model and data structures for the simulation."""
         mj_model = spec.compile()
         self._unweld_drones(mj_model)
-        mj_data = mujoco.MjData(mj_model)
+        mj_data = mujoco.MjData(mj_model)  # ty: ignore[unresolved-attribute]
         mjx_model = mjx.put_model(mj_model, device=self.device)
         mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
         mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
         return mj_model, mj_data, mjx_model, mjx_data
 
-    def _unweld_drones(self, mj_model: mujoco.MjModel):
+    def _unweld_drones(self, mj_model: mujoco.MjModel):  # ty: ignore[unresolved-attribute]
         """Relabel each drone as its own weld root so collisions are detected natively.
 
         Drones are mocap bodies, so MuJoCo welds them all to the world (``weldid == 0``). MJX skips
@@ -437,7 +445,7 @@ class Sim:
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
 
     def init_data(
-        self, state_freq: int, attitude_freq: int, force_torque_freq: int, rng_key: Array
+        self, state_freq: int, attitude_freq: int, force_torque_freq: int, rng_key: int | Array
     ) -> SimData:
         """Initialize the simulation data."""
         drone_name = "drone_fused" if self.fused_mjx_model else "drone"
@@ -474,10 +482,13 @@ class Sim:
     @property
     def control_freq(self) -> int:
         if self.control == Control.state:
+            assert self.data.controls.state is not None
             return self.data.controls.state.freq
         if self.control == Control.attitude:
+            assert self.data.controls.attitude is not None
             return self.data.controls.attitude.freq
         if self.control == Control.force_torque:
+            assert self.data.controls.force_torque is not None
             return self.data.controls.force_torque.freq
         raise NotImplementedError(f"Control mode {self.control} not implemented")
 
@@ -509,13 +520,8 @@ class Sim:
         geom_count = self.mj_model.body_geomnum[body_id]
         return contacts(geom_start, geom_count, self.mjx_data)
 
-    @staticmethod
-    def _reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
-        raise NotInitializedError("_reset call before building the simulation pipeline.")
-
-    @staticmethod
-    def _step(data: SimData, n_steps: int) -> SimData:
-        raise NotInitializedError("_step call before building the simulation pipeline.")
+    _reset: Callable[..., SimData]
+    _step: Callable[..., SimData]
 
 
 def build_control_fns(

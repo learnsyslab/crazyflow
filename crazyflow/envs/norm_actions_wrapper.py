@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
+from gymnasium import spaces
 from gymnasium.vector import VectorWrapper
 from gymnasium.vector.utils import batch_space
 from jax import Array
@@ -14,6 +15,8 @@ class NormalizeActions(VectorWrapper):
     This wrapper clips the expected actions to [-1,1] and rescales them to the action space expected
     in simulation.
     """
+
+    single_action_space: spaces.Box
 
     def __init__(self, env: DroneEnv):
         super().__init__(env)

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 def state_control(data: SimData, controls: Array) -> SimData:
     """State control function."""
     assert data.controls.mode == Control.state, f"control type {data.controls.mode} not enabled"
+    assert data.controls.state is not None, "state control data not initialized"
     assert controls.shape == (data.core.n_worlds, data.core.n_drones, 13), "controls shape mismatch"
     controls = to_device(controls, data.core.device)
     data = data.replace(
@@ -35,6 +36,7 @@ def attitude_control(data: SimData, controls: Array) -> SimData:
     controller updates at its correct frequency.
     """
     assert data.controls.mode == Control.attitude, f"control type {data.controls.mode} not enabled"
+    assert data.controls.attitude is not None, "attitude control data not initialized"
     assert controls.shape == (data.core.n_worlds, data.core.n_drones, 4), "controls shape mismatch"
     controls = to_device(controls, data.core.device)
     data = data.replace(
@@ -48,6 +50,7 @@ def force_torque_control(data: SimData, controls: Array) -> SimData:
     assert data.controls.mode == Control.force_torque, (
         f"control type {data.controls.mode} not enabled"
     )
+    assert data.controls.force_torque is not None, "force-torque control data not initialized"
     assert controls.shape == (data.core.n_worlds, data.core.n_drones, 4), "controls shape mismatch"
     controls = to_device(controls, data.core.device)
     data = data.replace(
@@ -74,10 +77,13 @@ def controllable(data: SimData) -> Array:
     controls = data.controls
     match data.controls.mode:
         case Control.state:
+            assert controls.state is not None, "state control data not initialized"
             control_steps, control_freq = controls.state.steps, controls.state.freq
         case Control.attitude:
+            assert controls.attitude is not None, "attitude control data not initialized"
             control_steps, control_freq = controls.attitude.steps, controls.attitude.freq
         case Control.force_torque:
+            assert controls.force_torque is not None, "force-torque control data not initialized"
             control_steps = controls.force_torque.steps
             control_freq = controls.force_torque.freq
         case Control.rotor_vel:

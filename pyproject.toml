@@ -64,10 +64,12 @@ docs = [
     "mkdocs-charts-plugin>=0.0.10",
 ]
 dist = ["build>=1.3", "twine>=6.0"]
+lint = ["ty==0.0.56"]
 dev = [
     "ruff",
     { include-group = "tests" },
     { include-group = "docs" },
+    { include-group = "lint" },
 ]
 
 [tool.setuptools.packages]
@@ -175,6 +177,7 @@ gpu = { features = ["gpu"], solve-group = "gpu" }
 benchmark = { features = ["benchmark", "gpu"], solve-group = "gpu" }
 gpu-tests = { features = ["tests", "gpu"], solve-group = "gpu" }
 dist = { features = ["dist"], solve-group = "default" }
+lint = { features = ["lint"], solve-group = "default" }
 
 [tool.pixi.feature.tests.dependencies]
 pytest = ">=8.4.1"
@@ -214,3 +217,9 @@ twine = "*"
 build = { cmd = "python -m build && twine check dist/*", description = "Build and test the package" }
 upload_test = { cmd = "twine upload -r testpypi dist/*", description = "Test upload of the built package" }
 upload = { cmd = "twine upload dist/*", description = "Upload of the built package" }
+
+[tool.pixi.feature.lint.pypi-dependencies]
+ty = "==0.0.56"
+
+[tool.pixi.feature.lint.tasks]
+ty = { cmd = "ty check crazyflow", description = "Type check the library" }

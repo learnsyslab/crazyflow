@@ -88,7 +88,7 @@ class FigureEightEnv(DroneEnv):
         obs = super().obs()
         idx = (self.steps + self.sample_offsets[None, ...]) % self.trajectory.shape[0]
         dpos = self.trajectory[idx, ...] - self.sim.data.states.pos
-        obs["local_samples"] = dpos.reshape(-1, 3 * self.n_samples)
+        obs["local_samples"] = jnp.reshape(dpos, (-1, 3 * self.n_samples))
         return obs
 
     def reward(self) -> Array:

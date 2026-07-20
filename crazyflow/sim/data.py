@@ -4,7 +4,7 @@ import typing
 
 import jax
 import jax.numpy as jnp
-from flax.struct import dataclass, field
+from flax.struct import PyTreeNode, field
 from jax import Array, Device
 
 from crazyflow.control import Control
@@ -20,8 +20,7 @@ from crazyflow.dynamics.so_rpy_rotor import Params as SoRpyRotorParams
 from crazyflow.dynamics.so_rpy_rotor_drag import Params as SoRpyRotorDragParams
 
 
-@dataclass
-class SimState:
+class SimState(PyTreeNode):
     pos: Array  # (N, M, 3)
     """Position of the drone's center of mass."""
     quat: Array  # (N, M, 4)
@@ -55,8 +54,7 @@ class SimState:
         )
 
 
-@dataclass
-class SimStateDeriv:
+class SimStateDeriv(PyTreeNode):
     vel: Array  # (N, M, 3)
     """Derivative of the position of the drone's center of mass."""
     ang_vel: Array  # (N, M, 3)
@@ -88,8 +86,6 @@ class ControlData(typing.Protocol):
     """
     cmd: Array  # (N, M, X)
     """Control command for the drone."""
-    staged_cmd: Array  # (N, M, X)
-    """Staged control command for the drone."""
     steps: Array  # (N, 1)
     """Last simulation steps that the state control command was applied."""
     freq: int
@@ -98,15 +94,14 @@ class ControlData(typing.Protocol):
     params: dict[str, Array]
 
 
-@dataclass
-class SimControls:
+class SimControls(PyTreeNode):
     mode: Control = field(pytree_node=False)
     """Control mode of the simulation."""
-    state: ControlData | None
+    state: MellingerStateData | None
     """State control data."""
-    attitude: ControlData | None
+    attitude: MellingerAttitudeData | None
     """Attitude control data."""
-    force_torque: ControlData | None
+    force_torque: MellingerForceTorqueData | None
     """Force and torque control data."""
     rotor_vel: Array  # (N, M, 4)
     """Desired motor speed."""
@@ -117,9 +112,9 @@ class SimControls:
         n_drones: int,
         control: Control,
         drone: str,
-        state_freq: int | None,
-        attitude_freq: int | None,
-        force_torque_freq: int | None,
+        state_freq: int,
+        attitude_freq: int,
+        force_torque_freq: int,
         device: Device,
     ) -> SimControls:
         """Create a default set of controls for the simulation."""
@@ -201,8 +196,7 @@ class SimParams(typing.Protocol):
                 raise ValueError(f"Dynamics mode {dynamics} not implemented")
 
 
-@dataclass
-class SimCore:
+class SimCore(PyTreeNode):
     freq: int = field(pytree_node=False)
     """Frequency of the simulation."""
     device: Device = field(pytree_node=False)
@@ -225,7 +219,7 @@ class SimCore:
         freq: int,
         n_worlds: int,
         n_drones: int,
-        drone_mocap_ids: Array,
+        drone_mocap_ids: Array | list[int],
         rng_key: int | Array,
         device: Device,
     ) -> SimCore:
@@ -246,8 +240,7 @@ class SimCore:
         )
 
 
-@dataclass
-class SimData:
+class SimData(PyTreeNode):
     states: SimState
     """State of the simulation."""
     states_deriv: SimStateDeriv

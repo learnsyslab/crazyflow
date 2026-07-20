@@ -59,6 +59,9 @@ class DroneEnv(VectorEnv):
 
     metadata = {"autoreset_mode": AutoresetMode.NEXT_STEP}
 
+    single_action_space: spaces.Box
+    single_observation_space: spaces.Dict
+
     def __init__(
         self,
         *,
@@ -68,7 +71,7 @@ class DroneEnv(VectorEnv):
         drone: str = "cf2x_L250",
         freq: int = 500,
         device: str = "cpu",
-        reset_randomization: Callable[[SimData, Array], SimData] | None = None,
+        reset_randomization: Callable[[SimData, SimData, Array | None], SimData] | None = None,
     ):
         """Initialize the CrazyflowEnv.
 
@@ -119,7 +122,7 @@ class DroneEnv(VectorEnv):
         )
         self.observation_space = batch_space(self.single_observation_space, self.sim.n_worlds)
 
-    def step(self, action: Array) -> tuple[Array, Array, Array, Array, dict]:
+    def step(self, action: Array) -> tuple[dict[str, Array], Array, Array, Array, dict]:
         self._apply_action(action)
         self.sim.step(self.n_substeps)
         # Reset all environments which terminated or were truncated in the last step
@@ -206,7 +209,7 @@ class DroneEnv(VectorEnv):
         return {k: v[:, 0, :] for k, v in obs.items()}
 
     @staticmethod
-    def _reset_randomization(data: SimData, _: SimData, mask: Array) -> SimData:
+    def _reset_randomization(data: SimData, _: SimData, mask: Array | None) -> SimData:
         """Randomize the initial position and velocity of the drones.
 
         This function will get compiled into the reset function of the simulation. Therefore, it

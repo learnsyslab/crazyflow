@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 import jax
 import jax.numpy as jnp
 import numpy as np
+from flax.struct import PyTreeNode
 from jax import Array
 
 if TYPE_CHECKING:
-    from types import ModuleType
+    from types import FunctionType, ModuleType
 
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
@@ -27,6 +28,7 @@ def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
 
 
 T = TypeVar("T")  # PyTree type
+S = TypeVar("S", bound=PyTreeNode)  # flax struct type with a .replace method
 P = ParamSpec("P")
 R = TypeVar("R")
 
@@ -48,7 +50,7 @@ def pytree_replace(tree: T, new_tree: T, mask: Array | None = None) -> T:
     return jax.tree.map(_replace, tree, new_tree)
 
 
-def leaf_replace(tree: T, mask: Array | None = None, **kwargs: dict[str, Array]) -> T:
+def leaf_replace(tree: S, mask: Array | None = None, **kwargs: Array) -> S:
     """Replace elements of a PyTree with the given keyword arguments.
 
     If a mask is provided, the replacement is applied only to the elements indicated by the mask.
@@ -117,7 +119,7 @@ def parametrize(
     return partial(fn, **kwargs)
 
 
-def filter_to_signature(params: dict, fn: Callable) -> dict:
+def filter_to_signature(params: dict, fn: FunctionType) -> dict:
     """Keep only the params accepted by ``fn``.
 
     Asserts that every keyword-only parameter of ``fn`` (the injectable params, as opposed to the

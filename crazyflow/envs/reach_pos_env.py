@@ -62,7 +62,7 @@ class ReachPosEnv(DroneEnv):
     def render(self):
         if self.sim.viewer is not None:
             self.sim.viewer.viewer.add_marker(
-                type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                type=mujoco.mjtGeom.mjGEOM_SPHERE,  # ty: ignore[unresolved-attribute]
                 size=np.array([0.02, 0.02, 0.02]),
                 pos=np.array(self._goal[0]),
                 rgba=np.array([1, 0, 0, 0.5]),
@@ -100,7 +100,13 @@ class ReachPosEnv(DroneEnv):
 
     @staticmethod
     def _reset_randomization(
-        data: SimData, _: SimData, mask: Array, pmin: Array, pmax: Array, vmin: float, vmax: float
+        data: SimData,
+        _: SimData,
+        mask: Array | None,
+        pmin: Array,
+        pmax: Array,
+        vmin: float,
+        vmax: float,
     ) -> SimData:
         shape = (data.core.n_worlds, data.core.n_drones, 3)
         key, pos_key, vel_key = jax.random.split(data.core.rng_key, 3)

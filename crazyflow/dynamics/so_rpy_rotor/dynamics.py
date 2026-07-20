@@ -415,7 +415,7 @@ class Params:
 
 def sim_dynamics(data: SimData) -> SimData:
     """Compute the forces and torques from the so_rpy_rotor dynamics."""
-    params: Params = data.params
+    assert data.controls.attitude is not None
     vel, _, acc, ang_acc, rotor_acc = dynamics(
         pos=data.states.pos,
         quat=data.states.quat,
@@ -425,7 +425,7 @@ def sim_dynamics(data: SimData) -> SimData:
         cmd=data.controls.attitude.cmd,
         dist_f=data.states.force,
         dist_t=data.states.torque,
-        **params.__dict__,
+        **data.params.__dict__,
     )
     states_deriv = data.states_deriv.replace(
         vel=vel, ang_vel=data.states.ang_vel, acc=acc, ang_acc=ang_acc, rotor_acc=rotor_acc

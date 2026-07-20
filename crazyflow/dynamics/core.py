@@ -14,7 +14,7 @@ from crazyflow.utils import filter_to_signature, to_xp
 from crazyflow.utils import parametrize as _parametrize
 
 if TYPE_CHECKING:
-    from types import ModuleType
+    from types import FunctionType, ModuleType
 
 F = TypeVar("F", bound=Callable[..., Any])
 P = ParamSpec("P")
@@ -37,7 +37,7 @@ def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
     """
 
     def decorator(fn: F) -> F:
-        fn.__dynamics_features__ = {"rotor_dynamics": rotor_dynamics}
+        setattr(fn, "__dynamics_features__", {"rotor_dynamics": rotor_dynamics})
         return fn
 
     return decorator
@@ -76,7 +76,7 @@ def parametrize(
 
 
 def load_params(
-    fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
+    fn: FunctionType, drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> dict:
     """Load and merge physical and dynamics-specific parameters for a drone configuration.
 

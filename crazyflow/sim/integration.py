@@ -61,12 +61,11 @@ def symplectic_euler(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> S
 
 def rk4_average(k1: SimData, k2: SimData, k3: SimData, k4: SimData) -> SimData:
     """Average four derivatives according to the RK4 rules."""
-    data = k1
-    k1, k2, k3, k4 = k1.states_deriv, k2.states_deriv, k3.states_deriv, k4.states_deriv
+    d1, d2, d3, d4 = k1.states_deriv, k2.states_deriv, k3.states_deriv, k4.states_deriv
     states_deriv = jax.tree.map(
-        lambda x1, x2, x3, x4: (x1 + 2 * x2 + 2 * x3 + x4) / 6, k1, k2, k3, k4
+        lambda x1, x2, x3, x4: (x1 + 2 * x2 + 2 * x3 + x4) / 6, d1, d2, d3, d4
     )
-    return data.replace(states_deriv=states_deriv)
+    return k1.replace(states_deriv=states_deriv)
 
 
 def integrate(data: SimData, deriv: SimData, dt: float) -> SimData:
@@ -121,7 +120,7 @@ def _integrate(
     dang_vel: Array,
     drotor_vel: Array,
     dt: float,
-) -> tuple[Array, Array, Array, Array]:
+) -> tuple[Array, Array, Array, Array, Array]:
     """Integrate the dynamics forward in time.
 
     Args:
@@ -163,7 +162,7 @@ def _integrate_symplectic(
     dang_vel: Array,
     drotor_vel: Array,
     dt: float,
-) -> tuple[Array, Array, Array, Array]:
+) -> tuple[Array, Array, Array, Array, Array]:
     """Integrate the dynamics forward in time using symplectic integration.
 
     See e.g. https://adamsturge.github.io/Engine-Blog/mydoc_symplectic_euler.html for an explanation
