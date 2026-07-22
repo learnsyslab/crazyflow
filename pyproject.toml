@@ -38,7 +38,7 @@ requires-python = ">=3.11,<3.14" # MuJoCo has no wheels for python 14
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
 benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
-splats = ["splax[viewer] @ git+https://github.com/learnsyslab/splax@109bf2f4624b2f660574af8b0d55744d08b426b1"]
+splats = ["splax[viewer] @ git+https://github.com/learnsyslab/splax@6e6ded41231edec28c837e855539e75690972690"]
 
 [project.urls]
 Homepage = "https://github.com/learnsyslab/crazyflow"
