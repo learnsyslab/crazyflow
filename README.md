@@ -8,6 +8,7 @@
   [![arXiv](https://img.shields.io/badge/arXiv-2606.01478-b31b1b.svg)](https://arxiv.org/abs/2606.01478)
   [![Tests](https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml)
   [![Ruff](https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml)
+  [![Ty](https://github.com/learnsyslab/crazyflow/actions/workflows/ty.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/ty.yml)
   [![Docs](https://github.com/learnsyslab/crazyflow/actions/workflows/docs.yml/badge.svg)](https://learnsyslab.github.io/crazyflow)
 
 </div>

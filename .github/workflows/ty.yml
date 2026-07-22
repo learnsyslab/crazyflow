@@ -1,0 +1,24 @@
+name: Ty
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ty-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.3
+        with:
+          pixi-version: v0.72.2
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+          environments: lint
+          activate-environment: false
+          locked: true
+
+      - name: Type check the library
+        run: pixi run -e lint ty

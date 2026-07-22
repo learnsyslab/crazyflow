@@ -39,7 +39,7 @@ def draw_line(
         rgba = np.array([1.0, 0, 0, 1])
     mats = _rotation_matrix_from_points(points[:-1], points[1:]).as_matrix().reshape(-1, 9)
     for i in range(len(points) - 1):
-        viewer.add_marker(
+        viewer.add_marker(  # ty: ignore[unresolved-attribute]
             type=mujoco.mjtGeom.mjGEOM_LINE,  # ty: ignore[unresolved-attribute]
             size=sizes[i],
             pos=points[i],
@@ -68,7 +68,7 @@ def draw_points(sim: Sim, points: NDArray, rgba: NDArray | None = None, size: fl
     if rgba is None:
         rgba = np.array([1.0, 0, 0, 1])
     for i in range(len(points)):
-        viewer.add_marker(
+        viewer.add_marker(  # ty: ignore[unresolved-attribute]
             type=mujoco.mjtGeom.mjGEOM_SPHERE,  # ty: ignore[unresolved-attribute]
             size=np.array([size, size, size]),
             pos=points[i],
@@ -104,7 +104,7 @@ def draw_capsule(
     mat = _rotation_matrix_from_points(p1[None, :], p2[None, :]).as_matrix().flatten()
     geom_type = mujoco.mjtGeom.mjGEOM_CYLINDER if cylinder else mujoco.mjtGeom.mjGEOM_CAPSULE  # ty: ignore[unresolved-attribute]
     rgba = rgba if rgba is not None else np.array([1, 0, 0, 1.0])
-    sim.viewer.viewer.add_marker(type=geom_type, pos=pos, size=size, mat=mat, rgba=rgba)
+    sim.viewer.viewer.add_marker(type=geom_type, pos=pos, size=size, mat=mat, rgba=rgba)  # ty: ignore[unresolved-attribute]
 
 
 def change_material(

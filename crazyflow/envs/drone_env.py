@@ -122,7 +122,7 @@ class DroneEnv(VectorEnv):
         )
         self.observation_space = batch_space(self.single_observation_space, self.sim.n_worlds)
 
-    def step(self, action: Array) -> tuple[dict[str, Array], Array, Array, Array, dict]:
+    def step(self, action: Array) -> tuple[dict[str, Array], Array, Array, Array, dict]:  # ty: ignore[invalid-method-override]
         self._apply_action(action)
         self.sim.step(self.n_substeps)
         # Reset all environments which terminated or were truncated in the last step
@@ -132,7 +132,7 @@ class DroneEnv(VectorEnv):
         return self.obs(), self.reward(), terminated, truncated, {}
 
     def _apply_action(self, action: Array):
-        low, high = self.action_space.low, self.action_space.high
+        low, high = self.action_space.low, self.action_space.high  # ty: ignore[unresolved-attribute]
         action = self._sanitize_action(action, low, high, self.sim.n_worlds, self.sim.device)
         match self.sim.control:
             case Control.state:
@@ -170,7 +170,7 @@ class DroneEnv(VectorEnv):
     def render(self):
         self.sim.render()
 
-    def close(self):
+    def close(self):  # ty: ignore[invalid-method-override]
         self.sim.close()
 
     def _reset(self, mask: Array | None = None, options: dict | None = None) -> None:

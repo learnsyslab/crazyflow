@@ -8,10 +8,7 @@ from crazyflow.envs.reach_vel_env import ReachVelEnv
 
 __all__ = ["ReachPosEnv", "ReachVelEnv", "LandingEnv", "NormalizeActions", "FigureEightEnv"]
 
-register(id="DroneReachPos-v0", vector_entry_point=ReachPosEnv)
-
-register(id="DroneReachVel-v0", vector_entry_point=ReachVelEnv)
-
-register(id="DroneLanding-v0", vector_entry_point=LandingEnv)
-
-register(id="DroneFigureEightTrajectory-v0", vector_entry_point=FigureEightEnv)
+register(id="DroneReachPos-v0", vector_entry_point=ReachPosEnv)  # ty: ignore[invalid-argument-type]
+register(id="DroneReachVel-v0", vector_entry_point=ReachVelEnv)  # ty: ignore[invalid-argument-type]
+register(id="DroneLanding-v0", vector_entry_point=LandingEnv)  # ty: ignore[invalid-argument-type]
+register(id="DroneFigureEightTrajectory-v0", vector_entry_point=FigureEightEnv)  # ty: ignore[invalid-argument-type]

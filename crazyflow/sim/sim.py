@@ -219,7 +219,7 @@ class Sim:
             if mode == "human" and cam_id > -1:
                 # Render one frame to force mj to create the viewer
                 self.viewer.render(mode)
-                self.viewer.viewer.cam.fixedcamid = cam_id
+                self.viewer.viewer.cam.fixedcamid = cam_id  # ty: ignore[unresolved-attribute]
                 self.viewer.viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED  # ty: ignore[unresolved-attribute]
 
         self.mj_data.qpos[:] = self.mjx_data.qpos[world, :]
@@ -514,7 +514,7 @@ class Sim:
             An boolean array of shape (n_worlds,) that is True if any contact is present.
         """
         if body is None:
-            return self.mjx_data._impl.contact.dist < 0
+            return self.mjx_data._impl.contact.dist < 0  # ty: ignore[unresolved-attribute]
         body_id = self.mj_model.body(body).id
         geom_start = self.mj_model.body_geomadr[body_id]
         geom_count = self.mj_model.body_geomnum[body_id]
@@ -604,7 +604,7 @@ def increment_steps(data: SimData) -> SimData:
 @jax.jit
 def contacts(geom_start: int, geom_count: int, data: Data) -> Array:
     """Filter contacts from MuJoCo data."""
-    contact = data._impl.contact
+    contact = data._impl.contact  # ty: ignore[unresolved-attribute]
     geom1_valid = contact.geom1 >= geom_start
     geom1_valid &= contact.geom1 < geom_start + geom_count
     geom2_valid = contact.geom2 >= geom_start

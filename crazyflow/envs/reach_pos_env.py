@@ -32,7 +32,7 @@ class ReachPosEnv(DroneEnv):
         pos_min = jnp.array([-1.0, -1.0, 1.0]) if pos_min is None else pos_min
         pos_max = jnp.array([1.0, 1.0, 2.0]) if pos_max is None else pos_max
         reset_randomization = partial(
-            self._reset_randomization, pmin=pos_min, pmax=pos_max, vmin=vel_min, vmax=vel_max
+            self._randomize, pmin=pos_min, pmax=pos_max, vmin=vel_min, vmax=vel_max
         )
         super().__init__(
             num_envs=num_envs,
@@ -61,7 +61,7 @@ class ReachPosEnv(DroneEnv):
 
     def render(self):
         if self.sim.viewer is not None:
-            self.sim.viewer.viewer.add_marker(
+            self.sim.viewer.viewer.add_marker(  # ty: ignore[unresolved-attribute]
                 type=mujoco.mjtGeom.mjGEOM_SPHERE,  # ty: ignore[unresolved-attribute]
                 size=np.array([0.02, 0.02, 0.02]),
                 pos=np.array(self._goal[0]),
@@ -99,7 +99,7 @@ class ReachPosEnv(DroneEnv):
         return new_goal
 
     @staticmethod
-    def _reset_randomization(
+    def _randomize(
         data: SimData,
         _: SimData,
         mask: Array | None,
