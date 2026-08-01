@@ -1,5 +1,5 @@
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -154,7 +154,14 @@ def plot_splat_data(*paths: Path):
         date_label = str(item["date"])
         df = item["df"]
         label = f"{device_names.get(device, device.upper())} ({date_label})"
-        ax.plot(df["n_worlds"], df["fps"], marker="o", linestyle="-", color=colors.get(device), label=label)
+        ax.plot(
+            df["n_worlds"],
+            df["fps"],
+            marker="o",
+            linestyle="-",
+            color=colors.get(device),
+            label=label,
+        )
 
     ax.set_title("Images per second: Splat renderer")
     ax.set_xlabel("Number of Worlds")
@@ -162,11 +169,7 @@ def plot_splat_data(*paths: Path):
     ax.set_yscale("log")
     ax.grid(True)
     ax.legend(loc="upper left")
-    format_log_axes(
-        ax,
-        {f"splat_{idx}": item["df"] for idx, item in enumerate(series)},
-        "splat_",
-    )
+    format_log_axes(ax, {f"splat_{idx}": item["df"] for idx, item in enumerate(series)}, "splat_")
     plt.tight_layout()
 
     output_dir = csv_files[0].parent

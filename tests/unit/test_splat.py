@@ -31,15 +31,15 @@ if TYPE_CHECKING:
 requires_gpu = pytest.mark.skipif("gpu" not in available_backends(), reason="splax requires CUDA")
 
 
-def _write_splat(path: Path, n: int = 64, extent: float = 0.5) -> int:
-    """Write a small synthetic render-space splat to a .ply file."""
+def _write_splat(path: Path, n: int = 64, extent: float = 0.5):
+    """Write a small synthetic splat to a .ply file."""
     rng = np.random.default_rng(0)
     means = rng.uniform(-extent, extent, (n, 3)).astype(np.float32)
-    scales = np.full((n, 3), 0.05, np.float32)
+    log_scales = np.full((n, 3), np.log(0.05), np.float32)
     quats = np.tile(np.array([1.0, 0.0, 0.0, 0.0], np.float32), (n, 1))
-    colors = rng.uniform(0.2, 0.8, (n, 3)).astype(np.float32)
-    opacities = np.full((n, 1), 0.9, np.float32)
-    splax.io.write_ply(path, means, scales, quats, colors, opacities)
+    sh_colors = rng.uniform(0.2, 0.8, (n, 3)).astype(np.float32)
+    logit_opacities = np.full((n,), 2.0, np.float32)
+    splax.io.write_ply(path, means, log_scales, quats, sh_colors, logit_opacities)
 
 
 @pytest.mark.unit
@@ -77,17 +77,20 @@ def test_attach_splats(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", n=n_splats)
     sim = Sim(n_worlds=2, n_drones=2)
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
-    for key, dim in zip(SPLAT_KEYS, (3, 3, 4, 3, 1)):
+    # The scene and both drone copies concatenate into one buffer per parameter array
+    n = 3 * n_splats
+    shapes = ((n, 3), (n, 3), (n, 4), (n, 3), (n,))
+    for key, shape in zip(SPLAT_KEYS, shapes):
         assert key in sim.data.plugins, f"Missing plugin key {key}"
-        assert sim.data.plugins[key].shape == (3 * n_splats, dim)
+        assert sim.data.plugins[key].shape == shape
         assert sim.data.plugins[key].device == sim.device
     slices = np.asarray(sim.data.plugins[SPLAT_SLICES_KEY])
     assert np.array_equal(slices, [[n_splats, 2 * n_splats], [2 * n_splats, 3 * n_splats]])
     # Splat data must survive resets
     sim.reset()
     assert all(key in sim.data.plugins for key in SPLAT_KEYS)
-    for key, dim in zip(SPLAT_KEYS, (3, 3, 4, 3, 1)):
-        assert sim.data.plugins[key].shape == (3 * n_splats, dim)
+    for key, shape in zip(SPLAT_KEYS, shapes):
+        assert sim.data.plugins[key].shape == shape
     assert np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).shape == (2, 2)
 
 

@@ -1,4 +1,4 @@
-"""Gaussian splat support built on `splax <https://github.com/amacati/splax>`_.
+"""Gaussian splat support built on `splax <https://github.com/learnsyslab/splax>`_.
 
 This module owns the splat plugin state and its visualization. :func:`attach_splats` loads 3D
 gaussian splatting ``.ply`` files and stores them in the simulation's plugin data, and
@@ -33,7 +33,13 @@ if TYPE_CHECKING:
 Params = ParamSpec("Params")
 Return = TypeVar("Return")
 
-SPLAT_KEYS = ("splat_means", "splat_scales", "splat_quats", "splat_colors", "splat_opacities")
+SPLAT_KEYS = (
+    "splat_means",
+    "splat_log_scales",
+    "splat_quats",
+    "splat_sh_colors",
+    "splat_logit_opacities",
+)
 """Keys under which the splat arrays are stored in ``sim.data.plugins``.
 
 The gaussians form a single buffer per array, laid out as ``[scene | drone:0 | ... | drone:n-1]``.

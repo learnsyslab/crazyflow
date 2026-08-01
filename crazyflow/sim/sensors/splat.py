@@ -1,12 +1,11 @@
-"""Gaussian splat camera sensor built on `splax <https://github.com/amacati/splax>`_.
+"""Gaussian splat camera sensor built on `splax <https://github.com/learnsyslab/splax>`_.
 
 Renders batched RGB images of the splats attached via :func:`crazyflow.sim.splat.attach_splats`
 from any model camera. splax rasterizes with CUDA kernels only, so this module requires the
 ``splats`` extra and a simulation constructed with ``device="gpu"``.
 
 Note:
-    Splat-based depth images are not supported yet because splax's depth path lacks dynamic
-    transform support.
+    Splat-based depth images are not supported yet.
 """
 
 from __future__ import annotations
@@ -194,10 +193,10 @@ def camera_intrinsics(
 @jax.jit(static_argnames=("slices", "img_shape", "f", "c", "background", "exclude"))
 def _render_splats(
     means: Array,
-    scales: Array,
+    log_scales: Array,
     quats: Array,
-    colors: Array,
-    opacities: Array,
+    sh_colors: Array,
+    logit_opacities: Array,
     cam_xpos: Array,
     cam_xmat: Array,
     pos: Array,
@@ -219,11 +218,19 @@ def _render_splats(
     vm = vm.reshape(*cam_xpos.shape[:2], 4, 4)
     bg = jnp.asarray(background, dtype=means.dtype)
     render = partial(
-        splax.inference.render, means, scales, quats, colors, opacities,
-        background=bg, img_shape=img_shape, f=f, c=c,
+        splax.render,
+        means,
+        log_scales,
+        quats,
+        sh_colors,
+        logit_opacities,
+        background=bg,
+        img_shape=img_shape,
+        f=f,
+        c=c,
     )
     if not slices:
-        return jax.vmap(jax.vmap(lambda v: render(viewmat=v)))(vm)
+        return jax.vmap(jax.vmap(lambda v: render(viewmat=v)[0]))(vm)
     tfs = RigidTransform.from_components(pos, R.from_quat(quat)).as_matrix()  # (n_worlds, n_drones)
     cam_axis = None
     if exclude is not None:
@@ -233,5 +240,5 @@ def _render_splats(
         tfs = jnp.broadcast_to(tfs[:, None], (tfs.shape[0], n_cams, *tfs.shape[1:]))
         tfs = tfs.at[:, jnp.arange(n_cams), jnp.asarray(exclude)].set(far)
         cam_axis = 0
-    render_cam = lambda v, t: render(viewmat=v, gaussian_transforms=t, gaussian_slices=slices)  # noqa: E731
+    render_cam = lambda v, t: render(viewmat=v, gaussian_transforms=t, gaussian_slices=slices)[0]  # noqa: E731
     return jax.vmap(jax.vmap(render_cam, in_axes=(0, cam_axis)), in_axes=(0, 0))(vm, tfs)

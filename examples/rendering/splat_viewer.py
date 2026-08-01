@@ -1,8 +1,8 @@
 """Render the simulation as gaussian splats in a web-based viewer.
 
 Requires splax (`pip install crazyflow[splats]`) and gaussian splat .ply files aligned to the
-simulation frames. The demo splats are downloaded from the crazyflow GitHub release assets on first
-use and cached locally.
+simulation frames. The demo splats are downloaded from the amacati/splats dataset on first use and
+cached locally.
 
 The viewer streams the splats to the browser once and then only updates the drone poses, so it
 runs in real time on any device. The splat camera sensor renders with CUDA kernels and therefore

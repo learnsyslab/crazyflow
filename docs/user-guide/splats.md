@@ -1,12 +1,12 @@
 # Gaussian Splat Rendering
 
-Crazyflow renders photorealistic images with 3D gaussian splatting through [splax](https://github.com/amacati/splax). A web-based viewer visualizes the simulation as splats. A camera sensor renders batched RGB images across all worlds. Both combine a static scene splat with one splat per drone that follows the drone's pose.
+Crazyflow renders photorealistic images with 3D gaussian splatting through [splax](https://github.com/learnsyslab/splax). A web-based viewer visualizes the simulation as splats. A camera sensor renders batched RGB images across all worlds. Both combine a static scene splat with one splat per drone that follows the drone's pose.
 
 <!-- TODO: Add image of the web viewer showing the hall splat with a drone splat mid-flight -->
 
 ## Installation
 
-Install crazyflow with the `splats` extra. It pulls in splax with its viewer dependencies from GitHub.
+Install crazyflow with the `splats` extra. It pulls in splax with its viewer dependencies.
 
 ```bash
 pip install "crazyflow[splats]"
@@ -16,15 +16,15 @@ The web viewer runs on any device. The camera sensor rasterizes with CUDA kernel
 
 ## Demo assets
 
-Demo splats of a flight hall and a Crazyflie drone are published as [release assets](https://github.com/learnsyslab/crazyflow/releases/tag/assets-v1). splax's `fetch` downloads a URL into a local cache on first use and returns the cached path afterwards. The cache lives at `~/.cache/splax` and can be moved with the `SPLAX_CACHE` environment variable. Passing `force=True` refreshes the cache.
+Demo splats of a flight hall and a Crazyflie drone are published in the [amacati/splats](https://huggingface.co/datasets/amacati/splats) dataset. splax's `fetch` downloads a URL into a local cache on first use and returns the cached path afterwards. The cache lives at `~/.cache/splax` and can be moved with the `SPLAX_CACHE` environment variable. Passing `force=True` refreshes the cache.
 
 <!-- notest: requires splax and network access -->
 ```{ .python notest }
-from splax import fetch
+from splax.io import fetch
 
-assets = "https://github.com/learnsyslab/crazyflow/releases/download/assets-v1"
-scene = fetch(f"{assets}/hall.ply")
-drone = fetch(f"{assets}/drone.ply")
+assets = "https://huggingface.co/datasets/amacati/splats/resolve/main"
+scene = fetch(f"{assets}/robot_hall.ply")
+drone = fetch(f"{assets}/cf21B_500.ply")
 ```
 
 ## Attaching splats
