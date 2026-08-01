@@ -6,12 +6,28 @@ from unittest.mock import patch
 import pytest
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
-# Make example_scripts a list of strings instead of Path objects so that pytest can use it in its
-# automatic printouts. We convert the elements back to Paths in the test function.
-example_scripts = [str(p) for p in sorted(EXAMPLES_DIR.rglob("*.py"))]
+
+# Examples that import splax. splax requires cuda, so it cannot run in CI or on OSX platforms.
+REQUIRES_SPLAX = (
+    "rendering/splat_camera.py",
+    "rendering/splat_gradients.py",
+    "rendering/splat_viewer.py",
+)
+
+requires_splax = pytest.mark.skipif(
+    importlib.util.find_spec("splax") is None, reason="requires splats "
+)
+
+assert all((EXAMPLES_DIR / name).is_file() for name in REQUIRES_SPLAX), "stale REQUIRES_SPLAX entry"
+
+example_scripts = []
+for path in sorted(EXAMPLES_DIR.rglob("*.py")):
+    marks = requires_splax if path.relative_to(EXAMPLES_DIR).as_posix() in REQUIRES_SPLAX else ()
+    # Parametrize over strings so that pytest prints readable ids. The test converts them back.
+    example_scripts.append(pytest.param(str(path), marks=marks))
 
 
-@pytest.mark.parametrize("example_script", [str(p) for p in example_scripts])
+@pytest.mark.parametrize("example_script", example_scripts)
 @pytest.mark.timeout(60)
 @pytest.mark.integration
 def test_example_main(example_script: str):
