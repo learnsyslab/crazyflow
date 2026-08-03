@@ -4,10 +4,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from conftest import available_backends
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
 
-# Examples that import splax. splax requires cuda, so it cannot run in CI or on OSX platforms.
+# Examples that render splats. splax rasterizes with cuda, so these need splax and a GPU.
 REQUIRES_SPLAX = (
     "rendering/splat_camera.py",
     "rendering/splat_depth.py",
@@ -16,7 +17,8 @@ REQUIRES_SPLAX = (
 )
 
 requires_splax = pytest.mark.skipif(
-    importlib.util.find_spec("splax") is None, reason="requires splats "
+    importlib.util.find_spec("splax") is None or "gpu" not in available_backends(),
+    reason="requires splax and a CUDA GPU",
 )
 
 assert all((EXAMPLES_DIR / name).is_file() for name in REQUIRES_SPLAX), "stale REQUIRES_SPLAX entry"

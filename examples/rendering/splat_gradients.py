@@ -39,7 +39,8 @@ BASELINE_POSITION = np.array([5.0, 0.0, 2.0], dtype=np.float32)
 BASELINE_QUATERNION = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)  # xyzw
 
 RESOLUTION = (360, 240)
-N_SAMPLES = 1000
+# Limit to 100 to prevent OOM during testing when JAX has already claimed significant GPU memory
+N_SAMPLES = 100
 MAX_Z_OFFSET = 0.025
 MAX_YAW_DEGREES = 0.1
 

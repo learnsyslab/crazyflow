@@ -185,7 +185,7 @@ dist = { features = ["dist"], solve-group = "default" }
 pytest = ">=8.4.1"
 pytest-timeout = ">=2.1.0"
 array-api-strict = ">=2.4.1"
-matplotlib = ">=3.11"
+matplotlib = "*"
 
 [tool.pixi.feature.tests.pypi-dependencies]
 pytest-markdown-docs = "*"
