@@ -13,6 +13,7 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
 
 from crazyflow.sim import Sim
@@ -22,8 +23,8 @@ from crazyflow.sim.splat import attach_splats
 ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 # Elliptical lap, inset from the hall walls so the camera keeps them in view and clears them
-CENTER = np.array([1.25, 0.5])
-RADII = np.array([10.25, 3.5])
+CENTER = np.array([0.0, 0.0])
+RADII = np.array([9.0, 3.5])
 HEIGHT = 1.5
 MAX_RANGE = 12.0
 RESOLUTION = (320, 240)
@@ -54,13 +55,12 @@ def main(show_plot: bool = False):
     scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
     drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
     attach_splats(sim, scene=scene, drone=drone)
-    render = build_render_splat_rgbd_fn(
-        sim, drones=0, resolution=RESOLUTION, max_range=MAX_RANGE, exclude_self=True
-    )
+    render = build_render_splat_rgbd_fn(sim, drones=0, resolution=RESOLUTION, max_range=MAX_RANGE)
 
     # Start on the lap so the controller does not have to fly in from the origin first
-    pos = control(0.0)[..., :3]
-    states = sim.data.states.replace(pos=sim.data.states.pos.at[..., :].set(pos))
+    cmd = control(0.0)
+    states = sim.data.states.replace(pos=sim.data.states.pos.at[..., :].set(cmd[..., :3]))
+    states = states.replace(quat=states.quat.at[...].set(R.from_euler("z", cmd[..., 9]).as_quat()))
     sim.data = sim.data.replace(states=states)
 
     fig, ax = plt.subplots(figsize=(7, 5))
@@ -77,7 +77,7 @@ def main(show_plot: bool = False):
             sim.step(sim.freq // FPS)
             im.set_data(np.asarray(render(sim.data))[0, 0, ..., 3])
             fig.canvas.draw_idle()
-            plt.pause(1e-12)
+            fig.canvas.flush_events()
         plt.close(fig)
     sim.close()
 
