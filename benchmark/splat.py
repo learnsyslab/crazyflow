@@ -28,19 +28,16 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 import fire
 import jax
 import jax.numpy as jnp
-import mujoco
 import numpy as np
 from jax.errors import JaxRuntimeError
 from splax.io import fetch
 
 from crazyflow.sim import Sim
-from crazyflow.sim.sensors.splat import _render_splats, camera_intrinsics
-from crazyflow.sim.sim import sync_sim2mjx
-from crazyflow.sim.splat import SPLAT_KEYS, SPLAT_SLICES_KEY, attach_splats
+from crazyflow.sim.sensors.splat import build_render_splat_fn
+from crazyflow.sim.splat import attach_splats
 
 if TYPE_CHECKING:
     from jax import Array
-    from mujoco.mjx import Data
 
     from crazyflow.sim.data import SimData
 
@@ -48,47 +45,25 @@ ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 
 def build_rollout(
-    sim: Sim, camera: int, resolution: tuple[int, int], n_frames: int, steps_per_frame: int
-) -> Callable[[SimData, Data], Array]:
+    sim: Sim, resolution: tuple[int, int], n_frames: int, steps_per_frame: int
+) -> Callable[[SimData], Array]:
     """Build a jitted rollout that steps the sim and renders one image per frame.
 
-    The static splat buffers and camera intrinsics are closed over. Each frame advances the
-    simulation, syncs the camera pose, rasterizes the splats for every world, and reduces the image
-    to a scalar sum. Reducing inside the loop keeps XLA from eliminating the render as dead code
-    while avoiding materializing the full (n_frames, n_worlds, H, W, 3) stack.
+    Each frame advances the simulation, rasterizes the splats from the first drone's camera for
+    every world, and reduces the image to a scalar sum. Reducing inside the loop keeps XLA from
+    eliminating the render as dead code while avoiding materializing the full
+    (n_frames, n_worlds, H, W, 3) stack.
     """
     step_fn = sim.build_step_fn()
-    mjx_model = sim.mjx_model
-    f, c = camera_intrinsics(sim.mj_model, camera, resolution)
-    slices = tuple((int(start), int(stop)) for start, stop in sim.data.plugins[SPLAT_SLICES_KEY])
-    gaussians = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
-    img_shape = (resolution[1], resolution[0])
-
-    def render(data: SimData, mjx_data: Data) -> Array:
-        return _render_splats(
-            *gaussians,
-            cam_xpos=mjx_data.cam_xpos[:, [camera]],
-            cam_xmat=mjx_data.cam_xmat[:, [camera]],
-            pos=data.states.pos,
-            quat=data.states.quat,
-            slices=slices,
-            img_shape=img_shape,
-            f=f,
-            c=c,
-            background=(0.0, 0.0, 0.0),
-            exclude=None,
-        )
+    render = build_render_splat_fn(sim, drones=0, resolution=resolution)
 
     @jax.jit
-    def rollout(data: SimData, mjx_data: Data) -> Array:
-        def frame(carry: tuple[SimData, Data], _: None) -> tuple[tuple[SimData, Data], Array]:
-            data, mjx_data = carry
+    def rollout(data: SimData) -> Array:
+        def frame(data: SimData, _: None) -> tuple[SimData, Array]:
             data = step_fn(data, n_steps=steps_per_frame)
-            data, mjx_data = sync_sim2mjx(data, mjx_data, mjx_model)
-            img = render(data, mjx_data)
-            return (data, mjx_data), img.sum()
+            return data, render(data).sum()
 
-        (data, mjx_data), sums = jax.lax.scan(frame, (data, mjx_data), length=n_frames)
+        data, sums = jax.lax.scan(frame, data, length=n_frames)
         return sums.sum()
 
     return rollout
@@ -141,10 +116,6 @@ def benchmark(
             attach_splats(sim, scene=scene, drone=drone)
             steps_per_frame = max(1, sim.freq // fps)
 
-            camera = mujoco.mj_name2id(sim.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, "fpv_cam:0")
-            if camera < 0:
-                raise ValueError("Camera 'fpv_cam:0' not found in the model")
-
             # Hold a constant target so the drone keeps moving and each frame renders a distinct
             # pose. A static scene would let XLA hoist the render out of the loop.
             cmd = np.zeros((sim.n_worlds, sim.n_drones, 13), dtype=np.float32)
@@ -152,15 +123,15 @@ def benchmark(
             sim.reset()
             sim.state_control(jnp.asarray(cmd, device=sim.device))
 
-            rollout = build_rollout(sim, camera, resolution, n_frames, steps_per_frame)
+            rollout = build_rollout(sim, resolution, n_frames, steps_per_frame)
 
             # Warmup triggers JIT compilation of the full rollout.
-            jax.block_until_ready(rollout(sim.data, sim.mjx_data))
+            jax.block_until_ready(rollout(sim.data))
 
             times = []
             for _ in range(n_repeats):
                 tstart = time.perf_counter()
-                jax.block_until_ready(rollout(sim.data, sim.mjx_data))
+                jax.block_until_ready(rollout(sim.data))
                 times.append(time.perf_counter() - tstart)
 
             assert rollout._cache_size() == 1, "rollout must only be jitted once"
