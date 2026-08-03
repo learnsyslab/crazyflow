@@ -1,6 +1,6 @@
 # Gaussian Splat Rendering
 
-Crazyflow renders photorealistic images with 3D gaussian splatting through [splax](https://github.com/learnsyslab/splax). A web-based viewer visualizes the simulation as splats. A camera sensor renders batched RGB images across all worlds. Both combine a static scene splat with one splat per drone that follows the drone's pose.
+Crazyflow renders photorealistic images with 3D gaussian splatting through [splax](https://github.com/learnsyslab/splax). A web-based viewer visualizes the simulation as splats. A camera sensor renders batched RGB(-D) images across all worlds. Both combine a static scene splat with one splat per drone that follows the drone's pose.
 
 <!-- TODO: Add image of the web viewer showing the hall splat with a drone splat mid-flight -->
 
@@ -70,13 +70,36 @@ from crazyflow.sim.sensors.splat import build_render_splat_fn, render_splat_rgb
 sim = Sim(n_worlds=4, n_drones=2, device="gpu")
 attach_splats(sim, scene=scene, drone=drone)
 imgs = render_splat_rgb(sim, resolution=(320, 240))  # (4, 2, 240, 320, 3) in [0, 1]
-imgs = render_splat_rgb(sim, drones=0, resolution=(320, 240))  # single drone: (4, 240, 320, 3)
+imgs = render_splat_rgb(sim, drones=0, resolution=(320, 240))  # single drone: (4, 1, 240, 320, 3)
 
-# Bake camera intrinsics and splat metadata into a compiled function for better performance
+# Bake input args into a compiled function. The result is a pure function of sim.data, so it can be
+# traced, jitted, and differentiated.
 render_fn = build_render_splat_fn(sim, resolution=(320, 240))
-imgs = render_fn(sim)
+imgs = render_fn(sim.data)
 ```
 
-`exclude_self=True` hides each drone's own splat from its own camera, so a drone sees the others but not itself. Depth images are not supported yet.
+`exclude_self=True` hides each drone's own splat from its own camera, so a drone sees the others but not itself.
 
 See `examples/rendering/splat_camera.py` for a matplotlib-based camera sensor demo.
+
+## Depth sensor
+
+`render_splat_rgbd` adds depth as a fourth channel.
+
+<!-- notest: requires splax and a CUDA GPU -->
+```{ .python notest }
+from crazyflow.sim.sensors.splat import build_render_splat_rgbd_fn, render_splat_rgbd
+
+rgbd = render_splat_rgbd(sim, resolution=(320, 240), max_range=8.0)  # (4, 2, 240, 320, 4)
+rgb, depth = rgbd[..., :3], rgbd[..., 3]
+
+# Bake camera intrinsics, sensor range, and splat metadata into a compiled function
+render_fn = build_render_splat_rgbd_fn(sim, resolution=(320, 240), max_range=8.0)
+rgbd = render_fn(sim.data)
+```
+
+Gaussians are semi-transparent, so a pixel only carries a usable depth once enough of them accumulate behind it. Pixels whose coverage stays below `alpha_threshold` count as empty space and report `max_range`, which is also the value depth is clipped to.
+
+The values are depth along the camera's optical axis in meters. `render_depth` from `crazyflow.sim.sensors.depth` raycasts the MuJoCo geometry instead and returns ray distances, so the two are not interchangeable.
+
+See `examples/rendering/splat_depth.py` for a depth camera flying a lap around the hall.

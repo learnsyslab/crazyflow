@@ -79,10 +79,10 @@ Inserting a random external force and torque into the step pipeline. The disturb
 
 ## Cameras and RGBD
 
-Offscreen rendering returns RGB and depth images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.
+Offscreen rendering returns RGB-D images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.
 
 <figure class="example-media">
-  <img src="../img/examples/cameras.gif" alt="RGB and depth camera outputs from a Crazyflow drone simulation">
+  <img src="../img/examples/cameras.gif" alt="RGB-D camera outputs from a Crazyflow drone simulation">
 </figure>
 
 <!-- notest: imported script, covered by tests/integration/test_examples.py -->

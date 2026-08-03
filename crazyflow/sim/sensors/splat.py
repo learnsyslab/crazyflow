@@ -1,11 +1,8 @@
-"""Gaussian splat camera sensor built on `splax <https://github.com/learnsyslab/splax>`_.
+"""Gaussian splat camera sensors built on `splax <https://github.com/learnsyslab/splax>`_.
 
-Renders batched RGB images of the splats attached via :func:`crazyflow.sim.splat.attach_splats`
-from any model camera. splax rasterizes with CUDA kernels only, so this module requires the
+Renders batched RGB(-D) images of the splats attached via :func:`crazyflow.sim.splat.attach_splats`
+from any model camera. splax rasterizes with Warp kernels only, so this module requires the
 ``splats`` extra and a simulation constructed with ``device="gpu"``.
-
-Note:
-    Splat-based depth images are not supported yet.
 """
 
 from __future__ import annotations
@@ -18,64 +15,57 @@ import jax.numpy as jnp
 import mujoco
 import numpy as np
 import splax
-from scipy.spatial.transform import RigidTransform
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.sim.sim import requires_mujoco_sync
+from crazyflow.sim.sim import sync_sim2mjx
 from crazyflow.sim.splat import SPLAT_KEYS, SPLAT_SLICES_KEY, requires_gpu, requires_splats
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
 
     from jax import Array
+    from mujoco.mjx import Data, Model
 
+    from crazyflow.sim.data import SimData
     from crazyflow.sim.sim import Sim
 
-# TODO: Add splat-based depth camera sensor
 
-
-@requires_mujoco_sync
 @requires_splats
 @requires_gpu
 def render_splat_rgb(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
     resolution: tuple[int, int] = (640, 480),
-    background: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    background: tuple[float, float, float] = (1.0, 1.0, 1.0),
     exclude_self: bool = False,
     camera_prefix: str = "fpv_cam",
 ) -> Array:
-    """Render RGB images of the attached splats from the drone fpv cameras in all worlds.
+    """Render RGB images of the attached splats in all worlds.
 
-    Renders the first person camera of each drone across all worlds in a single vmapped call. Scene
-    gaussians are rendered at their static pose, drone gaussians follow the drone poses.
+    Scene gaussians are rendered at their static pose, drone gaussians follow the drone poses.
 
     Args:
         sim: The simulation to render.
-        drones: Drones whose fpv cameras are rendered. ``None`` renders every drone. A single int
-            renders one drone and drops the drone axis from the output. A sequence renders that
-            subset in order.
+        drones: Drones whose cameras are rendered. ``None`` renders every drone, an int renders one,
+            and a sequence renders that subset in order.
         resolution: Image resolution as (width, height).
         background: RGB background color with values in [0, 1].
-        exclude_self: If True, hide each drone's own splat from its own camera so a drone sees the
-            others but not itself.
+        exclude_self: Hide each drone's own splat from its camera so a drone does not see itself.
         camera_prefix: Camera name prefix, resolved to ``{camera_prefix}:{drone}`` for each drone.
 
     Returns:
-        RGB images with values in [0, 1]. Shape (n_worlds, n_drones, height, width, 3), or
-        (n_worlds, height, width, 3) when ``drones`` selects a single drone.
+        RGB images with values in [0, 1] of shape (n_worlds, n_selected, height, width, 3).
     """
-    drone_ids, single = _resolve_drones(sim, drones)
-    cameras = [_camera(sim.mj_model, camera_prefix, d) for d in drone_ids]
+    drone_ids = _resolve_drones(sim, drones)
+    cameras = tuple(_camera(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras[0], resolution)
-    arrays = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
-    slices = tuple((int(start), int(stop)) for start, stop in sim.data.plugins[SPLAT_SLICES_KEY])
-    img = _render_splats(
-        *arrays,
-        cam_xpos=sim.mjx_data.cam_xpos[:, cameras],
-        cam_xmat=sim.mjx_data.cam_xmat[:, cameras],
-        pos=sim.data.states.pos,
-        quat=sim.data.states.quat,
+    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
+    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
+    return _render(
+        sim.data,
+        sim.mjx_data,
+        sim.mjx_model,
+        cameras=cameras,
         slices=slices,
         img_shape=(resolution[1], resolution[0]),
         f=f,
@@ -83,15 +73,68 @@ def render_splat_rgb(
         background=background,
         exclude=drone_ids if exclude_self else None,
     )
-    return img[:, 0] if single else img
 
 
-def _resolve_drones(sim: Sim, drones: int | Sequence[int] | None) -> tuple[tuple[int, ...], bool]:
-    """Normalize a drone selection to a tuple of indices and whether to squeeze the drone axis."""
+@requires_splats
+@requires_gpu
+def render_splat_rgbd(
+    sim: Sim,
+    drones: int | Sequence[int] | None = None,
+    resolution: tuple[int, int] = (640, 480),
+    background: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    alpha_threshold: float = 0.5,
+    max_range: float = 10.0,
+    exclude_self: bool = False,
+    camera_prefix: str = "fpv_cam",
+) -> Array:
+    """Render RGB-D images of the attached splats in all worlds.
+
+    Adds the expected depth of the gaussians as a fourth channel. Pixels whose coverage stays below
+    ``alpha_threshold`` are read as empty space and report ``max_range``.
+
+    Args:
+        sim: The simulation to render.
+        drones: Drones whose cameras are rendered. ``None`` renders every drone, an int renders one,
+            and a sequence renders that subset in order.
+        resolution: Image resolution as (width, height).
+        background: RGB background color with values in [0, 1].
+        alpha_threshold: Accumulated coverage a pixel needs before its depth counts as a hit.
+        max_range: Sensor range in meters. Reported where nothing is hit, and depth clips to it.
+        exclude_self: Hide each drone's own splat from its camera so a drone does not see itself.
+        camera_prefix: Camera name prefix, resolved to ``{camera_prefix}:{drone}`` for each drone.
+
+    Returns:
+        RGB in [0, 1] followed by depth in meters along the camera's optical axis, of shape
+        (n_worlds, n_selected, height, width, 4).
+    """
+    drone_ids = _resolve_drones(sim, drones)
+    cameras = tuple(_camera(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    f, c = camera_intrinsics(sim.mj_model, cameras[0], resolution)
+    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
+    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
+    return _render(
+        sim.data,
+        sim.mjx_data,
+        sim.mjx_model,
+        cameras=cameras,
+        slices=slices,
+        img_shape=(resolution[1], resolution[0]),
+        f=f,
+        c=c,
+        background=background,
+        exclude=drone_ids if exclude_self else None,
+        depth=True,
+        alpha_threshold=alpha_threshold,
+        max_range=max_range,
+    )
+
+
+def _resolve_drones(sim: Sim, drones: int | Sequence[int] | None) -> tuple[int, ...]:
+    """Normalize a drone selection to a tuple of drone indices."""
     if isinstance(drones, (int, np.integer)):
-        return (int(drones),), True
+        return (int(drones),)
     ids = range(sim.n_drones) if drones is None else drones
-    return tuple(int(d) for d in ids), False
+    return tuple(int(d) for d in ids)
 
 
 def _camera(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
@@ -109,54 +152,84 @@ def build_render_splat_fn(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
     resolution: tuple[int, int] = (640, 480),
-    background: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    background: tuple[float, float, float] = (1.0, 1.0, 1.0),
     exclude_self: bool = False,
     camera_prefix: str = "fpv_cam",
-) -> Callable[[Sim], Array]:
+) -> Callable[[SimData], Array]:
     """Build a splat renderer function for a given drone selection, camera prefix, and resolution.
 
-    Mirrors :func:`crazyflow.sim.sensors.depth.build_render_depth_fn`: the camera intrinsics and
-    the static slice metadata are baked into the returned function, which takes a ``Sim`` object
-    and returns RGB images shaped like :func:`render_splat_rgb`'s output for the same ``drones``.
-    Improves performance compared to :func:`crazyflow.sim.sensors.splat.render_splat_rgb`. Requires
-    splats to have been attached via :func:`crazyflow.sim.splat.attach_splats`.
+    We bake all arguments into the function to avoid the overhead of flattening static arguments,
+    significantly improving performance.
     """
-    drone_ids, single = _resolve_drones(sim, drones)
-    cameras = [_camera(sim.mj_model, camera_prefix, d) for d in drone_ids]
+    drone_ids = _resolve_drones(sim, drones)
+    cameras = tuple(_camera(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras[0], resolution)
-    slices = tuple((int(start), int(stop)) for start, stop in sim.data.plugins[SPLAT_SLICES_KEY])
-    render_fn = partial(
-        _render_splats,
-        slices=slices,
-        img_shape=(resolution[1], resolution[0]),
-        f=f,
-        c=c,
-        background=background,
-        exclude=drone_ids if exclude_self else None,
+    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
+    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
+    return jax.jit(
+        partial(
+            _render,
+            mjx_data=sim.mjx_data,
+            mjx_model=sim.mjx_model,
+            cameras=cameras,
+            slices=slices,
+            img_shape=(resolution[1], resolution[0]),
+            f=f,
+            c=c,
+            background=background,
+            exclude=drone_ids if exclude_self else None,
+        )
     )
 
-    @requires_mujoco_sync
-    def render_splat_fn(sim: Sim) -> Array:
-        arrays = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
-        img = render_fn(
-            *arrays,
-            cam_xpos=sim.mjx_data.cam_xpos[:, cameras],
-            cam_xmat=sim.mjx_data.cam_xmat[:, cameras],
-            pos=sim.data.states.pos,
-            quat=sim.data.states.quat,
-        )
-        return img[:, 0] if single else img
 
-    return render_splat_fn
+@requires_splats
+@requires_gpu
+def build_render_splat_rgbd_fn(
+    sim: Sim,
+    drones: int | Sequence[int] | None = None,
+    resolution: tuple[int, int] = (640, 480),
+    background: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    alpha_threshold: float = 0.5,
+    max_range: float = 10.0,
+    exclude_self: bool = False,
+    camera_prefix: str = "fpv_cam",
+) -> Callable[[SimData], Array]:
+    """Build a splat RGB-D renderer for a drone selection, camera prefix, and resolution.
+
+    Mirrors :func:`build_render_splat_fn`.
+    """
+    drone_ids = _resolve_drones(sim, drones)
+    cameras = tuple(_camera(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    f, c = camera_intrinsics(sim.mj_model, cameras[0], resolution)
+    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
+    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
+    # The outer jit turns the MuJoCo model and data into baked-in constants rather than arguments
+    # flattened on every call, which otherwise dominates the runtime of a single render.
+    return jax.jit(
+        partial(
+            _render,
+            mjx_data=sim.mjx_data,
+            mjx_model=sim.mjx_model,
+            cameras=cameras,
+            slices=slices,
+            img_shape=(resolution[1], resolution[0]),
+            f=f,
+            c=c,
+            background=background,
+            exclude=drone_ids if exclude_self else None,
+            depth=True,
+            alpha_threshold=alpha_threshold,
+            max_range=max_range,
+        )
+    )
 
 
 @jax.jit
 def viewmats(cam_xpos: Array, cam_xmat: Array) -> Array:
     """World-to-camera matrices in OpenCV convention for MuJoCo cameras.
 
-    MuJoCo cameras look along -z with +y up (OpenGL convention), whereas splax expects OpenCV
-    convention cameras (+z forward, +y down). Flipping the y and z camera axes converts between
-    the two.
+    MuJoCo cameras look along -z with +y up (OpenGL convention), splax expects OpenCV convention
+    cameras (+z forward, +y down).
 
     Args:
         cam_xpos: Camera positions of shape (..., 3).
@@ -167,8 +240,14 @@ def viewmats(cam_xpos: Array, cam_xmat: Array) -> Array:
     """
     rot_c2w = cam_xmat * jnp.array([1.0, -1.0, -1.0])  # Flip the y and z camera axes (columns)
     rot = jnp.swapaxes(rot_c2w, -1, -2)
-    trans = -(rot @ cam_xpos[..., None])[..., 0]
-    return RigidTransform.from_components(trans, R.from_matrix(rot, assume_valid=True)).as_matrix()
+    return _homogeneous(rot, -(rot @ cam_xpos[..., None])[..., 0])
+
+
+# TODO: RigidTransform.from_components produces NaN gradients. Swap once scipy#25767 is released.
+def _homogeneous(rot: Array, trans: Array) -> Array:
+    """Stack a rotation matrix and a translation into a (..., 4, 4) homogeneous transform."""
+    bottom = jnp.broadcast_to(jnp.array([0.0, 0.0, 0.0, 1.0]), (*rot.shape[:-2], 1, 4))
+    return jnp.concatenate([jnp.concatenate([rot, trans[..., None]], -1), bottom], -2)
 
 
 def camera_intrinsics(
@@ -190,55 +269,107 @@ def camera_intrinsics(
     return (focal, focal), (width / 2.0, height / 2.0)
 
 
-@jax.jit(static_argnames=("slices", "img_shape", "f", "c", "background", "exclude"))
-def _render_splats(
-    means: Array,
-    log_scales: Array,
-    quats: Array,
-    sh_colors: Array,
-    logit_opacities: Array,
+def _camera_transforms(
     cam_xpos: Array,
     cam_xmat: Array,
     pos: Array,
     quat: Array,
+    slices: tuple[tuple[int, int], ...],
+    exclude: tuple[int, ...] | None,
+) -> tuple[Array, Array | None, int | None]:
+    """View matrices, drone transforms, and the axis the transforms are vmapped over per camera."""
+    # viewmats needs a single leading batch axis, the render is then nested-vmapped over both axes.
+    vm = viewmats(cam_xpos.reshape(-1, 3), cam_xmat.reshape(-1, 3, 3))
+    vm = vm.reshape(*cam_xpos.shape[:2], 4, 4)
+    if not slices:
+        return vm, None, None
+    tfs = _homogeneous(R.from_quat(quat).as_matrix(), pos)  # (n_worlds, n_drones)
+    if exclude is None:
+        return vm, tfs, None
+    # Slices are static, so teleport each camera's own drone far below the scene to cull it.
+    far = jnp.eye(4, dtype=tfs.dtype).at[2, 3].set(-1e4)
+    n_cams = cam_xpos.shape[1]
+    tfs = jnp.broadcast_to(tfs[:, None], (tfs.shape[0], n_cams, *tfs.shape[1:]))
+    return vm, tfs.at[:, jnp.arange(n_cams), jnp.asarray(exclude)].set(far), 0
+
+
+@jax.jit(
+    static_argnames=(
+        "cameras",
+        "slices",
+        "img_shape",
+        "f",
+        "c",
+        "background",
+        "exclude",
+        "depth",
+        "alpha_threshold",
+        "max_range",
+    )
+)
+def _render(
+    data: SimData,
+    mjx_data: Data,
+    mjx_model: Model,
+    cameras: tuple[int, ...],
     slices: tuple[tuple[int, int], ...],
     img_shape: tuple[int, int],
     f: tuple[float, float],
     c: tuple[float, float],
     background: tuple[float, float, float],
     exclude: tuple[int, ...] | None,
+    depth: bool = False,
+    alpha_threshold: float = 0.5,
+    max_range: float = 10.0,
 ) -> Array:
-    """Render (n_worlds, n_cams, height, width, 3) with each drone at its current pose.
+    """Render the splats from every camera with each drone at its current pose.
 
-    ``cam_xpos`` is (n_worlds, n_cams, 3) and ``cam_xmat`` (n_worlds, n_cams, 3, 3). ``exclude``, if
-    given, holds the drone index culled from each camera, hiding a drone from its own view.
+    Args:
+        data: Simulation data holding the drone states and the attached splats.
+        mjx_data: MuJoCo data the camera kinematics are computed from.
+        mjx_model: MuJoCo model the camera kinematics are computed from.
+        cameras: Model camera index rendered for each selected drone.
+        slices: Start and stop index of each drone's gaussians.
+        img_shape: Image size as (height, width).
+        f: Focal lengths in pixels.
+        c: Principal point in pixels.
+        background: RGB background color.
+        exclude: Drone culled from each camera, or None to render every drone everywhere.
+        depth: If True, append the depth in meters as a fourth channel.
+        alpha_threshold: Coverage a pixel needs before its depth counts as a hit. Unused for RGB.
+        max_range: Sensor range in meters. Unused for RGB.
+
+    Returns:
+        Images of shape (n_worlds, n_cams, height, width, 3), one channel deeper with ``depth``.
     """
-    # viewmats needs a single leading batch axis, the render is then nested-vmapped over both axes.
-    vm = viewmats(cam_xpos.reshape(-1, 3), cam_xmat.reshape(-1, 3, 3))
-    vm = vm.reshape(*cam_xpos.shape[:2], 4, 4)
-    bg = jnp.asarray(background, dtype=means.dtype)
+    _, mjx_data = sync_sim2mjx(data, mjx_data, mjx_model)  # We need the current camera poses
+    cams = jnp.asarray(cameras)
+    arrays = tuple(data.plugins[key] for key in SPLAT_KEYS)
+    vm, tfs, cam_axis = _camera_transforms(
+        mjx_data.cam_xpos[:, cams],
+        mjx_data.cam_xmat[:, cams],
+        data.states.pos,
+        data.states.quat,
+        slices,
+        exclude,
+    )
     render = partial(
         splax.render,
-        means,
-        log_scales,
-        quats,
-        sh_colors,
-        logit_opacities,
-        background=bg,
+        *arrays,
+        background=jnp.asarray(background, dtype=arrays[0].dtype),
         img_shape=img_shape,
         f=f,
         c=c,
+        render_depth=depth,
     )
-    if not slices:
-        return jax.vmap(jax.vmap(lambda v: render(viewmat=v)[0]))(vm)
-    tfs = RigidTransform.from_components(pos, R.from_quat(quat)).as_matrix()  # (n_worlds, n_drones)
-    cam_axis = None
-    if exclude is not None:
-        # Slices are static, so teleport each camera's own drone far below the scene to cull it.
-        far = jnp.eye(4, dtype=tfs.dtype).at[2, 3].set(-1e4)
-        n_cams = cam_xpos.shape[1]
-        tfs = jnp.broadcast_to(tfs[:, None], (tfs.shape[0], n_cams, *tfs.shape[1:]))
-        tfs = tfs.at[:, jnp.arange(n_cams), jnp.asarray(exclude)].set(far)
-        cam_axis = 0
-    render_cam = lambda v, t: render(viewmat=v, gaussian_transforms=t, gaussian_slices=slices)[0]  # noqa: E731
-    return jax.vmap(jax.vmap(render_cam, in_axes=(0, cam_axis)), in_axes=(0, 0))(vm, tfs)
+    if tfs is None:
+        img, alpha = jax.vmap(jax.vmap(lambda v: render(viewmat=v)))(vm)
+    else:
+        render_cam = lambda v, t: render(viewmat=v, gaussian_transforms=t, gaussian_slices=slices)  # noqa: E731
+        img, alpha = jax.vmap(jax.vmap(render_cam, in_axes=(0, cam_axis)), in_axes=(0, 0))(vm, tfs)
+    if not depth:
+        return img
+    # splax reads 0 depth where nothing was hit, so thin coverage would otherwise come out as a
+    # surface right at the camera rather than as empty space.
+    metric = jnp.where(alpha < alpha_threshold, max_range, jnp.minimum(img[..., 3], max_range))
+    return img.at[..., 3].set(metric)

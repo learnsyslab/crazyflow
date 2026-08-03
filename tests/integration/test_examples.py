@@ -10,6 +10,7 @@ EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
 # Examples that import splax. splax requires cuda, so it cannot run in CI or on OSX platforms.
 REQUIRES_SPLAX = (
     "rendering/splat_camera.py",
+    "rendering/splat_depth.py",
     "rendering/splat_gradients.py",
     "rendering/splat_viewer.py",
 )
