@@ -247,10 +247,10 @@ def test_build_render_splat_fn(tmp_path: Path):
     sim.step(sim.freq // 10)
     assert not np.allclose(before, render_fn(sim.data))
     # The drone selection and self-exclusion carry through the builder
-    one = build_render_splat_fn(sim, resolution=(32, 24), drones=1)
+    one = build_render_splat_fn(sim, resolution=(32, 24), drones=1)(sim.data)
     assert one.shape == (2, 1, 24, 32, 3)
     assert np.allclose(one, render_splat_rgb(sim, drones=1, resolution=(32, 24)), atol=1e-5)
-    excl = build_render_splat_fn(sim, resolution=(32, 24), exclude_self=True)
+    excl = build_render_splat_fn(sim, resolution=(32, 24), exclude_self=True)(sim.data)
     assert np.allclose(excl, render_splat_rgb(sim, resolution=(32, 24), exclude_self=True), 1e-5)
     assert not np.allclose(excl, render_fn(sim.data))
 

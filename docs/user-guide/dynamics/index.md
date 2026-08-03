@@ -28,10 +28,7 @@ from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
 # Force-torque and rotor_vel control modes require first_principles
-sim = Sim(
-    dynamics=Dynamics.first_principles,
-    control=Control.rotor_vel,
-)
+sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
 sim.reset()
 ```
 

@@ -149,13 +149,15 @@ from crazyflow.sim.data import SimData
 sim = Sim(n_worlds=1, n_drones=1)
 sim.reset()
 
-_mjx_data = sim.mjx_data   # captured in closure
+_mjx_data = sim.mjx_data  # captured in closure
+
 
 def check_contacts(sim_data: SimData, obstacle_mocap_pos: Array) -> Array:
     # Update obstacle positions and sync inside JIT
     mjx_data = _mjx_data.replace(mocap_pos=obstacle_mocap_pos)
     _, mjx_data = sync_sim2mjx(sim_data, mjx_data, sim.mjx_model)
     return mjx_data._impl.contact.dist < 0
+
 
 in_contact = check_contacts(sim.data, sim.mjx_data.mocap_pos)
 ```

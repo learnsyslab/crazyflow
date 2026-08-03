@@ -21,9 +21,9 @@ sim = Sim(
     dynamics=Dynamics.first_principles,
     control=Control.state,
     integrator=Integrator.rk4,
-    freq=500,                       # dynamics update rate, Hz
-    state_freq=100,                 # state controller rate, Hz
-    attitude_freq=500,              # attitude controller rate, Hz
+    freq=500,  # dynamics update rate, Hz
+    state_freq=100,  # state controller rate, Hz
+    attitude_freq=500,  # attitude controller rate, Hz
     device="cpu",
 )
 sim.reset()
@@ -152,6 +152,7 @@ sim.step(50)
 
 # Reset only worlds 0 and 2, leaving 1 and 3 running
 import jax.numpy as jnp
+
 mask = jnp.array([True, False, True, False])
 sim.reset(mask=mask)
 ```
@@ -174,9 +175,9 @@ for _ in range(10):
     sim.step(sim.freq // sim.control_freq)
 
 # All drones in all worlds
-pos = sim.data.states.pos        # (2, 3, 3)
-quat = sim.data.states.quat      # (2, 3, 4)
-vel = sim.data.states.vel        # (2, 3, 3)
+pos = sim.data.states.pos  # (2, 3, 3)
+quat = sim.data.states.quat  # (2, 3, 4)
+vel = sim.data.states.vel  # (2, 3, 3)
 
 # Drone 1 in world 0
 pos_w0_d1 = sim.data.states.pos[0, 1]  # (3,)
@@ -208,11 +209,13 @@ from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
+
 def randomize_mass(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
     key, mass_key = jax.random.split(data.core.rng_key)
     mass = data.params.mass + jax.random.normal(mass_key, data.params.mass.shape) * 2e-3
     params = leaf_replace(data.params, mask, mass=mass)
     return data.replace(params=params, core=data.core.replace(rng_key=key))
+
 
 sim = Sim(n_worlds=4, n_drones=1)
 append_fn(sim.reset_pipeline, randomize_mass)

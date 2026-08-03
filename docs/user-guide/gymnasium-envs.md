@@ -70,12 +70,14 @@ from crazyflow.envs.drone_env import DroneEnv
 from crazyflow.sim.data import SimData
 from crazyflow.utils import leaf_replace
 
+
 def randomize(data: SimData, default_data: SimData, mask: jax.Array | None) -> SimData:
     key, subkey = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
     noise = jax.random.normal(subkey, data.states.pos.shape) * 0.05
     states = leaf_replace(data.states, mask, pos=data.states.pos + noise)
     return data.replace(states=states)
+
 
 env = DroneEnv(num_envs=64, reset_randomization=randomize)
 env.close()

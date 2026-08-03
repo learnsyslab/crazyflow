@@ -20,11 +20,13 @@ step, reset = sim.build_step_fn(), sim.build_reset_fn()
 cmd = jnp.zeros((1, 1, 4), dtype=jnp.float32)
 cmd = cmd.at[..., 3].set(float(data.params.mass[0, 0, 0]) * 9.81)
 
+
 @jax.jit
 def run(data, cmd):
     data = F.attitude_control(data, cmd)
     data = step(data, 10)
     return data
+
 
 data = run(data, cmd)
 assert data.states.pos.shape == (1, 1, 3)
@@ -92,12 +94,14 @@ step, reset = sim.build_step_fn(), sim.build_reset_fn()
 cmd = jnp.zeros((1, 1, 4), dtype=jnp.float32)
 cmd = cmd.at[..., 3].set(float(data.params.mass[0, 0, 0]) * 9.81)
 
+
 @jax.jit
 def simulate_episode(data, default_data, cmd):
     data = reset(data, default_data)
     data = F.attitude_control(data, cmd)
     data = step(data, 10)
     return data
+
 
 data = simulate_episode(data, default_data, cmd)
 pos = data.states.pos[0, 0]
@@ -119,21 +123,17 @@ sim = Sim(control=Control.attitude, attitude_freq=50)
 sim.reset()
 
 # Place the drone 2 m above the floor, above the 1 m target
-data = sim.data.replace(
-    states=sim.data.states.replace(
-        pos=sim.data.states.pos.at[..., 2].set(2.0)
-    )
-)
+data = sim.data.replace(states=sim.data.states.replace(pos=sim.data.states.pos.at[..., 2].set(2.0)))
 step = sim.build_step_fn()
+
 
 def loss(cmd, data):
     data = data.replace(
-        controls=data.controls.replace(
-            attitude=data.controls.attitude.replace(staged_cmd=cmd)
-        )
+        controls=data.controls.replace(attitude=data.controls.attitude.replace(staged_cmd=cmd))
     )
     data = step(data, 10)
     return (data.states.pos[0, 0, 2] - 1.0) ** 2  # squared error to 1 m
+
 
 grad_fn = jax.jit(jax.grad(loss))
 

@@ -71,9 +71,7 @@ nominal_J = dynamics.keywords["J"]
 
 @jax.jit
 def step(pos, quat, vel, ang_vel, cmd, rotor_vel, mass, J, J_inv):
-    return dynamics(
-        pos, quat, vel, ang_vel, cmd, rotor_vel=rotor_vel, mass=mass, J=J, J_inv=J_inv
-    )
+    return dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel=rotor_vel, mass=mass, J=J, J_inv=J_inv)
 
 
 key, k1, k2 = jax.random.split(key, 3)
