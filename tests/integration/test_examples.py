@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from conftest import available_backends
 
-EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
+EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "examples"
 
 # Examples that render splats. splax rasterizes with cuda, so these need splax and a GPU.
 REQUIRES_SPLAX = (

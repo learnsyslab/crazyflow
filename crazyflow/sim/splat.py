@@ -89,17 +89,17 @@ def attach_splats(sim: Sim, scene: Path | None = None, drone: Path | None = None
     """
     if scene is None and drone is None:
         raise ValueError("At least one of scene or drone must be provided")
-    parts, n_scene, slices = [], 0, ()
+    parts, n_splats, slices = [], 0, ()
     if scene is not None:
         scene_arrays = splax.io.load_ply(scene)
-        n_scene = scene_arrays[0].shape[0]
+        n_splats = scene_arrays[0].shape[0]
         parts.append(scene_arrays)
     if drone is not None:
         drone_arrays = splax.io.load_ply(drone)
-        n_drone = drone_arrays[0].shape[0]
+        n_drone_splats = drone_arrays[0].shape[0]
         parts.extend([drone_arrays] * sim.n_drones)
-        starts = [n_scene + i * n_drone for i in range(sim.n_drones)]
-        slices = tuple((start, start + n_drone) for start in starts)
+        starts = [n_splats + i * n_drone_splats for i in range(sim.n_drones)]
+        slices = tuple((start, start + n_drone_splats) for start in starts)
     arrays = [jnp.concatenate(x, axis=0) for x in zip(*parts)]
     splat_data = dict(zip(SPLAT_KEYS, arrays))
     splat_data[SPLAT_SLICES_KEY] = jnp.asarray(slices, dtype=jnp.int32).reshape(-1, 2)
@@ -126,9 +126,9 @@ class SplatViewer:
         arrays = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
         slices = tuple((start, stop) for start, stop in sim.data.plugins[SPLAT_SLICES_KEY])
         self.viewer = Viewer(port=port)
-        n_scene = slices[0][0] if slices else arrays[0].shape[0]
-        if n_scene > 0:
-            self.viewer.add_splats("scene", *(x[:n_scene] for x in arrays))
+        n_splats = slices[0][0] if slices else arrays[0].shape[0]
+        if n_splats > 0:
+            self.viewer.add_splats("scene", *(x[:n_splats] for x in arrays))
         for i, (start, stop) in enumerate(slices):
             self.viewer.add_splats(f"drone:{i}", *(x[start:stop] for x in arrays))
         self._n_drones = len(slices)
