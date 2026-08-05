@@ -57,7 +57,7 @@ def render_splat_rgb(
         RGB images with values in [0, 1] of shape (n_worlds, n_selected, height, width, 3).
     """
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_ids(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     # tolist pulls the bounds over in one transfer, int() would sync the device per bound
     slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
@@ -108,7 +108,7 @@ def render_splat_rgbd(
         (n_worlds, n_selected, height, width, 4).
     """
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_ids(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     # tolist pulls the bounds over in one transfer, int() would sync the device per bound
     slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
@@ -137,13 +137,13 @@ def _resolve_drones(sim: Sim, drones: int | Sequence[int] | None) -> tuple[int, 
     return tuple(int(d) for d in ids)
 
 
-def _camera_ids(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
+def _camera_id(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
     """Camera index of a drone for the given camera name prefix."""
     name = f"{prefix}:{drone}"
-    camera = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_CAMERA, name)
-    if camera < 0:
+    camera_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_CAMERA, name)
+    if camera_id < 0:
         raise ValueError(f"Camera '{name}' not found in the model")
-    return camera
+    return camera_id
 
 
 @requires_splats
@@ -162,7 +162,7 @@ def build_render_splat_fn(
     significantly improving performance.
     """
     drone_ids = _resolve_drones(sim, drones)
-    cameras_ids = tuple(_camera_ids(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    cameras_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras_ids[0], resolution)
     # tolist pulls the bounds over in one transfer, int() would sync the device per bound
     slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
@@ -199,7 +199,7 @@ def build_render_splat_rgbd_fn(
     Mirrors :func:`build_render_splat_fn`.
     """
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_ids(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     # tolist pulls the bounds over in one transfer, int() would sync the device per bound
     slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
@@ -251,20 +251,20 @@ def _homogeneous(rot: Array, trans: Array) -> Array:
 
 
 def camera_intrinsics(
-    mj_model: mujoco.MjModel, camera: int, resolution: tuple[int, int]
+    mj_model: mujoco.MjModel, camera_id: int, resolution: tuple[int, int]
 ) -> tuple[tuple[float, float], tuple[float, float]]:
     """Pinhole intrinsics of a model camera for a given image resolution.
 
     Args:
         mj_model: MuJoCo model containing the camera.
-        camera: Camera index.
+        camera_id: Camera index.
         resolution: Image resolution as (width, height).
 
     Returns:
         Focal lengths (fx, fy) and principal point (cx, cy) in pixels.
     """
     width, height = resolution
-    fov_y = np.deg2rad(mj_model.cam_fovy[camera])
+    fov_y = np.deg2rad(mj_model.cam_fovy[camera_id])
     focal = float(height / (2.0 * np.tan(fov_y / 2.0)))
     return (focal, focal), (width / 2.0, height / 2.0)
 
