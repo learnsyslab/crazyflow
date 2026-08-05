@@ -73,13 +73,14 @@ from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import append_fn
 
+
 def randomize_initial_pos(data: SimData, default_data: SimData, mask: Array | None) -> SimData:
     key, subkey = jax.random.split(data.core.rng_key)
     noise = jax.random.normal(subkey, data.states.pos.shape) * 0.1  # ±10 cm
     return data.replace(
-        states=data.states.replace(pos=data.states.pos + noise),
-        core=data.core.replace(rng_key=key),
+        states=data.states.replace(pos=data.states.pos + noise), core=data.core.replace(rng_key=key)
     )
+
 
 sim = Sim(n_worlds=16)
 append_fn(sim.reset_pipeline, randomize_initial_pos)
@@ -133,9 +134,11 @@ from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import append_fn
 
+
 def my_step_stage(data: SimData) -> SimData:
     # JAX operations only — return updated data
     return data.replace(states=data.states.replace(pos=data.states.pos + 0.01))
+
 
 sim = Sim()
 append_fn(sim.step_pipeline, my_step_stage)

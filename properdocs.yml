@@ -64,6 +64,7 @@ nav:
       - JIT compilation: user-guide/control/jit.md
     - Pipelines: user-guide/pipelines.md
     - Visualization: user-guide/visualization.md
+    - Gaussian Splat Rendering: user-guide/splats.md
     - MuJoCo Integration: user-guide/mujoco.md
     - Gymnasium Environments: user-guide/gymnasium-envs.md
   - Examples: examples/index.md

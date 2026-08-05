@@ -57,6 +57,7 @@ sim = Sim(n_worlds=1, n_drones=1)
 sim.reset()
 
 import jax.numpy as jnp
+
 new_pos = sim.data.states.pos.at[..., 2].add(1.0)
 sim.data = sim.data.replace(states=sim.data.states.replace(pos=new_pos))
 ```

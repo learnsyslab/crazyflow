@@ -39,7 +39,10 @@ cmd = np.full((4,), 15_000.0)
 rotor_vel = np.full((4,), 12_000.0)
 
 pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot = dynamics(
-    pos, quat, vel, ang_vel,
+    pos,
+    quat,
+    vel,
+    ang_vel,
     cmd,  # shape (4,) — motor RPMs
     rotor_vel,  # shape (4,) — current motor RPMs; pass None to skip rotor dynamics
 )

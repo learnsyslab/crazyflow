@@ -193,6 +193,20 @@ class Sim:
         width: int = 1920,
         height: int = 1080,
     ) -> NDArray | None:
+        """Render one world of the simulation.
+
+        Args:
+            mode: Render mode. ``"human"`` opens an interactive MuJoCo viewer window,
+                ``"rgb_array"``, ``"depth_array"`` and ``"rgbd_tuple"`` return offscreen renderings.
+            world: Index of the world to render.
+            camera: Camera name or id. -1 is the global free camera.
+            cam_config: Camera configuration for the MuJoCo viewer.
+            width: Image width for offscreen rendering.
+            height: Image height for offscreen rendering.
+
+        Returns:
+            The rendered image(s) for the offscreen modes, None for ``"human"``.
+        """
         if self.viewer is None:
             if isinstance(camera, str):
                 cam_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, camera)

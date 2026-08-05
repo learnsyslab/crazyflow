@@ -1,8 +1,33 @@
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+
+def collect_csv_files(*paths: Path) -> list[Path]:
+    """Collect CSV files from paths or from the default data directory.
+
+    Args:
+        paths: CSV files or directories containing CSV files.
+
+    Returns:
+        List of CSV file paths.
+    """
+    default_data_folder = Path(__file__).parent / "data"
+    inputs = [Path(p) for p in paths] if paths else [default_data_folder]
+    csv_files: list[Path] = []
+    for input_path in inputs:
+        if input_path.is_dir():
+            csv_files.extend(sorted(input_path.glob("*.csv")))
+        elif input_path.is_file() and input_path.suffix.lower() == ".csv":
+            csv_files.append(input_path)
+        else:
+            raise ValueError(f"Expected a CSV file or directory, got: {input_path}")
+    if not csv_files:
+        raise ValueError("No CSV files found for plotting")
+    return csv_files
 
 
 def plot_fps_data(data_folder: Path):
@@ -92,6 +117,67 @@ def plot_fps_data(data_folder: Path):
     print(f"Plot saved to {output_path}")
 
 
+def plot_splat_data(*paths: Path):
+    """Plot splat rendering throughput and save render.png.
+
+    Args:
+        paths: CSV files or directories containing CSV files. If empty, uses benchmark/data.
+    """
+    csv_files = collect_csv_files(*paths)
+    required = {"test_type", "n_worlds", "fps", "device"}
+    series: list[dict[str, str | pd.DataFrame]] = []
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        if not required.issubset(df.columns):
+            missing = sorted(required.difference(df.columns))
+            raise ValueError(f"CSV {csv_file} is missing required columns: {missing}")
+        splat = df[df["test_type"] == "splat"].copy()
+        if splat.empty:
+            continue
+        splat = splat.sort_values("n_worlds")
+        device = str(splat["device"].iloc[-1]).lower()
+        date_token = csv_file.stem.split("_")[-2]
+        date_label = datetime.strptime(date_token, "%Y%m%d").strftime("%d.%m.%y")
+        series.append({"device": device, "date": date_label, "df": splat})
+
+    if not series:
+        raise ValueError("No splat benchmark data found in provided CSV files")
+
+    colors = {"cpu": "#0000AA", "gpu": "#76B900"}
+    device_names = {"cpu": "Intel Core i9-13900KF", "gpu": "NVIDIA RTX 4090"}
+    fig, ax = plt.subplots(1, 1, figsize=(7, 5))
+    fig.suptitle("Crazyflow Splat Rendering", fontsize=16, fontweight="bold", y=0.98)
+
+    for item in series:
+        device = str(item["device"])
+        date_label = str(item["date"])
+        df = item["df"]
+        label = f"{device_names.get(device, device.upper())} ({date_label})"
+        ax.plot(
+            df["n_worlds"],
+            df["fps"],
+            marker="o",
+            linestyle="-",
+            color=colors.get(device),
+            label=label,
+        )
+
+    ax.set_title("Images per second: Splat renderer")
+    ax.set_xlabel("Number of Worlds")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid(True)
+    ax.legend(loc="upper left")
+    format_log_axes(ax, {f"splat_{idx}": item["df"] for idx, item in enumerate(series)}, "splat_")
+    plt.tight_layout()
+
+    output_dir = csv_files[0].parent
+    output_path = output_dir / "render.png"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to {output_path}")
+
+
 def format_log_axes(ax: plt.Axes, dfs: dict[str, pd.DataFrame], prefix: str):
     """Format logarithmic axes with nice labels.
 
@@ -136,4 +222,6 @@ def format_log_axes(ax: plt.Axes, dfs: dict[str, pd.DataFrame], prefix: str):
 
 
 if __name__ == "__main__":
-    plot_fps_data(Path(__file__).parent / "data")
+    data_folder = Path(__file__).parent / "data"
+    plot_fps_data(data_folder)
+    plot_splat_data(data_folder)
