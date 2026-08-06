@@ -193,7 +193,7 @@ def attitude2force_torque(
         mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
 
     Returns:
-        4 Motor forces [N], i_error_m
+        Desired forces (3,), torques (3,) and i_error_m
     """
     xp = array_namespace(quat)
     force_des = cmd[..., 3]  # Total thrust in N
@@ -276,7 +276,7 @@ def force_torque2rotor_vel(
 
     The firmware calculates PWMs for each motor, compensates for the battery voltage, and then
     applies the modified PWMs to the motors. We assume perfect battery compensation here, skip the
-    PWM interface except for clipping, and instead return desired motor forces.
+    PWM interface except for clipping, and instead return desired motor velocities.
 
     Note:
         The equivalent function in the crazyflie firmware is power_distribution from
@@ -296,7 +296,7 @@ def force_torque2rotor_vel(
         mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
 
     Returns:
-        The desired motor forces in SI units with shape (..., 4).
+        The desired rotor velocities in RPMs with shape (..., 4).
     """
     xp = array_namespace(torque)
     assert torque.shape[-1] == 3, f"Torque must have shape (..., 3), but has {torque.shape}"

@@ -21,7 +21,7 @@ def motor_force2rotor_vel(motor_forces: Array, rpm2thrust: Array) -> Array:
         rpm2thrust: RPM to thrust conversion factors.
 
     Returns:
-        Array of rotor velocities in rad/s with shape (..., N).
+        Array of rotor velocities in RPMs with shape (..., N).
     """
     xp = array_namespace(motor_forces)
     return (

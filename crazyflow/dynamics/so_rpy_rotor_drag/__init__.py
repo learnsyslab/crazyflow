@@ -2,8 +2,9 @@ r"""Second-order fitted RPY dynamics with thrust dynamics and linear drag.
 
 Extends ``so_rpy_rotor`` by adding a body-frame linear drag term to the translational dynamics.
 Rotational dynamics remain a fitted second-order linear system, and thrust spin-up uses a
-first-order lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``. The 
-``rotor_vel`` state is the current thrust in Newtons (not motor RPMs).
+first-order lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``. The
+``rotor_vel`` state is the current thrust in Newtons (not motor RPMs), carried as four entries
+of which only the first enters the dynamics.
 
 \[
 \begin{aligned}

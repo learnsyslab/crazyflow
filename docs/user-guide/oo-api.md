@@ -17,7 +17,7 @@ from crazyflow.control import Control
 sim = Sim(
     n_worlds=1,
     n_drones=1,
-    drone="cf2x_L250",
+    drone="cf21B_500",
     dynamics=Dynamics.first_principles,
     control=Control.state,
     integrator=Integrator.rk4,
@@ -31,16 +31,18 @@ sim.reset()
 
 Key constructor arguments:
 
-| Argument | Default | Description |
-|---|---|---|
-| `n_worlds` | 1 | Number of independent parallel environments |
-| `n_drones` | 1 | Drones per world |
-| `drone` | `"cf2x_L250"` | Drone configuration (see `crazyflow.available_drones`) |
-| `dynamics` | `Dynamics.default` | Dynamics |
-| `control` | `Control.default` | Control mode |
-| `integrator` | `Integrator.default` | Numerical integrator |
-| `freq` | 500 | Dynamics frequency, Hz |
-| `device` | `"cpu"` | `"cpu"` or `"gpu"` |
+| Argument | Description |
+|---|---|
+| `n_worlds` | Number of independent parallel environments |
+| `n_drones` | Drones per world |
+| `drone` | Drone configuration (see `crazyflow.available_drones`) |
+| `dynamics` | Dynamics |
+| `control` | Control mode |
+| `integrator` | Numerical integrator |
+| `freq` | Dynamics frequency, Hz |
+| `device` | `"cpu"` or `"gpu"` |
+
+See [`Sim`][crazyflow.sim.Sim] in the API reference for the defaults and the full argument list.
 
 ## Control methods
 
