@@ -56,9 +56,10 @@ def requires_mujoco_sync(fn: Callable[Params, Return]) -> Callable[Params, Retur
 class Sim:
     """Crazyflow simulation.
 
-    Used both through its object-oriented methods (:meth:`step`, :meth:`reset`, the ``*_control``
-    setters) and as the builder for the functional API in :mod:`crazyflow.sim.functional`, which
-    operates on the ``sim.data`` and pipelines constructed here.
+    Used both through its object-oriented methods ([step][crazyflow.sim.Sim.step],
+    [reset][crazyflow.sim.Sim.reset], the ``*_control`` setters) and as the builder for the
+    functional API in [crazyflow.sim.functional][], which operates on the ``sim.data`` and pipelines
+    constructed here.
 
     The simulation is always batched. Every quantity in ``sim.data`` has a leading
     ``(n_worlds, n_drones, ...)`` shape, even for a single world and drone. ``n_worlds`` indexes

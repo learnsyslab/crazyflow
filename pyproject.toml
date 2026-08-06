@@ -208,7 +208,7 @@ mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
 
 [tool.pixi.feature.docs.tasks]
-docs-build = { cmd = "properdocs build", description = "Build docs" }
+docs-build = { cmd = "properdocs build --strict", description = "Build docs" }
 docs-serve = { cmd = "properdocs serve --livereload", description = "Serve docs locally" }
 
 [tool.pixi.feature.dist.pypi-dependencies]
