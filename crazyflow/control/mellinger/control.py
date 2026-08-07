@@ -193,7 +193,7 @@ def attitude2force_torque(
         mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
 
     Returns:
-        Desired forces (3,), torques (3,) and i_error_m
+        Desired forces (1,), torques (3,) and i_error_m
     """
     xp = array_namespace(quat)
     force_des = cmd[..., 3]  # Total thrust in N
