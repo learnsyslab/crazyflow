@@ -10,27 +10,27 @@ from crazyflow.sim import Sim
 from crazyflow.sim.data import Control, SimData
 
 
-@pytest.mark.skip(reason="State needs SVD in from_matrix, which is not differentiable.")
 @pytest.mark.unit
 @pytest.mark.parametrize("dynamics", Dynamics)
 def test_state_cmd_gradients(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.state, freq=500)
     sim_step = sim._step
+    # Hover clear of the floor and command a centimeter up to avoid clipping
+    states = sim.data.states.replace(pos=sim.data.states.pos.at[..., 2].set(1.0))
+    data = sim.data.replace(states=states)
 
-    def step(cmd: Array, data: SimData) -> Array:
+    def height(cmd: Array, data: SimData) -> Array:
         data = data.replace(
             controls=data.controls.replace(state=data.controls.state.replace(staged_cmd=cmd))
         )
-        data = sim_step(data, sim.freq // sim.control_freq)
-        return (data.states.pos[0, 0, 2] - 1.0) ** 2  # Quadratic cost to reach 1m height
-
-    step_grad = jax.jit(jax.grad(step))
+        return sim_step(data, sim.freq // sim.control_freq).states.pos[0, 0, 2]
 
     cmd = jnp.zeros((1, 1, 13), dtype=jnp.float32)
-    cmd = cmd.at[..., 3].set(0.3)
+    cmd = cmd.at[..., 2].set(1.01)
 
-    grad = step_grad(cmd, sim.data)
+    grad = jax.jit(jax.grad(height))(cmd, data)
     assert not jnp.any(jnp.isnan(grad))
+    assert grad[0, 0, 2] > 0, "Commanding a higher setpoint must raise the drone"
 
 
 @pytest.mark.unit
