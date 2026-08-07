@@ -12,7 +12,7 @@ from jax import Array
 from numpy.typing import NDArray
 
 from crazyflow.control import Control
-from crazyflow.drones import load_params as load_hardware_params
+from crazyflow.drones import load_params
 from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
@@ -32,7 +32,7 @@ def action_space(control_type: Control, drone: str) -> spaces.Box:
     """
     match control_type:
         case Control.attitude:
-            params = load_hardware_params(drone)
+            params = load_params(drone)
             thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),
