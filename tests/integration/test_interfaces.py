@@ -3,8 +3,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import Control, parametrize
-from crazyflow.control.core import load_params
+from crazyflow.control import Control, load_params, parametrize
 from crazyflow.control.mellinger import force_torque2rotor_vel, state2attitude
 from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim

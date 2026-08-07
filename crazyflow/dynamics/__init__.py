@@ -14,13 +14,13 @@ configuration, and ``available_dynamics`` to enumerate all registered dynamics.
 
 from typing import Callable
 
-from crazyflow.dynamics.core import Dynamics, parametrize
+from crazyflow.dynamics.core import Dynamics, load_params, parametrize
 from crazyflow.dynamics.first_principles import dynamics as _first_principles_dynamics
 from crazyflow.dynamics.so_rpy import dynamics as _so_rpy_dynamics
 from crazyflow.dynamics.so_rpy_rotor import dynamics as _so_rpy_rotor_dynamics
 from crazyflow.dynamics.so_rpy_rotor_drag import dynamics as _so_rpy_rotor_drag_dynamics
 
-__all__ = ["parametrize", "available_dynamics", "dynamics_features", "Dynamics"]
+__all__ = ["parametrize", "load_params", "available_dynamics", "dynamics_features", "Dynamics"]
 
 
 available_dynamics: dict[str, Callable] = {

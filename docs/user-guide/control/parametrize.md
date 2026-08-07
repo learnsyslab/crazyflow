@@ -77,10 +77,10 @@ rpyt, _ = ctrl(pos, quat, vel, cmd)
 
 ## Loading raw parameters
 
-Use [`load_params`][crazyflow.control.core.load_params] to inspect or override the values that `parametrize` would bind for a specific controller function:
+Use [`load_params`][crazyflow.control.load_params] to inspect or override the values that `parametrize` would bind for a specific controller function:
 
 ```python
-from crazyflow.control.core import load_params
+from crazyflow.control import load_params
 from crazyflow.control.mellinger import state2attitude
 
 params = load_params(state2attitude, "cf2x_L250")

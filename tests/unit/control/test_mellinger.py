@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
-from crazyflow.control import parametrize
-from crazyflow.control.core import load_params
+from crazyflow.control import load_params, parametrize
 from crazyflow.control.mellinger import (
     attitude2force_torque,
     force_torque2rotor_vel,

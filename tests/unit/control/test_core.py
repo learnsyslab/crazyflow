@@ -6,7 +6,7 @@ from typing import Any, Callable
 import array_api_strict
 import pytest
 
-from crazyflow.control.core import load_params, parametrize
+from crazyflow.control import load_params, parametrize
 from crazyflow.control.mellinger import (
     attitude2force_torque,
     force_torque2rotor_vel,

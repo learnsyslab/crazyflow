@@ -114,10 +114,10 @@ parametrized_dynamics = parametrize(dynamics, drone="cf2x_T350")
 
 ## Loading raw parameters
 
-If you need the parameter values directly, for example, to pass them to [`symbolic_dynamics`](symbolic.md), use [`load_params`][crazyflow.dynamics.core.load_params]:
+If you need the parameter values directly, for example, to pass them to [`symbolic_dynamics`](symbolic.md), use [`load_params`][crazyflow.dynamics.load_params]:
 
 ```python { .python continuation }
-from crazyflow.dynamics.core import load_params
+from crazyflow.dynamics import load_params
 
 params = load_params(dynamics, "cf2x_L250")
 params["mass"]  # 0.0319
