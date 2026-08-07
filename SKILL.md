@@ -43,12 +43,8 @@ Use pixi, not uv. `pixi run <cmd>` resolves task names only, so arbitrary comman
 
 ## Adding a dynamics model or drone
 
-Grepping the name of an existing model or drone finds every registration site. Two fail silently:
-
-- Omitting the `package-data` entry in `pyproject.toml` works in an editable install and breaks only
-  in a built wheel.
-- The model must register its controllers in `build_control_fns`. Otherwise,
-  `Sim(control=Control.attitude, ...)` raises `NotImplementedError`.
+Grepping the name of an existing model or drone finds every registration site, except when matching
+against all models in the simulation's `build_control_fns`.
 
 Define the function in `dynamics.py` and never in the package `__init__.py`, because `load_params`
 derives the model name from `fn.__module__.split(".")[-2]`. `parametrize` binds exactly the
