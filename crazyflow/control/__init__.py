@@ -14,7 +14,7 @@ from typing import Callable
 
 __all__ = []
 
-from crazyflow.control.core import Control, parametrize
+from crazyflow.control.core import Control, load_params, parametrize
 from crazyflow.control.mellinger import attitude2force_torque as mellinger_attitude2force_torque
 from crazyflow.control.mellinger import state2attitude as mellinger_state2attitude
 
@@ -23,4 +23,4 @@ available_controller: dict[str, Callable] = {
     "mellinger_attitude2force_torque": mellinger_attitude2force_torque,
 }
 
-__all__ = ["Control", "parametrize"]
+__all__ = ["Control", "load_params", "parametrize"]
