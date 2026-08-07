@@ -74,7 +74,7 @@ def ang_vel2rpy_rates(quat: Array, ang_vel: Array) -> Array:
 
 def rpy_rates2ang_vel(quat: Array, rpy_rates: Array) -> Array:
     """Convert rpy rates to angular velocity with batch support."""
-    xp = quat.__array_namespace__()
+    xp = array_namespace(quat)
     rpy = R.from_quat(quat).as_euler("xyz")
     phi, theta = rpy[..., 0], rpy[..., 1]
 
@@ -105,7 +105,7 @@ def ang_vel_deriv2rpy_rates_deriv(quat: Array, ang_vel: Array, ang_vel_deriv: Ar
     \dot{\psi} = \mathbf{\dot{W}}\mathbf{\omega} + \mathbf{W} \dot{\mathbf{\omega}}
     \]
     """
-    xp = quat.__array_namespace__()
+    xp = array_namespace(quat)
     rpy = R.from_quat(quat).as_euler("xyz")
     phi, theta = rpy[..., 0], rpy[..., 1]
     rpy_rates = ang_vel2rpy_rates(quat, ang_vel)
@@ -151,7 +151,7 @@ def rpy_rates_deriv2ang_vel_deriv(quat: Array, rpy_rates: Array, rpy_rates_deriv
     \dot{\omega} = \mathbf{\dot{W}}\dot{\mathbf{\psi}} + \mathbf{W} \ddot{\mathbf{\psi}}
     \]
     """
-    xp = quat.__array_namespace__()
+    xp = array_namespace(quat)
     rpy = R.from_quat(quat).as_euler("xyz")
     phi, theta = rpy[..., 0], rpy[..., 1]
     phi_dot, theta_dot = rpy_rates[..., 0], rpy_rates[..., 1]
