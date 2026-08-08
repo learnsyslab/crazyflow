@@ -37,7 +37,7 @@ def main():
     attach_splats(sim, scene=scene, drone=drone)
     viewer = SplatViewer(sim)
 
-    for i in range(2000):
+    for i in range(500):
         t_start = time.perf_counter()
         sim.state_control(control(i / sim.control_freq))
         sim.step(sim.freq // sim.control_freq)
