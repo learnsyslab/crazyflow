@@ -80,11 +80,8 @@ version = { attr = "crazyflow.__version__" }
 [tool.setuptools.package-data]
 crazyflow = ["scene.xml"]
 "crazyflow.drones" = ["*.xml", "params.toml", "assets/*/*.stl"]
-"crazyflow.dynamics.first_principles" = ["params.toml"]
-"crazyflow.dynamics.so_rpy" = ["params.toml"]
-"crazyflow.dynamics.so_rpy_rotor" = ["params.toml"]
-"crazyflow.dynamics.so_rpy_rotor_drag" = ["params.toml"]
-"crazyflow.control.mellinger" = ["params.toml"]
+"crazyflow.dynamics" = ["*/params.toml"]
+"crazyflow.control" = ["*/params.toml"]
 
 [tool.pytest.ini_options]
 markers = ["unit", "integration", "render"]
