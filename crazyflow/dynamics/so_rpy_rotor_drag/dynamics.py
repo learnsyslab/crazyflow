@@ -4,8 +4,9 @@ This module extends the ``so_rpy_rotor`` by adding a body-frame linear drag term
 translational dynamics.  Rotational dynamics are still modelled as a fitted second-order linear
 system, and thrust spin-up uses a first-order lag.
 
-The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``. The ``rotor_vel`` state is a
-**scalar thrust state in Newtons** (not motor RPMs).
+The command interface is ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``. The ``rotor_vel`` state holds
+the thrust in Newtons (not motor RPMs). It keeps the four entries of the shared state layout,
+and only the first entry enters the dynamics.
 
 Both a numeric implementation ([dynamics][crazyflow.dynamics.so_rpy_rotor_drag.dynamics]) and
 symbolic CasADi implementations
@@ -82,8 +83,9 @@ def dynamics(
         vel: Velocity of the drone (m/s).
         ang_vel: Angular velocity of the drone (rad/s).
         cmd: Roll pitch yaw (rad) and collective thrust (N) command.
-        rotor_vel: Speed of the 4 motors (RPMs). If None, the commanded thrust is directly
-            applied (not recommended). If value is given, rotor dynamics are calculated.
+        rotor_vel: Thrust state (N) of shape ``(4,)``, of which only the first entry is used. If
+            None, the commanded thrust is directly applied (not recommended). If a value is given,
+            thrust dynamics are calculated.
         dist_f: Disturbance force (N) in the world frame acting on the CoM.
         dist_t: Disturbance torque (Nm) in the world frame acting on the CoM.
 
@@ -222,8 +224,8 @@ def symbolic_dynamics(
     matches that of [symbolic_dynamics][crazyflow.dynamics.first_principles.symbolic_dynamics].
 
     Args:
-        model_rotor_vel: If ``True``, the scalar thrust state is included in ``X`` and first-order
-            thrust dynamics are modelled. Defaults to ``True``.
+        model_rotor_vel: If ``True``, the thrust state is included in ``X`` and first-order thrust
+            dynamics are modelled. Defaults to ``True``.
         model_dist_f: If ``True``, a 3-D force disturbance is appended to ``X``.
         model_dist_t: If ``True``, a 3-D torque disturbance is appended to ``X``.
         mass: Drone mass in kg.
@@ -242,11 +244,11 @@ def symbolic_dynamics(
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
-        * ``X_dot``: State derivative, length 14 when ``model_rotor_vel=True`` (13 otherwise), plus
+        * ``X_dot``: State derivative, length 17 when ``model_rotor_vel=True`` (13 otherwise), plus
             3 per enabled disturbance.
-        * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with ``rotor_vel(1)``
+        * ``X``: State vector ``[pos(3), quat(4), vel(3), ang_vel(3)]``, with ``rotor_vel(4)``
             appended if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust
-            state in Newtons.
+            state in Newtons, and that only its first entry enters the dynamics.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), quat(4)]``.
     """
@@ -341,8 +343,8 @@ def symbolic_dynamics_euler(
     trigonometric overhead inside CasADi-based solvers.
 
     Args:
-        model_rotor_vel: If ``True``, the scalar thrust state is included in ``X`` and first-order
-            thrust dynamics are modelled. Defaults to ``True``.
+        model_rotor_vel: If ``True``, the thrust state is included in ``X`` and first-order thrust
+            dynamics are modelled. Defaults to ``True``.
         mass: Drone mass in kg.
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
@@ -359,10 +361,10 @@ def symbolic_dynamics_euler(
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
 
-        * ``X_dot``: State derivative, length 13 when ``model_rotor_vel=True`` (12 otherwise).
-        * ``X``: State vector ``[pos(3), rpy(3), vel(3), drpy(3)]``, with ``rotor_vel(1)`` appended
+        * ``X_dot``: State derivative, length 16 when ``model_rotor_vel=True`` (12 otherwise).
+        * ``X``: State vector ``[pos(3), rpy(3), vel(3), drpy(3)]``, with ``rotor_vel(4)`` appended
             if ``model_rotor_vel=True``. Note that ``rotor_vel`` here represents the thrust state in
-            Newtons.
+            Newtons, and that only its first entry enters the dynamics.
         * ``U``: Input vector ``[roll_rad, pitch_rad, yaw_rad, thrust_N]``.
         * ``Y``: Output ``[pos(3), rpy(3)]``.
     """

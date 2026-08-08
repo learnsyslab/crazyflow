@@ -1,8 +1,9 @@
-"""Gaussian splat camera sensors built on `splax <https://github.com/learnsyslab/splax>`_.
+"""Gaussian splat camera sensors built on [splax](https://github.com/learnsyslab/splax).
 
-Renders batched RGB(-D) images of the splats attached via :func:`crazyflow.sim.splat.attach_splats`
-from any model camera. splax rasterizes with Warp kernels only, so this module requires the
-``splats`` extra and a simulation constructed with ``device="gpu"``.
+Renders batched RGB(-D) images of the splats attached via
+[attach_splats][crazyflow.sim.splat.attach_splats] from any model camera. splax rasterizes with Warp
+kernels only, so this module requires the ``splats`` extra and a simulation constructed with
+``device="gpu"``.
 """
 
 from __future__ import annotations
@@ -196,7 +197,7 @@ def build_render_splat_rgbd_fn(
 ) -> Callable[[SimData], Array]:
     """Build a splat RGB-D renderer for a drone selection, camera prefix, and resolution.
 
-    Mirrors :func:`build_render_splat_fn`.
+    Mirrors [build_render_splat_fn][crazyflow.sim.sensors.splat.build_render_splat_fn].
     """
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)

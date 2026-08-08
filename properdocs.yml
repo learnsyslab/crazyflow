@@ -6,6 +6,12 @@ repo_url: https://github.com/learnsyslab/crazyflow
 
 docs_dir: docs
 
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
 theme:
   name: material
   logo: img/logo_white.svg
@@ -57,6 +63,7 @@ nav:
       - System identification: user-guide/dynamics/system-identification.md
     - Control Modes:
       - user-guide/control/index.md
+      - Controllers: user-guide/control/controllers.md
       - Mellinger controller: user-guide/control/mellinger.md
       - Parametrization: user-guide/control/parametrize.md
       - Integral errors: user-guide/control/integral-errors.md

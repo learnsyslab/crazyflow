@@ -69,7 +69,7 @@ State vector layout with `model_rotor_vel=True`:
 | 3–5 | `rpy` (roll/pitch/yaw) | rad |
 | 6–8 | `vel` | m/s |
 | 9–11 | `drpy` (RPY rates) | rad/s |
-| 12 | thrust state | N |
+| 12–15 | thrust state (only index 12 enters the dynamics) | N |
 
 ## Wrapping for Acados / IPOPT
 

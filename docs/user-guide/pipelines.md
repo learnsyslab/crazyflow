@@ -19,24 +19,24 @@ Both pipelines are constructed at `Sim` initialisation and compiled into a singl
 
 ## The step pipeline
 
-`sim.step_pipeline` contains four stages by default:
+`sim.step_pipeline` contains multiple stages by default:
 
 1. **Control functions** — convert the staged command through the control hierarchy (state → attitude → force/torque → rotor velocities, depending on the selected mode)
 2. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler)
 3. **Step counter** (`increment_steps`) — increment `data.core.steps`
 4. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
 
-```python
-from crazyflow.sim import Sim
+```pycon
+>>> from crazyflow.sim import Sim
+>>> sim = Sim()
+>>> print(tuple(sim.step_pipeline.keys()))
+('attitude_controller', 'force_torque_controller', 'integration', 'increment_steps', 'clip_floor_pos')
 
-sim = Sim()
-print(tuple(sim.step_pipeline.keys()))
-# ('step_attitude_controller', 'step_force_torque_controller', 'integration', 'increment_steps', 'clip_floor_pos')
 ```
 
 ## The reset pipeline
 
-`sim.reset_pipeline` is empty by default. When `sim.reset()` is called, it first restores `SimData` to the default state, then runs every function in the reset pipeline in order. Each reset stage has the signature `(data: SimData, default_data: SimData, mask: Array | None) -> SimData`. The `default_data` argument holds the freshly-restored default state, which is useful for selectively reverting fields.
+`sim.reset_pipeline` holds a single `reset` stage that restores `SimData` to the default state. Every stage appended after it runs in order on the restored data. Each reset stage has the signature `(data: SimData, default_data: SimData, mask: Array | None) -> SimData`. The `default_data` argument holds the freshly-restored default state, which is useful for selectively reverting fields.
 
 Populate `sim.reset_pipeline` to add episode-level randomization without modifying the default state.
 
@@ -44,12 +44,17 @@ Populate `sim.reset_pipeline` to add episode-level randomization without modifyi
 
 Stages are addressed by name. Use `insert_fn_before` / `insert_fn_after` to place a function relative to an existing stage, `append_fn` to add it at the end, and `replace_fn` to swap a stage's implementation. New stages are named after the function's `__name__` unless an explicit name is given; names must be unique within a pipeline.
 
-```{ .python continuation }
+```python
+from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import insert_fn_before
 
+sim = Sim()
+
+
 def disturbance_fn(data: SimData) -> SimData:
     return data.replace(states=data.states.replace(vel=data.states.vel + 1e-5))
+
 
 insert_fn_before(sim.step_pipeline, "integration", disturbance_fn)
 sim.build_step_fn()  # recompile

@@ -1,10 +1,11 @@
-"""Gaussian splat support built on `splax <https://github.com/learnsyslab/splax>`_.
+"""Gaussian splat support built on [splax](https://github.com/learnsyslab/splax).
 
-This module owns the splat plugin state and its visualization. :func:`attach_splats` loads 3D
-gaussian splatting ``.ply`` files and stores them in the simulation's plugin data, and
-:class:`SplatViewer` streams the splats to a web-based viewer.
+This module owns the splat plugin state and its visualization.
+[attach_splats][crazyflow.sim.splat.attach_splats] loads 3D gaussian splatting ``.ply`` files and
+stores them in the simulation's plugin data, and [SplatViewer][crazyflow.sim.splat.SplatViewer]
+streams the splats to a web-based viewer.
 
-The batched RGB camera sensor that renders splats lives in :mod:`crazyflow.sim.sensors.splat`.
+The batched RGB camera sensor that renders splats lives in [crazyflow.sim.sensors.splat][].
 
 Splat files must be aligned to the simulation frames. The viewer renders in the browser and works on
 any device. Camera sensors rasterize on the GPU only.
@@ -112,11 +113,13 @@ class SplatViewer:
     """Web-based gaussian splat viewer.
 
     Starts a ``splax.viewer.Viewer`` (viser web server) and uploads all attached splats once.
-    :meth:`update` then only pushes the current drone poses, so the viewer runs at real-time rates
-    on any device. The viewer is owned by its creator and is independent of ``sim.render()``.
+    [update][crazyflow.sim.splat.SplatViewer.update] then only pushes the current drone poses, so
+    the viewer runs at real-time rates on any device. The viewer is owned by its creator and is
+    independent of ``sim.render()``.
 
     Args:
-        sim: The simulation to visualize. Requires :func:`attach_splats` to have been called.
+        sim: The simulation to visualize. Requires
+            [attach_splats][crazyflow.sim.splat.attach_splats] to have been called.
         port: Port of the web server.
     """
 
