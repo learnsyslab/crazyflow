@@ -233,7 +233,8 @@ def attitude2force_torque(
     torque_pwm = xp.where((force_des > 0)[..., None], torque_pwm, 0.0)
     force_des_pwm = force2pwm(force_des / 4, thrust_max, pwm_max)
     pwms = force_torque_pwms2pwms(force_des_pwm, torque_pwm, mixing_matrix)
-    pwms = xp.where(xp.all(pwms == 0), 0.0, xp.clip(pwms, pwm_min, pwm_max))
+    idle = xp.all(pwms == 0, axis=-1, keepdims=True)
+    pwms = xp.where(idle, 0.0, xp.clip(pwms, pwm_min, pwm_max))
 
     # Info: The Mellinger controller in the firmware ends here. However, we enforce a standardized
     # interface in the simulation from states -> attitude -> force_torque. We therefore need this
@@ -304,7 +305,8 @@ def force_torque2rotor_vel(
     torque_forces = (torque * xp.asarray([1 / L, 1 / L, 1 / thrust2torque])) @ mixing_matrix
     motor_forces = (torque_forces + force) / 4
     # Clip motor forces on the thrust instead of PWM level.
-    motor_forces = xp.where(xp.all(force == 0), 0.0, xp.clip(motor_forces, thrust_min, thrust_max))
+    idle = xp.all(force == 0, axis=-1, keepdims=True)
+    motor_forces = xp.where(idle, 0.0, xp.clip(motor_forces, thrust_min, thrust_max))
     # Assume perfect battery compensation and calculate the desired motor speeds directly
     return motor_force2rotor_vel(motor_forces, rpm2thrust)
 
