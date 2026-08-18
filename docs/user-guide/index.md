@@ -8,6 +8,7 @@ In-depth documentation for every part of the simulator.
 - [Dynamics](dynamics/index.md) — first-principles vs. fitted dynamics, when to use each
 - [Control Modes](control/index.md) — state, attitude, force/torque, and rotor velocity control
 - [Pipelines](pipelines.md) — composable step and reset pipelines, randomization, and disturbances
+- [The world axis](world-axis.md) — which arrays are batched over worlds, and what resets and sharding do with them
 - [Visualization](visualization.md) — rendering modes, cameras, raycasting, and materials
 - [MuJoCo Integration](mujoco.md) — MJCF scene construction, adding objects, and sync internals
 - [Gymnasium Environments](gymnasium-envs.md) — vectorized environments for RL training

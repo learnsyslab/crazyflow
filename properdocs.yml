@@ -70,6 +70,8 @@ nav:
       - Batching: user-guide/control/batching.md
       - JIT compilation: user-guide/control/jit.md
     - Pipelines: user-guide/pipelines.md
+    - The world axis: user-guide/world-axis.md
+    - Sharding: user-guide/sharding.md
     - Visualization: user-guide/visualization.md
     - Gaussian Splat Rendering: user-guide/splats.md
     - MuJoCo Integration: user-guide/mujoco.md

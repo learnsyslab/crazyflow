@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 from collections.abc import Mapping
+from dataclasses import fields, is_dataclass
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
@@ -14,6 +15,9 @@ from jax import Array
 
 if TYPE_CHECKING:
     from types import ModuleType
+
+WORLD_INDEXED_KEY = "world_indexed"
+"""Metadata key for dataclass fields that have a world axis."""
 
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
@@ -32,21 +36,64 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def pytree_replace(tree: T, new_tree: T, mask: Array | None = None) -> T:
-    """Overwrite elements of a PyTree with values from another PyTree filtered by a mask.
+def world_mask(tree: T) -> T:
+    """Flag the arrays of a PyTree that are indexed by world.
 
-    The mask indicates which elements of the leaf arrays to overwrite with new values, and which
-    ones to leave unchanged.
+    Structs declare fields with a world axis with the WORLD_INDEXED_KEY metadata. Arrays without
+    fields or the metadata tag are shared. Structs must be flax dataclasses.
+
+    Args:
+        tree: PyTree of arrays and structs to classify.
+
+    Returns:
+        A PyTree of booleans matching the input.
+    """
+    return _flag(tree)
+
+
+def _flag(node: Any) -> Any:
+    """Flag the leaves of a node, recursing through the declared structure of the data."""
+    # Case 1: a dataclass with potential WORLD_INDEXED_KEY fields. We filter out the dynamic fields
+    # and check which of them declare a world axis
+    if _declares_fields(node):
+        dynamic = [f for f in fields(node) if f.metadata.get("pytree_node", True)]
+        tags = {f.name: f.metadata.get(WORLD_INDEXED_KEY, False) for f in dynamic}
+        values = {f: getattr(node, f) for f in tags}
+        # Structs with fields must not be tagged. Tagging is array-level only
+        if tagged_structs := [f for f, tag in tags.items() if tag and _declares_fields(values[f])]:
+            raise ValueError(f"{type(node).__name__} tags structs: {tagged_structs}")
+        # Tagged fields hold no structs, so all of their arrays are indexed by world
+        indexed = {f: jax.tree.map(lambda _: True, values[f]) for f in tags if tags[f]}
+        return node.replace(**indexed, **{f: _flag(values[f]) for f in tags if not tags[f]})
+    # Case 2: any other node. Its arrays are shared. Nested structs are handed back to us via
+    # is_leaf so that we can further recurse into them
+    return jax.tree.map(
+        lambda x: _flag(x) if _declares_fields(x) else False, node, is_leaf=_declares_fields
+    )
+
+
+def _declares_fields(node: Any) -> bool:
+    """Check whether a node is a dataclass that jax traverses."""
+    return is_dataclass(node) and not jax.tree_util.all_leaves([node])
+
+
+def pytree_replace(tree: T, new_tree: T, batched: T, mask: Array | None = None) -> T:
+    """Overwrite batched leaves of a PyTree with values from another PyTree filtered by a mask.
+
+    Args:
+        tree: PyTree to overwrite.
+        new_tree: PyTree to take the new values from.
+        batched: PyTree of booleans flagging the leaves that carry the batch axis.
+        mask: Boolean array matching the leading axis of the batched leaves.
     """
 
-    def _replace(x: Array, y: Array) -> Array:
-        """Replace broadcastable leaves in tree.map."""
-        # Do not replace leaves that are not broadcastable
-        if x.ndim < 1 or (mask is not None and mask.shape[0] != x.shape[0]):
+    def _replace(x: Array, y: Array, batched: bool) -> Array:
+        """Replace batched leaves in tree.map."""
+        if not batched:
             return x
         return jnp.where(broadcast_mask(mask, x.shape), y, x)
 
-    return jax.tree.map(_replace, tree, new_tree)
+    return jax.tree.map(_replace, tree, new_tree, batched)
 
 
 def leaf_replace(tree: T, mask: Array | None = None, **kwargs: dict[str, Array]) -> T:
@@ -69,12 +116,6 @@ def broadcast_mask(mask: Array | None, shape: tuple[int, ...]) -> Array:
     """Broadcast a mask to match the shape of the data."""
     mask = jnp.ones(shape, dtype=bool) if mask is None else mask
     return mask.reshape(*mask.shape, *[1] * (len(shape) - mask.ndim))
-
-
-@partial(jax.jit, static_argnames="device")
-def to_device(data: Array, device: str) -> Array:
-    """Turn an array into a jax array on the specified device."""
-    return jnp.array(data, device=device)
 
 
 def enable_cache(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -18,23 +19,24 @@ from crazyflow.dynamics.first_principles import Params as FirstPrinciplesParams
 from crazyflow.dynamics.so_rpy import Params as SoRpyParams
 from crazyflow.dynamics.so_rpy_rotor import Params as SoRpyRotorParams
 from crazyflow.dynamics.so_rpy_rotor_drag import Params as SoRpyRotorDragParams
+from crazyflow.utils import WORLD_INDEXED_KEY
 
 
 @dataclass
 class SimState:
-    pos: Array  # (N, M, 3)
+    pos: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Position of the drone's center of mass."""
-    quat: Array  # (N, M, 4)
+    quat: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
     """Quaternion of the drone's orientation."""
-    vel: Array  # (N, M, 3)
+    vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Velocity of the drone's center of mass in the world frame."""
-    ang_vel: Array  # (N, M, 3)
+    ang_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Angular velocity of the drone in the body frame."""
-    force: Array  # (N, M, 3)  # CoM force
+    force: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3) CoM force
     """Force applied to the drone's center of mass in the world frame."""
-    torque: Array  # (N, M, 3)  # CoM torque
+    torque: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3) CoM torque
     """Torque applied to the drone's center of mass in the world frame."""
-    rotor_vel: Array  # (N, M, 4)  # Motor forces along body frame z axis
+    rotor_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4) in RPM
     """Motor forces along body frame z axis."""
 
     @staticmethod
@@ -57,15 +59,15 @@ class SimState:
 
 @dataclass
 class SimStateDeriv:
-    vel: Array  # (N, M, 3)
+    vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Derivative of the position of the drone's center of mass."""
-    ang_vel: Array  # (N, M, 3)
+    ang_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Derivative of the quaternion of the drone's orientation as angular velocity."""
-    acc: Array  # (N, M, 3)
+    acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Derivative of the velocity of the drone's center of mass."""
-    ang_acc: Array  # (N, M, 3)
+    ang_acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
     """Derivative of the angular velocity of the drone's center of mass."""
-    rotor_acc: Array  # (N, M, 4)
+    rotor_acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
     """Derivative of the rotor velocity."""
 
     @staticmethod
@@ -108,7 +110,7 @@ class SimControls:
     """Attitude control data."""
     force_torque: ControlData | None
     """Force and torque control data."""
-    rotor_vel: Array  # (N, M, 4)
+    rotor_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
     """Desired motor speed."""
 
     @staticmethod
@@ -205,9 +207,7 @@ class SimParams(typing.Protocol):
 class SimCore:
     freq: int = field(pytree_node=False)
     """Frequency of the simulation."""
-    device: Device = field(pytree_node=False)
-    """Device of the simulation."""
-    steps: Array  # (N, 1)
+    steps: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, 1)
     """Simulation steps taken since the last reset."""
     n_worlds: int = field(pytree_node=False)
     """Number of worlds in the simulation."""
@@ -215,9 +215,9 @@ class SimCore:
     """Number of drones in the simulation."""
     drone_mocap_ids: Array  # (M,)
     """MuJoCo mocap IDs of the drone bodies."""
-    rng_key: Array  # (N, 1)
+    rng_key: Array  # ()
     """Random number generator key for the simulation."""
-    mjx_synced: Array  # (1,)
+    mjx_synced: Array  # ()
     """Whether the simulation data is synchronized with the MuJoCo mjx_data."""
 
     @staticmethod
@@ -236,7 +236,6 @@ class SimCore:
         rng_key = jax.device_put(rng_key, device)
         return SimCore(
             freq=freq,
-            device=device,
             steps=steps,
             n_worlds=n_worlds,
             n_drones=n_drones,
@@ -258,5 +257,10 @@ class SimData:
     """Drone parameters."""
     core: SimCore
     """Core parameters of the simulation."""
-    plugins: dict[str, Array] = field(default_factory=dict)
-    """Arbitrary data for plugins to store state in the simulation."""
+    plugins: dict[str, Any] = field(default_factory=dict)
+    """Arbitrary data for plugins to store state in the simulation.
+
+    Data that is batched over worlds has to declare this using the WORLD_INDEXED_KEY metadata, so
+    that resets can mask it and sharding can distribute it. This requires data to be stored in a
+    struct.
+    """

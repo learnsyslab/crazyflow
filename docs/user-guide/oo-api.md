@@ -138,6 +138,8 @@ Passing more steps to a single `step(n_steps)` call is more efficient than multi
 
 `sim.reset()` reinitialises all worlds to their default state. Pass a boolean mask of shape `(n_worlds,)` to reset only selected worlds: `True` resets that world, `False` leaves it unchanged. This is useful in RL training loops where episodes end at different times.
 
+A full reset restores everything except the rng key. A mask selects along the world axis, so it only restores per-world arrays, and leaves parameters shared by all worlds untouched. See [The world axis](world-axis.md) for more details.
+
 ```python
 import numpy as np
 from crazyflow.sim import Sim

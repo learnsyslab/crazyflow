@@ -1,34 +1,53 @@
 """Unit tests for the simulation plugin system.
 
 Plugins are callables of the form ``fn(data: SimData) -> SimData`` that are inserted into
-``sim.step_pipeline``. They can store arbitrary state in ``sim.data.plugins`` (a dict of JAX
-arrays). Tests use a simple per-world step counter as a canonical plugin.
+``sim.step_pipeline``. They can store arbitrary state in ``sim.data.plugins``. State that is batched
+over worlds has to declare its world axis so that resets can mask it. Tests use a simple per-world
+step counter as a canonical plugin.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import flax
 import jax.numpy as jnp
 import pytest
+from flax.struct import field
 
 from crazyflow.sim import Sim
 from crazyflow.sim.pipeline import append_fn
+from crazyflow.utils import WORLD_INDEXED_KEY
 
 if TYPE_CHECKING:
+    from jax import Array
+
     from crazyflow.sim.data import SimData
+
+
+@flax.struct.dataclass
+class Counter:
+    """Per-world plugin state."""
+
+    count: Array = field(metadata={WORLD_INDEXED_KEY: True})
+
+    @staticmethod
+    def create(n_worlds: int) -> Counter:
+        """Create a zeroed counter for all worlds."""
+        return Counter(jnp.zeros((n_worlds, 1), jnp.int32))
 
 
 def counter_plugin(data: SimData) -> SimData:
     """Increment plugins["counter"] by 1 on every simulation step."""
-    return data.replace(plugins=data.plugins | {"counter": data.plugins["counter"] + 1})
+    counter = data.plugins["counter"]
+    return data.replace(plugins=data.plugins | {"counter": Counter(counter.count + 1)})
 
 
 def accumulater_plugin(data: SimData) -> SimData:
     """Accumulate plugins["counter"] on every simulation step."""
+    accumulated, counter = data.plugins["accumulated"], data.plugins["counter"]
     return data.replace(
-        plugins=data.plugins
-        | {"accumulated": data.plugins["accumulated"] + data.plugins["counter"]}
+        plugins=data.plugins | {"accumulated": Counter(accumulated.count + counter.count)}
     )
 
 
@@ -56,12 +75,12 @@ def test_builds():
 def test_plugin_data_changes(n_worlds: int):
     """Plugin data changes across simulation steps."""
     sim = Sim(n_worlds=n_worlds)
-    sim.data = sim.data.replace(plugins={"counter": jnp.zeros((n_worlds, 1), dtype=jnp.int32)})
+    sim.data = sim.data.replace(plugins={"counter": Counter.create(n_worlds)})
     append_fn(sim.step_pipeline, counter_plugin)
     sim.build_step_fn()
     n_steps = 7
     sim.step(n_steps)
-    assert jnp.all(sim.data.plugins["counter"] == n_steps), (
+    assert jnp.all(sim.data.plugins["counter"].count == n_steps), (
         f"Expected counter={n_steps}, got {sim.data.plugins['counter']}"
     )
     sim.close()
@@ -71,14 +90,14 @@ def test_plugin_data_changes(n_worlds: int):
 def test_plugin_resets():
     """sim.reset() restores the counter to its default value (0)."""
     sim = Sim()
-    sim.data = sim.data.replace(plugins={"counter": jnp.zeros((1, 1), dtype=jnp.int32)})
+    sim.data = sim.data.replace(plugins={"counter": Counter.create(1)})
     append_fn(sim.step_pipeline, counter_plugin)
     sim.build_default_data()
     sim.build_step_fn()
     sim.step(10)
-    assert jnp.all(sim.data.plugins["counter"] == 10), "Precondition: counter should be 10"
+    assert jnp.all(sim.data.plugins["counter"].count == 10), "Counter should be 10"
     sim.reset()
-    assert jnp.all(sim.data.plugins["counter"] == 0), "Counter should be 0 after full reset"
+    assert jnp.all(sim.data.plugins["counter"].count == 0), "Counter should be 0 after full reset"
     sim.close()
 
 
@@ -87,17 +106,17 @@ def test_plugin_masked_reset():
     """Masked reset only resets the plugin data for selected worlds."""
     n_worlds = 2
     sim = Sim(n_worlds=n_worlds)
-    sim.data = sim.data.replace(plugins={"counter": jnp.zeros((n_worlds, 1), dtype=jnp.int32)})
+    sim.data = sim.data.replace(plugins={"counter": Counter.create(n_worlds)})
     append_fn(sim.step_pipeline, counter_plugin)
     sim.build_default_data()
     sim.build_step_fn()
     sim.step(10)
-    assert jnp.all(sim.data.plugins["counter"] == 10), "Precondition: both counters should be 10"
+    assert jnp.all(sim.data.plugins["counter"].count == 10), "Both counters should be 10"
 
     mask = jnp.array([True, False])  # reset world 0 only
     sim.reset(mask)
-    assert jnp.all(sim.data.plugins["counter"][0] == 0), "World 0 counter must be reset to 0"
-    assert jnp.all(sim.data.plugins["counter"][1] == 10), "World 1 counter must remain at 10"
+    assert jnp.all(sim.data.plugins["counter"].count[0] == 0), "World 0 counter must be reset to 0"
+    assert jnp.all(sim.data.plugins["counter"].count[1] == 10), "World 1 counter must remain at 10"
     sim.close()
 
 
@@ -106,10 +125,7 @@ def test_chained_plugins():
     """Two chained plugins produce different results depending on their order in the pipeline."""
     sim = Sim()
     sim.data = sim.data.replace(
-        plugins={
-            "counter": jnp.zeros((1, 1), dtype=jnp.int32),
-            "accumulated": jnp.zeros((1, 1), dtype=jnp.int32),
-        }
+        plugins={"counter": Counter.create(1), "accumulated": Counter.create(1)}
     )
     append_fn(sim.step_pipeline, counter_plugin)
     append_fn(sim.step_pipeline, accumulater_plugin)
@@ -117,10 +133,10 @@ def test_chained_plugins():
     sim.build_step_fn()
     n_steps = 3
     sim.step(n_steps)
-    assert int(sim.data.plugins["counter"][0, 0]) == n_steps, (
+    assert int(sim.data.plugins["counter"].count[0, 0]) == n_steps, (
         f"Expected counter={n_steps}, got {sim.data.plugins['counter']}"
     )
-    assert int(sim.data.plugins["accumulated"][0, 0]) == sum(range(1, n_steps + 1)), (
+    assert int(sim.data.plugins["accumulated"].count[0, 0]) == sum(range(1, n_steps + 1)), (
         f"Expected accumulated={sum(range(1, n_steps + 1))}, got {sim.data.plugins['accumulated']}"
     )
     sim.close()
