@@ -196,6 +196,35 @@ def test_force_torque2rotor_vel_batch_consistency(drone: str):
             assert np.allclose(rpm_batch[i, j], rpm_s, atol=1e-5)
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("drone", available_drones)
+def test_attitude2force_torque_batch_zero_thrust(drone: str):
+    # Drones with zero thrust must stay at zero force, independent of other drones
+    controller = parametrize(attitude2force_torque, drone)
+    quat = np.tile(np.array([0.0, 0.0, 0.0, 1.0]), (2, 1))
+    ang_vel = np.zeros((2, 3))
+    cmd = np.array([[0.1, 0.1, 0.1, 0.0], [0.1, 0.1, 0.1, 0.5]])
+    force_batch, torque_batch, _ = controller(quat, ang_vel, cmd)
+    force_single, torque_single, _ = controller(quat[0], ang_vel[0], cmd[0])
+    assert np.allclose(force_single, 0.0, atol=1e-6), "Drone with zero thrust must have zero force"
+    assert np.allclose(force_batch[0], force_single, atol=1e-6)
+    assert np.allclose(torque_batch[0], torque_single, atol=1e-6)
+    assert force_batch[1] > 0.0, "Drone thrust must be positive"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("drone", available_drones)
+def test_force_torque2rotor_vel_batch_zero_force(drone: str):
+    # Drones with zero desired force must not be clipped because other drones have non-zero force.
+    controller = parametrize(force_torque2rotor_vel, drone)
+    force = np.array([[0.0], [0.2]])
+    torque = np.zeros((2, 3))
+    rotor_vel_batch = controller(force, torque)
+    rotor_vel_single = controller(force[0], torque[0])
+    assert np.allclose(rotor_vel_batch[0], rotor_vel_single, rtol=1e-5)
+    assert np.all(rotor_vel_batch[1] > rotor_vel_single)
+
+
 # Symmetric force check
 
 
