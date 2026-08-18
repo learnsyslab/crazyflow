@@ -2,8 +2,7 @@
 
 Plugins are callables of the form ``fn(data: SimData) -> SimData`` that are inserted into
 ``sim.step_pipeline``. They can store arbitrary state in ``sim.data.plugins``. State that is batched
-over worlds has to declare its world axis so that resets can mask it. Tests use a simple per-world
-step counter as a canonical plugin.
+over worlds has to declare its dimensions without batch axes so that resets can mask it.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ from flax.struct import field
 
 from crazyflow.sim import Sim
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.utils import WORLD_INDEXED_KEY
+from crazyflow.utils import CORE_NDIM_KEY
 
 if TYPE_CHECKING:
     from jax import Array
@@ -29,7 +28,7 @@ if TYPE_CHECKING:
 class Counter:
     """Per-world plugin state."""
 
-    count: Array = field(metadata={WORLD_INDEXED_KEY: True})
+    count: Array = field(metadata={CORE_NDIM_KEY: 1})
 
     @staticmethod
     def create(n_worlds: int) -> Counter:

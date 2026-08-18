@@ -16,8 +16,8 @@ from jax import Array
 if TYPE_CHECKING:
     from types import ModuleType
 
-WORLD_INDEXED_KEY = "world_indexed"
-"""Metadata key for dataclass fields that have a world axis."""
+CORE_NDIM_KEY = "core_ndim"
+"""Metadata key for the number of dimensions a dataclass field has without any batch axes."""
 
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
@@ -39,8 +39,9 @@ R = TypeVar("R")
 def world_mask(tree: T) -> T:
     """Flag the arrays of a PyTree that are indexed by world.
 
-    Structs declare fields with a world axis with the WORLD_INDEXED_KEY metadata. Arrays without
-    fields or the metadata tag are shared. Structs must be flax dataclasses.
+    Fields declare their number of dimensions without batch axes with the CORE_NDIM_KEY metadata.
+    An array carries a world axis when its ndim exceeds that. Arrays without the metadata are
+    treated as not batched.
 
     Args:
         tree: PyTree of arrays and structs to classify.
@@ -53,23 +54,22 @@ def world_mask(tree: T) -> T:
 
 def _flag(node: Any) -> Any:
     """Flag the leaves of a node, recursing through the declared structure of the data."""
-    # Case 1: a dataclass with potential WORLD_INDEXED_KEY fields. We filter out the dynamic fields
-    # and check which of them declare a world axis
-    if _declares_fields(node):
-        dynamic = [f for f in fields(node) if f.metadata.get("pytree_node", True)]
-        tags = {f.name: f.metadata.get(WORLD_INDEXED_KEY, False) for f in dynamic}
-        values = {f: getattr(node, f) for f in tags}
-        # Structs with fields must not be tagged. Tagging is array-level only
-        if tagged_structs := [f for f, tag in tags.items() if tag and _declares_fields(values[f])]:
-            raise ValueError(f"{type(node).__name__} tags structs: {tagged_structs}")
-        # Tagged fields hold no structs, so all of their arrays are indexed by world
-        indexed = {f: jax.tree.map(lambda _: True, values[f]) for f in tags if tags[f]}
-        return node.replace(**indexed, **{f: _flag(values[f]) for f in tags if not tags[f]})
-    # Case 2: any other node. Its arrays are shared. Nested structs are handed back to us via
-    # is_leaf so that we can further recurse into them
-    return jax.tree.map(
-        lambda x: _flag(x) if _declares_fields(x) else False, node, is_leaf=_declares_fields
-    )
+    if not _declares_fields(node):
+        # Any other node. Nested structs are handed back to us via is_leaf so that we can recurse
+        return jax.tree.map(
+            lambda x: _flag(x) if _declares_fields(x) else False, node, is_leaf=_declares_fields
+        )
+    flags = {}
+    for f in (f for f in fields(node) if f.metadata.get("pytree_node", True)):
+        value, core_ndim = getattr(node, f.name), f.metadata.get(CORE_NDIM_KEY)
+        if core_ndim is None:  # Structs and containers classify their own contents
+            flags[f.name] = _flag(value)
+        elif _declares_fields(value):
+            name = f"{type(node).__name__}.{f.name}"
+            raise ValueError(f"{name} holds a struct, which declares its own fields")
+        else:
+            flags[f.name] = jax.tree.map(lambda x, core=core_ndim: x.ndim > core, value)
+    return node.replace(**flags)
 
 
 def _declares_fields(node: Any) -> bool:

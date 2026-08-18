@@ -11,7 +11,7 @@ from flax.struct import field
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
-from crazyflow.utils import WORLD_INDEXED_KEY, enable_cache, world_mask
+from crazyflow.utils import CORE_NDIM_KEY, enable_cache, world_mask
 
 if TYPE_CHECKING:
     from jax import Array
@@ -91,7 +91,7 @@ def test_world_mask_covers_batched_arrays():
 def test_world_mask_user_dataclass():
     @flax.struct.dataclass
     class PluginState:
-        buffer: Array = field(metadata={WORLD_INDEXED_KEY: True})
+        buffer: Array = field(metadata={CORE_NDIM_KEY: 1})
         constant: Array = None
 
     state = PluginState(buffer=jnp.zeros((3, 2)), constant=jnp.zeros(3))
@@ -106,7 +106,7 @@ def test_world_mask_matches_structure():
     # The mask has to match the tree leaf for leaf, whatever container holds the arrays
     @flax.struct.dataclass
     class PluginState:  # With world data
-        buffer: Array = field(metadata={WORLD_INDEXED_KEY: True})
+        buffer: Array = field(metadata={CORE_NDIM_KEY: 1})
 
     @dataclass
     class Opaque:  # State that is treated as leaf
@@ -125,10 +125,22 @@ def test_world_mask_matches_structure():
 
 @pytest.mark.unit
 def test_world_mask_rejects_tagged_struct():
-    # The world axis is declared per array. Tags on structs are not allowed.
+    # A struct declares its own fields, so a core ndim on a field holding a struct is an error.
     @flax.struct.dataclass
     class TaggedStruct:
-        nested: Any = field(metadata={WORLD_INDEXED_KEY: True})
+        nested: Any = field(metadata={CORE_NDIM_KEY: 1})
 
-    with pytest.raises(ValueError, match="tags structs"):
+    with pytest.raises(ValueError, match="declares its own fields"):
         world_mask(TaggedStruct(nested=TaggedStruct(nested=None)))
+
+
+@pytest.mark.unit
+def test_world_mask_infers_randomized_parameter():
+    # A parameter that is shared by default declares itself once it gains a world axis
+    sim = Sim(n_worlds=3)
+    assert not world_mask(sim.data).params.drag_matrix  # (3, 3), shared
+    drag = jnp.broadcast_to(sim.data.params.drag_matrix, (3, 1, 3, 3))
+    sim.data = sim.data.replace(params=sim.data.params.replace(drag_matrix=drag))
+    mask = world_mask(sim.data)
+    assert mask.params.drag_matrix  # (3, 1, 3, 3), now world-indexed
+    assert not mask.params.gravity_vec  # Siblings are unaffected

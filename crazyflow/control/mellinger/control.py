@@ -21,7 +21,7 @@ from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control.core import controllable, load_params
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
-from crazyflow.utils import WORLD_INDEXED_KEY, leaf_replace
+from crazyflow.utils import CORE_NDIM_KEY, leaf_replace
 
 if TYPE_CHECKING:
     from jax import Device
@@ -311,19 +311,19 @@ def force_torque2rotor_vel(
 
 @dataclass
 class MellingerStateData:
-    cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 13)
+    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 13)
     """Full state control command for the drone.
 
     A command consists of [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
     We currently do not use the acceleration and angle rate components. This is subject to change.
     """
-    staged_cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 13)
+    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 13)
     """Staging buffer to store the most recent command until the next controller tick."""
-    steps: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, 1)
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the state control command was applied."""
     freq: int = field(pytree_node=False)
     """Frequency of the state control command."""
-    pos_err_i: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    pos_err_i: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Integral errors of the state control command."""
     # Parameters for the state controller
     params: dict[str, Array]
@@ -344,20 +344,20 @@ class MellingerStateData:
 
 @dataclass
 class MellingerAttitudeData:
-    cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Full attitude control command for the drone.
 
     A command consists of [roll, pitch, yaw, collective thrust].
     """
-    staged_cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Staging buffer to store the most recent command until the next controller tick."""
-    steps: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, 1)
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the attitude control command was applied."""
     freq: int = field(pytree_node=False)
     """Frequency of the attitude control command."""
-    r_int_error: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    r_int_error: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Integral errors of the attitude control command."""
-    last_ang_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    last_ang_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Last angular velocity of the drone."""
     # Parameters for the attitude controller
     params: dict[str, Array]
@@ -384,14 +384,14 @@ class MellingerAttitudeData:
 
 @dataclass
 class MellingerForceTorqueData:
-    cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Force-torque command for the drone.
 
     A command consists of [fz, tx, ty, tz].
     """
-    staged_cmd: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Staging buffer to store the most recent command until the next controller tick."""
-    steps: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, 1)
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the force and torque control command was applied."""
     freq: int = field(pytree_node=False)
     """Frequency of the force and torque control command."""

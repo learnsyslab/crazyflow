@@ -19,24 +19,24 @@ from crazyflow.dynamics.first_principles import Params as FirstPrinciplesParams
 from crazyflow.dynamics.so_rpy import Params as SoRpyParams
 from crazyflow.dynamics.so_rpy_rotor import Params as SoRpyRotorParams
 from crazyflow.dynamics.so_rpy_rotor_drag import Params as SoRpyRotorDragParams
-from crazyflow.utils import WORLD_INDEXED_KEY
+from crazyflow.utils import CORE_NDIM_KEY
 
 
 @dataclass
 class SimState:
-    pos: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    pos: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Position of the drone's center of mass."""
-    quat: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    quat: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Quaternion of the drone's orientation."""
-    vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Velocity of the drone's center of mass in the world frame."""
-    ang_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    ang_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Angular velocity of the drone in the body frame."""
-    force: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3) CoM force
+    force: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3) CoM force
     """Force applied to the drone's center of mass in the world frame."""
-    torque: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3) CoM torque
+    torque: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3) CoM torque
     """Torque applied to the drone's center of mass in the world frame."""
-    rotor_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4) in RPM
+    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4) in RPM
     """Motor forces along body frame z axis."""
 
     @staticmethod
@@ -59,15 +59,15 @@ class SimState:
 
 @dataclass
 class SimStateDeriv:
-    vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Derivative of the position of the drone's center of mass."""
-    ang_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    ang_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Derivative of the quaternion of the drone's orientation as angular velocity."""
-    acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Derivative of the velocity of the drone's center of mass."""
-    ang_acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3)
+    ang_acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Derivative of the angular velocity of the drone's center of mass."""
-    rotor_acc: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    rotor_acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Derivative of the rotor velocity."""
 
     @staticmethod
@@ -92,7 +92,7 @@ class ControlData(typing.Protocol):
     """Control command for the drone."""
     staged_cmd: Array  # (N, M, X)
     """Staged control command for the drone."""
-    steps: Array  # (N, 1)
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the state control command was applied."""
     freq: int
     """Frequency of the state control command."""
@@ -110,7 +110,7 @@ class SimControls:
     """Attitude control data."""
     force_torque: ControlData | None
     """Force and torque control data."""
-    rotor_vel: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 4)
+    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Desired motor speed."""
 
     @staticmethod
@@ -207,17 +207,17 @@ class SimParams(typing.Protocol):
 class SimCore:
     freq: int = field(pytree_node=False)
     """Frequency of the simulation."""
-    steps: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, 1)
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Simulation steps taken since the last reset."""
     n_worlds: int = field(pytree_node=False)
     """Number of worlds in the simulation."""
     n_drones: int = field(pytree_node=False)
     """Number of drones in the simulation."""
-    drone_mocap_ids: Array  # (M,)
+    drone_mocap_ids: Array = field(metadata={CORE_NDIM_KEY: 1})  # (M,)
     """MuJoCo mocap IDs of the drone bodies."""
-    rng_key: Array  # ()
+    rng_key: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Random number generator key for the simulation."""
-    mjx_synced: Array  # ()
+    mjx_synced: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Whether the simulation data is synchronized with the MuJoCo mjx_data."""
 
     @staticmethod
@@ -260,7 +260,7 @@ class SimData:
     plugins: dict[str, Any] = field(default_factory=dict)
     """Arbitrary data for plugins to store state in the simulation.
 
-    Data that is batched over worlds has to declare this using the WORLD_INDEXED_KEY metadata, so
-    that resets can mask it and sharding can distribute it. This requires data to be stored in a
-    struct.
+    Data that is batched over worlds has to declare its dimensions without batch axes using the
+    CORE_NDIM_KEY metadata, so that resets can mask it and sharding can distribute it. Dicts have no
+    fields to declare on, so batched data has to be stored in a struct.
     """

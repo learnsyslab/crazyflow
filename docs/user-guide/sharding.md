@@ -20,7 +20,7 @@ assert sim.data.states.pos.sharding.spec == jax.sharding.PartitionSpec("worlds")
 assert sim.data.params.gravity_vec.sharding.spec == jax.sharding.PartitionSpec()
 ```
 
-The number of worlds has to be divisible by the number of devices. Arrays declare that they are batched over worlds on their fields, see [The world axis](world-axis.md). Data shared across worlds, such as the gravity vector above, is replicated on every device.
+The number of worlds has to be divisible by the number of devices. Whether an array is batched over worlds is determined from its shape and the core ndim its field declares, see [The world axis](world-axis.md). Data shared across worlds, such as the gravity vector above, is replicated on every device.
 
 !!! warning
     Sharding relies on JAX's automatic sharding mode, which `world_mesh` requests for you. `jax.make_mesh` defaults to explicit sharding, under which the Mellinger controller fails inside SciPy's rotation backend.
@@ -46,7 +46,7 @@ data = jax.device_put(sim.data, placement(sim.data, mesh))
 
 ## Plugin data
 
-Bare arrays in `sim.data.plugins` are replicated, since a dict has no fields to declare the world axis. Store per-world plugin state in a struct that declares it, as shown in [The world axis](world-axis.md#your-own-state).
+Bare arrays in `sim.data.plugins` are replicated, since a dict has no fields to declare a core ndim on. Store per-world plugin state in a struct that declares one, as shown in [The world axis](world-axis.md#your-own-state).
 
 ## Next steps
 

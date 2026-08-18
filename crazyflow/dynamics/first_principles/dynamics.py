@@ -28,7 +28,7 @@ from scipy.spatial.transform import Rotation as R
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
 from crazyflow.dynamics.utils import rotation
-from crazyflow.utils import WORLD_INDEXED_KEY, to_xp
+from crazyflow.utils import CORE_NDIM_KEY, to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -298,27 +298,27 @@ def symbolic_dynamics(
 
 @dataclass
 class Params:
-    mass: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 1)
+    mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 1)
     """Mass of the drone."""
-    L: Array  # ()
+    L: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Arm length of the drone."""
-    prop_inertia: Array  # ()
+    prop_inertia: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Inertia of the propeller."""
-    gravity_vec: Array  # (3,)
+    gravity_vec: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Gravity vector of the drone."""
-    J: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3, 3)
+    J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inertia matrix of the drone."""
-    J_inv: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3, 3)
+    J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inverse of the inertia matrix of the drone."""
-    rpm2thrust: Array  # (3,)
+    rpm2thrust: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Force constant of the drone."""
-    rpm2torque: Array  # (3,)
+    rpm2torque: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Torque constant of the drone."""
-    mixing_matrix: Array  # (3, 4)
+    mixing_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 4)
     """Mixing matrix of the drone."""
-    drag_matrix: Array  # (3, 3)
+    drag_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Drag matrix of the drone."""
-    rotor_dyn_coef: Array  # (4,)
+    rotor_dyn_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (4,)
     """Rotor speed dynamics time constant of the drone."""
 
     @staticmethod

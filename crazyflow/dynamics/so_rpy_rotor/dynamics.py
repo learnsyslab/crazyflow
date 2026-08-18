@@ -29,7 +29,7 @@ from scipy.spatial.transform import Rotation as R
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
 from crazyflow.dynamics.utils import rotation
-from crazyflow.utils import WORLD_INDEXED_KEY, to_xp
+from crazyflow.utils import CORE_NDIM_KEY, to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -375,25 +375,25 @@ def symbolic_dynamics_euler(
 
 @dataclass
 class Params:
-    mass: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 1)
+    mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 1)
     """Mass of the drone."""
-    gravity_vec: Array  # (3,)
+    gravity_vec: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Gravity vector of the drone."""
-    J: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3, 3)
+    J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inertia matrix of the drone."""
-    J_inv: Array = field(metadata={WORLD_INDEXED_KEY: True})  # (N, M, 3, 3)
+    J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inverse of the inertia matrix of the drone."""
-    thrust_time_coef: Array  # ()
+    thrust_time_coef: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Rotor coefficient of the drone."""
-    acc_coef: Array  # ()
+    acc_coef: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Acceleration coefficient of the drone."""
-    cmd_f_coef: Array  # ()
+    cmd_f_coef: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Collective thrust coefficient of the drone."""
-    rpy_coef: Array  # (3,)
+    rpy_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Roll pitch yaw coefficient of the drone."""
-    rpy_rates_coef: Array  # (3,)
+    rpy_rates_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Roll pitch yaw rates coefficient of the drone."""
-    cmd_rpy_coef: Array  # (3,)
+    cmd_rpy_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Roll pitch yaw command coefficient of the drone."""
 
     @staticmethod
