@@ -2,6 +2,8 @@ import os
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["SCIPY_ARRAY_API"] = "1"
+# We need multiple devices for sharding tests
+os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count=2"
 
 import jax
 import pytest

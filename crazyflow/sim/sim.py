@@ -31,9 +31,11 @@ from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.utils import grid_2d, pytree_replace
+from crazyflow.sim.sharding import placement
+from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
+    from jax.sharding import Mesh
     from mujoco.mjx import Data, Model
     from numpy.typing import NDArray
 
@@ -430,6 +432,20 @@ class Sim:
         )
         return self.data
 
+    def shard(self, mesh: Mesh) -> SimData:
+        """Distribute the data and default data over a mesh along the world axis.
+
+        Args:
+            mesh: Mesh to distribute the worlds over, as built by
+                [world_mesh][crazyflow.sim.sharding.world_mesh].
+
+        Returns:
+            The placed simulation data.
+        """
+        self.data = jax.device_put(self.data, placement(self.data, mesh))
+        self.default_data = jax.device_put(self.default_data, placement(self.default_data, mesh))
+        return self.data
+
     def build_default_data(self) -> SimData:
         """Initialize the default data for the simulation.
 
@@ -601,8 +617,14 @@ def select_integrate_fn(
 
 
 def reset(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
-    """Reset the simulation data to the default data for the worlds specified by the mask."""
-    return pytree_replace(data, default_data, mask)  # Does not overwrite rng_key
+    """Reset the simulation data to the default data for the worlds specified by the mask.
+
+    Without a mask, the full data is restored. The mask selects along the world axis, so it only
+    restores per-world arrays. The rng key is never restored.
+    """
+    if mask is None:
+        return default_data.replace(core=default_data.core.replace(rng_key=data.core.rng_key))
+    return pytree_replace(data, default_data, world_mask(data), mask)
 
 
 def increment_steps(data: SimData) -> SimData:

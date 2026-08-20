@@ -530,7 +530,7 @@ def test_data_committed(control: Control, device: str):
         elif isinstance(obj0, (list, tuple)):  # Handle sequences
             for i, item0 in enumerate(obj0):
                 assert_committed(item0, f"{path}[{i}]")
-        elif isinstance(obj0, type(sim.data.core.device)):  # Device objects
+        elif isinstance(obj0, type(sim.device)):  # Device objects
             pass  # Devices themselves don't have committed attribute
         elif isinstance(obj0, dict):
             for key, value0 in obj0.items():
@@ -640,3 +640,26 @@ def test_fused_model(device: str, drone: str):
     sim.reset()
     sim.step(1)
     sim.close()
+
+
+@pytest.mark.unit
+def test_partial_reset_keeps_shared_arrays():
+    # A partial reset with a world mask must leave shared arrays intact
+    sim = Sim(n_worlds=3)
+    gravity = jnp.array([1.0, 2.0, 3.0])
+    sim.data = sim.data.replace(params=sim.data.params.replace(gravity_vec=gravity))
+    sim.reset(jnp.array([True, False, False]))
+    assert jnp.array_equal(sim.data.params.gravity_vec, gravity)
+
+
+@pytest.mark.unit
+def test_full_reset_restores_shared_arrays():
+    sim = Sim(n_worlds=3)
+    default_gravity, rng_key = sim.default_data.params.gravity_vec, sim.data.core.rng_key
+    sim.data = sim.data.replace(
+        params=sim.data.params.replace(gravity_vec=jnp.array([1.0, 2.0, 3.0]))
+    )
+    sim.reset()
+    assert jnp.array_equal(sim.data.params.gravity_vec, default_gravity)
+    # The random key is the only thing that does not reset
+    assert jnp.array_equal(jax.random.key_data(sim.data.core.rng_key), jax.random.key_data(rng_key))

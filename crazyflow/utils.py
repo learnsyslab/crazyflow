@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 from collections.abc import Mapping
+from dataclasses import fields, is_dataclass
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
@@ -14,6 +15,9 @@ from jax import Array
 
 if TYPE_CHECKING:
     from types import ModuleType
+
+CORE_NDIM_KEY = "core_ndim"
+"""Metadata key for the number of dimensions a dataclass field has without any batch axes."""
 
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
@@ -32,21 +36,64 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def pytree_replace(tree: T, new_tree: T, mask: Array | None = None) -> T:
-    """Overwrite elements of a PyTree with values from another PyTree filtered by a mask.
+def world_mask(tree: T) -> T:
+    """Flag the arrays of a PyTree that are indexed by world.
 
-    The mask indicates which elements of the leaf arrays to overwrite with new values, and which
-    ones to leave unchanged.
+    Fields declare their number of dimensions without batch axes with the CORE_NDIM_KEY metadata.
+    An array carries a world axis when its ndim exceeds that. Arrays without the metadata are
+    treated as not batched.
+
+    Args:
+        tree: PyTree of arrays and structs to classify.
+
+    Returns:
+        A PyTree of booleans matching the input.
+    """
+    return _flag(tree)
+
+
+def _flag(node: Any) -> Any:
+    """Flag the leaves of a node, recursing through the declared structure of the data."""
+    if not _declares_fields(node):
+        # Any other node. Nested structs are handed back to us via is_leaf so that we can recurse
+        return jax.tree.map(
+            lambda x: _flag(x) if _declares_fields(x) else False, node, is_leaf=_declares_fields
+        )
+    flags = {}
+    for f in (f for f in fields(node) if f.metadata.get("pytree_node", True)):
+        value, core_ndim = getattr(node, f.name), f.metadata.get(CORE_NDIM_KEY)
+        if core_ndim is None:  # Structs and containers classify their own contents
+            flags[f.name] = _flag(value)
+        elif _declares_fields(value):
+            name = f"{type(node).__name__}.{f.name}"
+            raise ValueError(f"{name} holds a struct, which declares its own fields")
+        else:
+            flags[f.name] = jax.tree.map(lambda x, core=core_ndim: x.ndim > core, value)
+    return node.replace(**flags)
+
+
+def _declares_fields(node: Any) -> bool:
+    """Check whether a node is a dataclass that jax traverses."""
+    return is_dataclass(node) and not jax.tree_util.all_leaves([node])
+
+
+def pytree_replace(tree: T, new_tree: T, batched: T, mask: Array | None = None) -> T:
+    """Overwrite batched leaves of a PyTree with values from another PyTree filtered by a mask.
+
+    Args:
+        tree: PyTree to overwrite.
+        new_tree: PyTree to take the new values from.
+        batched: PyTree of booleans flagging the leaves that carry the batch axis.
+        mask: Boolean array matching the leading axis of the batched leaves.
     """
 
-    def _replace(x: Array, y: Array) -> Array:
-        """Replace broadcastable leaves in tree.map."""
-        # Do not replace leaves that are not broadcastable
-        if x.ndim < 1 or (mask is not None and mask.shape[0] != x.shape[0]):
+    def _replace(x: Array, y: Array, batched: bool) -> Array:
+        """Replace batched leaves in tree.map."""
+        if not batched:
             return x
         return jnp.where(broadcast_mask(mask, x.shape), y, x)
 
-    return jax.tree.map(_replace, tree, new_tree)
+    return jax.tree.map(_replace, tree, new_tree, batched)
 
 
 def leaf_replace(tree: T, mask: Array | None = None, **kwargs: dict[str, Array]) -> T:
@@ -69,12 +116,6 @@ def broadcast_mask(mask: Array | None, shape: tuple[int, ...]) -> Array:
     """Broadcast a mask to match the shape of the data."""
     mask = jnp.ones(shape, dtype=bool) if mask is None else mask
     return mask.reshape(*mask.shape, *[1] * (len(shape) - mask.ndim))
-
-
-@partial(jax.jit, static_argnames="device")
-def to_device(data: Array, device: str) -> Array:
-    """Turn an array into a jax array on the specified device."""
-    return jnp.array(data, device=device)
 
 
 def enable_cache(

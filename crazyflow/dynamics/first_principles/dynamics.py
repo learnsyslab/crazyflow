@@ -22,13 +22,13 @@ import jax
 import jax.numpy as jnp
 from array_api_compat import array_namespace
 from array_api_compat import device as xp_device
-from flax.struct import dataclass
+from flax.struct import dataclass, field
 from scipy.spatial.transform import Rotation as R
 
 import crazyflow.dynamics.symbols as symbols
 from crazyflow.dynamics.core import load_params, supports
 from crazyflow.dynamics.utils import rotation
-from crazyflow.utils import to_xp
+from crazyflow.utils import CORE_NDIM_KEY, to_xp
 
 if TYPE_CHECKING:
     from jax import Device
@@ -298,27 +298,27 @@ def symbolic_dynamics(
 
 @dataclass
 class Params:
-    mass: Array  # (N, M, 1)
+    mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 1)
     """Mass of the drone."""
-    L: Array  # (N, M, 1)
+    L: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Arm length of the drone."""
-    prop_inertia: Array  # (N, M, 1)
+    prop_inertia: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
     """Inertia of the propeller."""
-    gravity_vec: Array  # (N, M, 3)
+    gravity_vec: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Gravity vector of the drone."""
-    J: Array  # (N, M, 3, 3)
+    J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inertia matrix of the drone."""
-    J_inv: Array  # (N, M, 3, 3)
+    J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inverse of the inertia matrix of the drone."""
-    rpm2thrust: Array  # (N, M, 1)
+    rpm2thrust: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Force constant of the drone."""
-    rpm2torque: Array  # (N, M, 1)
+    rpm2torque: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Torque constant of the drone."""
-    mixing_matrix: Array  # (N, M, 3, 4)
+    mixing_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 4)
     """Mixing matrix of the drone."""
-    drag_matrix: Array  # (N, M, 3, 3)
+    drag_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Drag matrix of the drone."""
-    rotor_dyn_coef: Array  # (N, M, 4)
+    rotor_dyn_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (4,)
     """Rotor speed dynamics time constant of the drone."""
 
     @staticmethod
