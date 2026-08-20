@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from functools import partial
 from typing import Callable
 
@@ -11,7 +11,7 @@ from jax.scipy.spatial.transform import Rotation as R
 from crazyflow.sim.data import SimData
 
 
-class Integrator(str, Enum):
+class Integrator(StrEnum):
     euler = "euler"
     rk4 = "rk4"
     symplectic_euler = "symplectic_euler"

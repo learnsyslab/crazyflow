@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tomllib
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
@@ -81,7 +81,7 @@ def load_params(
     return to_xp(filter_to_signature(merged, fn), xp=xp, device=device)
 
 
-class Control(str, Enum):
+class Control(StrEnum):
     """Control type of the simulated onboard controller."""
 
     state = "state"
