@@ -101,6 +101,8 @@ def attach_splats(sim: Sim, scene: Path | None = None, drone: Path | None = None
         parts.extend([drone_arrays] * sim.n_drones)
         starts = [n_splats + i * n_drone_splats for i in range(sim.n_drones)]
         slices = tuple((start, start + n_drone_splats) for start in starts)
+    coefficients = {part[3].shape[1] for part in parts}
+    assert len(coefficients) == 1, f"Splats must share their SH degree, got {coefficients=}"
     arrays = [jnp.concatenate(x, axis=0) for x in zip(*parts)]
     splat_data = dict(zip(SPLAT_KEYS, arrays))
     splat_data[SPLAT_SLICES_KEY] = jnp.asarray(slices, dtype=jnp.int32).reshape(-1, 2)

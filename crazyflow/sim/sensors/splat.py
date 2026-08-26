@@ -367,6 +367,7 @@ def _render(
     else:
         render_cam = lambda v, t: render(viewmat=v, gaussian_transforms=t, gaussian_slices=slices)  # noqa: E731
         img, alpha = jax.vmap(jax.vmap(render_cam, in_axes=(0, cam_axis)), in_axes=(0, 0))(vm, tfs)
+    img = img.at[..., :3].min(1.0)  # Spherical harmonics colors have no upper bound, so we clip
     if not depth:
         return img
     # splax reads 0 depth where nothing was hit, so thin coverage would otherwise come out as a

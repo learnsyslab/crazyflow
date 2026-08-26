@@ -35,13 +35,15 @@ if TYPE_CHECKING:
 requires_gpu = pytest.mark.skipif("gpu" not in available_backends(), reason="splax requires CUDA")
 
 
-def _write_splat(path: Path, n: int = 64, extent: float = 0.5):
-    """Write a small synthetic splat to a .ply file."""
+def _write_splat(path: Path, n: int = 64, extent: float = 0.5, n_coeffs: int = 1):
+    """Write a small synthetic splat with ``n_coeffs`` SH coefficients per gaussian."""
     rng = np.random.default_rng(0)
     means = rng.uniform(-extent, extent, (n, 3)).astype(np.float32)
     log_scales = np.full((n, 3), np.log(0.05), np.float32)
     quats = np.tile(np.array([1.0, 0.0, 0.0, 0.0], np.float32), (n, 1))
-    sh_colors = rng.uniform(0.2, 0.8, (n, 3)).astype(np.float32)
+    sh_colors = np.zeros((n, n_coeffs, 3), np.float32)
+    sh_colors[:, 0] = splax.io.rgb_to_sh(rng.uniform(0.2, 0.8, (n, 3)))
+    sh_colors[:, 1:] = rng.uniform(-0.5, 0.5, (n, n_coeffs - 1, 3))
     logit_opacities = np.full((n,), 2.0, np.float32)
     splax.io.write_ply(path, means, log_scales, quats, sh_colors, logit_opacities)
 
@@ -76,14 +78,15 @@ def test_camera_intrinsics():
 
 
 @pytest.mark.unit
-def test_attach_splats(tmp_path: Path):
+@pytest.mark.parametrize("n_coeffs", [1, 4, 16])
+def test_attach_splats(tmp_path: Path, n_coeffs: int):
     n_splats = 64
-    _write_splat(tmp_path / "splat.ply", n=n_splats)
+    _write_splat(tmp_path / "splat.ply", n=n_splats, n_coeffs=n_coeffs)
     sim = Sim(n_worlds=2, n_drones=2)
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     # The scene and both drone copies concatenate into one buffer per parameter array
     n = 3 * n_splats
-    shapes = ((n, 3), (n, 3), (n, 4), (n, 3), (n,))
+    shapes = ((n, 3), (n, 3), (n, 4), (n, n_coeffs, 3), (n,))
     for key, shape in zip(SPLAT_KEYS, shapes):
         assert key in sim.data.plugins, f"Missing plugin key {key}"
         assert sim.data.plugins[key].shape == shape
@@ -106,6 +109,15 @@ def test_attach_splats_scene_only(tmp_path: Path):
     attach_splats(sim, scene=tmp_path / "splat.ply")
     assert sim.data.plugins[SPLAT_KEYS[0]].shape == (n_splats, 3)
     assert sim.data.plugins[SPLAT_SLICES_KEY].shape == (0, 2)
+
+
+@pytest.mark.unit
+def test_attach_splats_sh_mismatch(tmp_path: Path):
+    _write_splat(tmp_path / "scene.ply", n_coeffs=1)
+    _write_splat(tmp_path / "drone.ply", n_coeffs=4)
+    sim = Sim()
+    with pytest.raises(AssertionError, match="SH degree"):
+        attach_splats(sim, scene=tmp_path / "scene.ply", drone=tmp_path / "drone.ply")
 
 
 @pytest.mark.unit
@@ -162,6 +174,23 @@ def test_render_splat_rgb(tmp_path: Path):
     # Hiding each drone from its own camera changes the images
     excl = render_splat_rgb(sim, resolution=(32, 24), exclude_self=True)
     assert not np.allclose(img, excl)
+
+
+@pytest.mark.unit
+@requires_gpu
+def test_render_splat_clips(tmp_path: Path):
+    n = 64
+    rng = np.random.default_rng(0)
+    means = rng.uniform(-1.0, 1.0, (n, 3)).astype(np.float32)
+    log_scales = np.full((n, 3), np.log(0.2), np.float32)
+    quats = np.tile(np.array([1.0, 0.0, 0.0, 0.0], np.float32), (n, 1))
+    sh_colors = np.asarray(splax.io.rgb_to_sh(np.full((n, 3), 3.0, np.float32)))[:, None]
+    opacities = np.full((n,), 10.0, np.float32)
+    splax.io.write_ply(tmp_path / "bright.ply", means, log_scales, quats, sh_colors, opacities)
+    sim = Sim(device="gpu")
+    attach_splats(sim, scene=tmp_path / "bright.ply")
+    img = render_splat_rgb(sim, resolution=(32, 24), background=(0.0, 0.0, 0.0))
+    assert img.max() == 1.0, "Colors above the sensor range must saturate, not exceed it"
 
 
 @pytest.mark.unit
