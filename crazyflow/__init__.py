@@ -23,4 +23,4 @@ from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 
 __all__ = ["Sim", "Dynamics", "Control", "available_drones"]
-__version__ = "0.3.1"
+__version__ = "0.3.2"
