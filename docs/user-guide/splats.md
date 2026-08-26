@@ -29,7 +29,7 @@ drone = fetch(f"{assets}/cf21B_500.ply")
 
 ## Attaching splats
 
-Splats are loaded from 3D gaussian splatting `.ply` files and stored in the simulation's plugin data (`sim.data.plugins`). They therefore persist across resets and travel with the sim data through `jax.jit`. The files must be aligned with the simulation frames. The scene splat is aligned with the MuJoCo world frame, with +z up and metric scale. The drone splat is aligned with the drone body frame and centered on its center of mass.
+Splats are loaded from 3D gaussian splatting `.ply` files into a `SplatData` struct stored in the simulation's plugin data under `sim.data.plugins["splats"]`. They therefore persist across resets and travel with the sim data through `jax.jit`. The files must be aligned with the simulation frames. The scene splat is aligned with the MuJoCo world frame, with +z up and metric scale. The drone splat is aligned with the drone body frame and centered on its center of mass.
 
 <!-- notest: requires splax and splat .ply files -->
 ```{ .python notest }
@@ -40,7 +40,7 @@ sim = Sim(n_worlds=4, n_drones=2)
 attach_splats(sim, scene=scene, drone=drone)
 ```
 
-The drone splat is replicated once per drone. Both arguments are optional. Pass only `scene` for a static environment, or only `drone` for splats in an empty world.
+The drone splat is replicated once per drone, and `SplatData.slices` records each drone's index range in the buffer. Both arguments are optional. Pass only `scene` for a static environment, or only `drone` for splats in an empty world.
 
 ## Web viewer
 

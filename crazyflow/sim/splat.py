@@ -20,13 +20,16 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import splax
+from flax.struct import dataclass, field
 from splax.viewer import Viewer
 
 from crazyflow.sim.sim import requires_mujoco_sync
+from crazyflow.utils import CORE_NDIM_KEY
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from jax import Array
     from numpy.typing import NDArray
 
     from crazyflow.sim.sim import Sim
@@ -34,22 +37,35 @@ if TYPE_CHECKING:
 Params = ParamSpec("Params")
 Return = TypeVar("Return")
 
-SPLAT_KEYS = (
-    "splat_means",
-    "splat_log_scales",
-    "splat_quats",
-    "splat_sh_colors",
-    "splat_logit_opacities",
-)
-"""Keys under which the splat arrays are stored in ``sim.data.plugins``.
+SPLATS_KEY = "splats"
+"""Key of the [SplatData][crazyflow.sim.splat.SplatData] in ``sim.data.plugins``."""
 
-The gaussians form a single buffer per array, laid out as ``[scene | drone:0 | ... | drone:n-1]``.
-Scene gaussians are not part of any slice and remain static. Each drone's slice follows that drone's
-world pose.
-"""
 
-SPLAT_SLICES_KEY = "splat_slices"
-"""Key of the (n_drones, 2) array of per-drone (start, stop) gaussian buffer slices."""
+@dataclass
+class SplatData:
+    """Gaussian splat plugin data.
+
+    Gaussians are stored in a single array as ``[scene | drone:0 | ... | drone:n-1]``. Scene
+    gaussians are not part of any slice and remain static. Drone slices follow the drone's pose.
+    """
+
+    means: Array = field(metadata={CORE_NDIM_KEY: 2})
+    """Gaussian centers, shape (N, 3)."""
+    log_scales: Array = field(metadata={CORE_NDIM_KEY: 2})
+    """Log of the per-axis scales, shape (N, 3)."""
+    quats: Array = field(metadata={CORE_NDIM_KEY: 2})
+    """Rotations as wxyz quaternions, shape (N, 4)."""
+    sh_colors: Array = field(metadata={CORE_NDIM_KEY: 3})
+    """Spherical harmonics color coefficients, shape (N, K, 3)."""
+    logit_opacities: Array = field(metadata={CORE_NDIM_KEY: 1})
+    """Opacity logits, shape (N,)."""
+    slices: tuple[tuple[int, int], ...] = field(pytree_node=False)
+    """Start and stop index of each drone's gaussians."""
+
+    @property
+    def params(self) -> tuple[Array, Array, Array, Array, Array]:
+        """The gaussian parameter arrays in splax's argument order."""
+        return self.means, self.log_scales, self.quats, self.sh_colors, self.logit_opacities
 
 
 def requires_splats(fn: Callable[Params, Return]) -> Callable[Params, Return]:
@@ -57,7 +73,7 @@ def requires_splats(fn: Callable[Params, Return]) -> Callable[Params, Return]:
 
     @wraps(fn)
     def wrapper(sim: Sim, *args: Any, **kwargs: Any) -> Return:
-        if not all(k in sim.data.plugins for k in SPLAT_KEYS):
+        if SPLATS_KEY not in sim.data.plugins:
             raise RuntimeError("No splats attached to this simulation, call attach_splats first")
         return fn(sim, *args, **kwargs)
 
@@ -80,8 +96,8 @@ def attach_splats(sim: Sim, scene: Path | None = None, drone: Path | None = None
     """Load gaussian splat ``.ply`` files and attach them to the simulation.
 
     The drone splat is replicated once per drone so that each drone has its own slice of gaussians.
-    All splat state, including the drone slice metadata, is inserted into ``sim.data.plugins`` and
-    the default data is rebuilt so it survives resets.
+    The splat data is inserted into ``sim.data.plugins`` and the default data is rebuilt so it
+    survives resets.
 
     Args:
         sim: The simulation to attach the splats to.
@@ -104,10 +120,8 @@ def attach_splats(sim: Sim, scene: Path | None = None, drone: Path | None = None
     coefficients = {part[3].shape[1] for part in parts}
     assert len(coefficients) == 1, f"Splats must share their SH degree, got {coefficients=}"
     arrays = [jnp.concatenate(x, axis=0) for x in zip(*parts)]
-    splat_data = dict(zip(SPLAT_KEYS, arrays))
-    splat_data[SPLAT_SLICES_KEY] = jnp.asarray(slices, dtype=jnp.int32).reshape(-1, 2)
-    splat_data = jax.device_put(splat_data, sim.device)
-    sim.data = sim.data.replace(plugins=sim.data.plugins | splat_data)
+    splats = jax.device_put(SplatData(*arrays, slices=slices), sim.device)
+    sim.data = sim.data.replace(plugins=sim.data.plugins | {SPLATS_KEY: splats})
     sim.build_default_data()
 
 
@@ -126,17 +140,18 @@ class SplatViewer:
     """
 
     def __init__(self, sim: Sim, port: int = 8080):
-        if not all(k in sim.data.plugins for k in SPLAT_KEYS):
+        if SPLATS_KEY not in sim.data.plugins:
             raise RuntimeError("No splats attached to this simulation, call attach_splats first")
-        arrays = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
-        slices = tuple((start, stop) for start, stop in sim.data.plugins[SPLAT_SLICES_KEY])
+        splats = sim.data.plugins[SPLATS_KEY]
         self.viewer = Viewer(port=port)
-        n_splats = slices[0][0] if slices else arrays[0].shape[0]
+        n_splats = splats.slices[0][0] if splats.slices else splats.means.shape[0]
         if n_splats > 0:
-            self.viewer.add_splats("scene", *(x[:n_splats] for x in arrays))
-        for i, (start, stop) in enumerate(slices):
-            self.viewer.add_splats(f"drone:{i}", *(x[start:stop] for x in arrays))
-        self._n_drones = len(slices)
+            scene = jax.tree.map(lambda x: x[:n_splats], splats)
+            self.viewer.add_splats("scene", *scene.params)
+        for i, (start, stop) in enumerate(splats.slices):
+            drone = jax.tree.map(lambda x, a=start, b=stop: x[a:b], splats)
+            self.viewer.add_splats(f"drone:{i}", *drone.params)
+        self._n_drones = len(splats.slices)
 
     def update(self, sim: Sim, world: int = 0):
         """Push the current drone poses of one world to the viewer.

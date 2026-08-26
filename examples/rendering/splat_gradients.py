@@ -25,7 +25,7 @@ from splax.io import fetch
 
 from crazyflow.sim import Sim
 from crazyflow.sim.sensors.splat import camera_intrinsics
-from crazyflow.sim.splat import SPLAT_KEYS, attach_splats
+from crazyflow.sim.splat import SPLATS_KEY, attach_splats
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -84,10 +84,12 @@ def _build_renderer(sim: Sim) -> Callable[[Array, Array], Array]:
     camera_rotation = R.from_quat(camera_quaternion)
 
     f, c = camera_intrinsics(sim.mj_model, camera_id, RESOLUTION)
-    arrays = tuple(sim.data.plugins[key] for key in SPLAT_KEYS)
-    background = jnp.zeros(3, dtype=arrays[0].dtype)
+    splats = sim.data.plugins[SPLATS_KEY]
+    background = jnp.zeros(3, dtype=splats.means.dtype)
     image_shape = (RESOLUTION[1], RESOLUTION[0])
-    render = partial(splax.render, *arrays, background=background, img_shape=image_shape, f=f, c=c)
+    render = partial(
+        splax.render, *splats.params, background=background, img_shape=image_shape, f=f, c=c
+    )
 
     def render_views(z_offsets: Array, yaw_angles: Array) -> Array:
         viewmats = _camera_viewmats(z_offsets, yaw_angles, camera_position, camera_rotation)

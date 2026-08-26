@@ -22,12 +22,7 @@ from crazyflow.sim.sensors.splat import (  # noqa: E402
     render_splat_rgbd,
     viewmats,
 )
-from crazyflow.sim.splat import (  # noqa: E402
-    SPLAT_KEYS,
-    SPLAT_SLICES_KEY,
-    SplatViewer,
-    attach_splats,
-)
+from crazyflow.sim.splat import SPLATS_KEY, SplatViewer, attach_splats  # noqa: E402
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -87,18 +82,15 @@ def test_attach_splats(tmp_path: Path, n_coeffs: int):
     # The scene and both drone copies concatenate into one buffer per parameter array
     n = 3 * n_splats
     shapes = ((n, 3), (n, 3), (n, 4), (n, n_coeffs, 3), (n,))
-    for key, shape in zip(SPLAT_KEYS, shapes):
-        assert key in sim.data.plugins, f"Missing plugin key {key}"
-        assert sim.data.plugins[key].shape == shape
-        assert sim.data.plugins[key].device == sim.device
-    slices = sim.data.plugins[SPLAT_SLICES_KEY]
-    assert np.array_equal(slices, [[n_splats, 2 * n_splats], [2 * n_splats, 3 * n_splats]])
+    splats = sim.data.plugins[SPLATS_KEY]
+    assert tuple(x.shape for x in splats.params) == shapes
+    assert all(x.device == sim.device for x in splats.params)
+    assert splats.slices == ((n_splats, 2 * n_splats), (2 * n_splats, 3 * n_splats))
     # Splat data must survive resets
     sim.reset()
-    assert all(key in sim.data.plugins for key in SPLAT_KEYS)
-    for key, shape in zip(SPLAT_KEYS, shapes):
-        assert sim.data.plugins[key].shape == shape
-    assert sim.data.plugins[SPLAT_SLICES_KEY].shape == (2, 2)
+    splats = sim.data.plugins[SPLATS_KEY]
+    assert tuple(x.shape for x in splats.params) == shapes
+    assert splats.slices == ((n_splats, 2 * n_splats), (2 * n_splats, 3 * n_splats))
 
 
 @pytest.mark.unit
@@ -107,8 +99,8 @@ def test_attach_splats_scene_only(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", n=n_splats)
     sim = Sim(n_drones=2)
     attach_splats(sim, scene=tmp_path / "splat.ply")
-    assert sim.data.plugins[SPLAT_KEYS[0]].shape == (n_splats, 3)
-    assert sim.data.plugins[SPLAT_SLICES_KEY].shape == (0, 2)
+    assert sim.data.plugins[SPLATS_KEY].means.shape == (n_splats, 3)
+    assert sim.data.plugins[SPLATS_KEY].slices == ()
 
 
 @pytest.mark.unit

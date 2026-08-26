@@ -19,7 +19,7 @@ import splax
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim.sim import sync_sim2mjx
-from crazyflow.sim.splat import SPLAT_KEYS, SPLAT_SLICES_KEY, requires_gpu, requires_splats
+from crazyflow.sim.splat import SPLATS_KEY, requires_gpu, requires_splats
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
@@ -60,14 +60,11 @@ def render_splat_rgb(
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
-    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
-    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
     return _render(
         sim.data,
         sim.mjx_data,
         sim.mjx_model,
         camera_ids=camera_ids,
-        slices=slices,
         img_shape=(resolution[1], resolution[0]),
         f=f,
         c=c,
@@ -111,14 +108,11 @@ def render_splat_rgbd(
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
-    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
-    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
     return _render(
         sim.data,
         sim.mjx_data,
         sim.mjx_model,
         camera_ids=camera_ids,
-        slices=slices,
         img_shape=(resolution[1], resolution[0]),
         f=f,
         c=c,
@@ -165,15 +159,12 @@ def build_render_splat_fn(
     drone_ids = _resolve_drones(sim, drones)
     cameras_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras_ids[0], resolution)
-    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
-    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
     return jax.jit(
         partial(
             _render,
             mjx_data=sim.mjx_data,
             mjx_model=sim.mjx_model,
             camera_ids=cameras_ids,
-            slices=slices,
             img_shape=(resolution[1], resolution[0]),
             f=f,
             c=c,
@@ -202,8 +193,6 @@ def build_render_splat_rgbd_fn(
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
-    # tolist pulls the bounds over in one transfer, int() would sync the device per bound
-    slices = tuple(map(tuple, np.asarray(sim.data.plugins[SPLAT_SLICES_KEY]).tolist()))
     # The outer jit turns the MuJoCo model and data into baked-in constants rather than arguments
     # flattened on every call, which otherwise dominates the runtime of a single render.
     return jax.jit(
@@ -212,7 +201,6 @@ def build_render_splat_rgbd_fn(
             mjx_data=sim.mjx_data,
             mjx_model=sim.mjx_model,
             camera_ids=camera_ids,
-            slices=slices,
             img_shape=(resolution[1], resolution[0]),
             f=f,
             c=c,
@@ -297,7 +285,6 @@ def _camera_transforms(
 @jax.jit(
     static_argnames=(
         "camera_ids",
-        "slices",
         "img_shape",
         "f",
         "c",
@@ -313,7 +300,6 @@ def _render(
     mjx_data: Data,
     mjx_model: Model,
     camera_ids: tuple[int, ...],
-    slices: tuple[tuple[int, int], ...],
     img_shape: tuple[int, int],
     f: tuple[float, float],
     c: tuple[float, float],
@@ -330,7 +316,6 @@ def _render(
         mjx_data: MuJoCo data the camera kinematics are computed from.
         mjx_model: MuJoCo model the camera kinematics are computed from.
         camera_ids: Model camera index rendered for each selected drone.
-        slices: Start and stop index of each drone's gaussians.
         img_shape: Image size as (height, width).
         f: Focal lengths in pixels.
         c: Principal point in pixels.
@@ -344,7 +329,8 @@ def _render(
         Images of shape (n_worlds, n_cams, height, width, 3), one channel deeper with ``depth``.
     """
     _, mjx_data = sync_sim2mjx(data, mjx_data, mjx_model)  # We need the current camera poses
-    arrays = tuple(data.plugins[key] for key in SPLAT_KEYS)
+    splats = data.plugins[SPLATS_KEY]
+    slices = splats.slices
     vm, tfs, cam_axis = _camera_transforms(
         mjx_data.cam_xpos[:, camera_ids],
         mjx_data.cam_xmat[:, camera_ids],
@@ -355,8 +341,8 @@ def _render(
     )
     render = partial(
         splax.render,
-        *arrays,
-        background=jnp.asarray(background, dtype=arrays[0].dtype),
+        *splats.params,
+        background=jnp.asarray(background, dtype=splats.means.dtype),
         img_shape=img_shape,
         f=f,
         c=c,
