@@ -24,7 +24,9 @@ from crazyflow.utils import grid_2d, leaf_replace
 def randomize_mass(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
     key, mass_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
-    shape = default_data.params.mass.shape
+    # The default mass is shared by all drones with shape (1,). Multiplying it with a
+    # (n_worlds, n_drones, 1) scale gives every drone its own mass.
+    shape = (data.core.n_worlds, data.core.n_drones, 1)
     amount = 0.2  # +-20%
     scale = jax.random.uniform(mass_key, shape, minval=1.0 - amount, maxval=1.0 + amount)
     mass = default_data.params.mass * scale
@@ -35,7 +37,9 @@ def randomize_mass(data: SimData, default_data: SimData, mask: Array | None = No
 def randomize_inertia(data: SimData, default_data: SimData, mask: Array | None = None) -> SimData:
     key, inertia_key = jax.random.split(data.core.rng_key)
     data = data.replace(core=data.core.replace(rng_key=key))  # Make sure to update the rng_key
-    shape = default_data.params.J.shape
+    # The default inertia matrix is shared by all drones with shape (3, 3). Multiplying it with a
+    # (n_worlds, n_drones, 3, 3) scale gives every drone its own inertia.
+    shape = (data.core.n_worlds, data.core.n_drones, 3, 3)
     amount = 0.2  # +-20%
     scale = jax.random.uniform(inertia_key, shape, minval=1.0 - amount, maxval=1.0 + amount)
     J = default_data.params.J * scale

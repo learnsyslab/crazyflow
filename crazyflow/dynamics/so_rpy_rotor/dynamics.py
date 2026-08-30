@@ -19,7 +19,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 import casadi as cs
-import jax
 import jax.numpy as jnp
 from array_api_compat import array_namespace
 from array_api_compat import device as xp_device
@@ -375,13 +374,13 @@ def symbolic_dynamics_euler(
 
 @dataclass
 class Params:
-    mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 1)
+    mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Mass of the drone."""
     gravity_vec: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Gravity vector of the drone."""
-    J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
+    J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Inertia matrix of the drone."""
-    J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
+    J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Inverse of the inertia matrix of the drone."""
     thrust_time_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Rotor coefficient of the drone."""
@@ -397,12 +396,16 @@ class Params:
     """Roll pitch yaw command coefficient of the drone."""
 
     @staticmethod
-    def create(n_worlds: int, n_drones: int, drone: str, device: Device) -> Params:
-        """Create a default set of parameters for the simulation."""
+    def create(drone: str, device: Device) -> Params:
+        """Create the default parameters for the simulation.
+
+        All parameters are shared by all worlds and drones. Give them leading (n_worlds, n_drones)
+        axes to vary them per world and drone.
+        """
         p = load_params(dynamics, drone)
-        J = jax.device_put(jnp.tile(p["J"][None, None, :, :], (n_worlds, n_drones, 1, 1)), device)
+        J = jnp.asarray(p["J"], device=device)
         return Params(
-            mass=jnp.full((n_worlds, n_drones, 1), p["mass"], device=device),
+            mass=jnp.asarray([p["mass"]], device=device),
             gravity_vec=jnp.asarray(p["gravity_vec"], device=device),
             J=J,
             J_inv=jnp.linalg.inv(J),
