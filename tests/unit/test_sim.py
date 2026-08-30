@@ -16,7 +16,8 @@ from crazyflow.control import Control
 from crazyflow.exception import ConfigError
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
-from crazyflow.sim.sim import sync_sim2mjx, use_box_collision
+from crazyflow.sim.integration import Integrator
+from crazyflow.sim.sim import rotor_vel_limits, select_dynamics_fn, sync_sim2mjx, use_box_collision
 from crazyflow.sim.visualize import change_material
 
 if TYPE_CHECKING:
@@ -393,6 +394,103 @@ def test_floor_penetration(dynamics: Dynamics):
     # Check that the drone ended up on the floor (very close to z=0)
     final_z_pos = sim.data.states.pos[..., 2]
     assert jnp.all(final_z_pos == -0.001), f"Drone should be on floor but z={final_z_pos}"
+    sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "dynamics", [Dynamics.first_principles, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag]
+)
+@pytest.mark.parametrize("integrator", Integrator)
+def test_rotor_vel_clip(dynamics: Dynamics, integrator: Integrator):
+    """Test that the rotor state (RPM or thrust) saturates at its physical limits.
+
+    Commands beyond the limits must not push the state past them, not even transiently, and states
+    that already violate the limits (e.g. set by the user) must be clipped after one step.
+    """
+    control = Control.rotor_vel if dynamics == Dynamics.first_principles else Control.attitude
+    sim = Sim(dynamics=dynamics, control=control, integrator=integrator, device="cpu")
+    lower, upper = rotor_vel_limits(dynamics, sim.drone)
+    assert 0.0 < lower < upper
+    stages = tuple(sim.step_pipeline)
+    assert stages.index("clip_rotor_vel") == stages.index("integration") + 1
+
+    def command(value: float):
+        if dynamics == Dynamics.first_principles:
+            sim.rotor_vel_control(np.full((1, 1, 4), value))
+        else:
+            sim.attitude_control(np.array([[[0.0, 0.0, 0.0, value]]]))
+
+    def rotor_vel() -> Array:
+        # The fitted models only use the first entry of rotor_vel as the collective thrust
+        return (
+            sim.data.states.rotor_vel[..., :1]
+            if dynamics != Dynamics.first_principles
+            else sim.data.states.rotor_vel
+        )
+
+    # Commanding far beyond the upper limit saturates the state exactly at the limit
+    sim.reset()
+    command(10 * upper)
+    for _ in range(200):
+        sim.step()
+        assert jnp.all(sim.data.states.rotor_vel <= upper), "rotor_vel exceeded the upper limit"
+    assert jnp.all(rotor_vel() == upper), f"rotor_vel {rotor_vel()} did not saturate at {upper}"
+    # Commanding below the lower limit saturates at the lower limit. The first principles rotor
+    # dynamics are not linear in the command, so we only test this for the fitted models.
+    if dynamics != Dynamics.first_principles:
+        command(-10 * upper)
+        sim.step(200)
+        assert jnp.all(rotor_vel() == lower), f"rotor_vel {rotor_vel()} did not saturate at {lower}"
+    # States outside the limits are clipped after the integration
+    for value, target in ((2 * upper, upper), (-upper, lower)):
+        command(target)
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        sim.data = sim.data.replace(states=states)
+        sim.step()
+        assert jnp.all(sim.data.states.rotor_vel >= lower)
+        assert jnp.all(sim.data.states.rotor_vel <= upper)
+    sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "dynamics", [Dynamics.first_principles, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag]
+)
+def test_rotor_acc_clip(dynamics: Dynamics):
+    """Test that the rotor derivative used by the integrator is clamped at the rotor limits.
+
+    The derivative must be <= 0 at the upper limit, >= 0 at the lower limit, and equal to the raw
+    dynamics derivative in between.
+    """
+    control = Control.rotor_vel if dynamics == Dynamics.first_principles else Control.attitude
+    sim = Sim(dynamics=dynamics, control=control, device="cpu")
+    lower, upper = rotor_vel_limits(dynamics, sim.drone)
+    deriv_fn = sim.step_pipeline["integration"].keywords["deriv_fn"]
+    raw_deriv_fn = select_dynamics_fn(dynamics)
+
+    def command(value: float):
+        if dynamics == Dynamics.first_principles:
+            sim.rotor_vel_control(np.full((1, 1, 4), value))
+        else:
+            sim.attitude_control(np.array([[[0.0, 0.0, 0.0, value]]]))
+        sim.step()  # Commit the staged command
+
+    def rotor_acc(value: float) -> tuple[Array, Array]:
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        data = sim.data.replace(states=states)
+        return deriv_fn(data).states_deriv.rotor_acc, raw_deriv_fn(data).states_deriv.rotor_acc
+
+    command(10 * upper)
+    acc, raw_acc = rotor_acc(upper)
+    assert jnp.all(raw_acc > 0), "Raw derivative should point beyond the upper limit"
+    assert jnp.all(acc <= 0), f"rotor_acc {acc} points beyond the upper limit"
+    acc, raw_acc = rotor_acc((lower + upper) / 2)
+    assert jnp.all(acc == raw_acc), "rotor_acc must not be modified within the limits"
+    command(0.0)
+    acc, raw_acc = rotor_acc(lower)
+    assert jnp.all(raw_acc < 0), "Raw derivative should point below the lower limit"
+    assert jnp.all(acc >= 0), f"rotor_acc {acc} points below the lower limit"
     sim.close()
 
 

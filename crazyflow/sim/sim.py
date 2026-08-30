@@ -22,6 +22,8 @@ from crazyflow.control.mellinger import (
     control_force_torque2rotor_vel,
     control_state2attitude,
 )
+from crazyflow.control.transform import motor_force2rotor_vel
+from crazyflow.drones import load_params as load_drone_params
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
 from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
@@ -145,8 +147,16 @@ class Sim:
         # simulation pipeline.
         for name, fn in build_control_fns(self.control, self.dynamics):
             append_fn(self.step_pipeline, fn, name=name)
-        integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
+        # Keep the rotor state (RPM or thrust, see ``rotor_vel_limits``) within its physical limits.
+        # Inside the integration, the derivative is clamped at the limits so that the integrator
+        # does not push the state beyond them. Since the clamp only acts at the limits, a single
+        # step can still overshoot from below, which the clip after the integration removes.
+        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
+        dynamics_fn = select_dynamics_fn(self.dynamics)
+        integrate_fn = select_integrate_fn(self.integrator, dynamics_fn, (lower, upper))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
+        clip_fn = partial(clip_rotor_vel, lower=lower, upper=upper)
+        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel")
         append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
@@ -600,9 +610,17 @@ def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
 
 
 def select_integrate_fn(
-    integrator: Integrator, dynamics_fn: Callable[[SimData], SimData]
+    integrator: Integrator,
+    dynamics_fn: Callable[[SimData], SimData],
+    rotor_vel_limits: tuple[Array | float, Array | float],
 ) -> Callable[[SimData], SimData]:
-    """Select the integration function for the given dynamics and integrator mode."""
+    """Select the integration function for the given dynamics and integrator mode.
+
+    The dynamics function is wrapped with [clip_rotor_acc][crazyflow.sim.sim.clip_rotor_acc] so that
+    the integrator never pushes ``rotor_vel`` beyond ``rotor_vel_limits``.
+    """
+    lower, upper = rotor_vel_limits
+    dynamics_fn = partial(clip_rotor_acc, deriv_fn=dynamics_fn, lower=lower, upper=upper)
     match integrator:
         case Integrator.euler:
             integrate_fn = euler
@@ -668,6 +686,40 @@ def clip_floor_pos(data: SimData) -> SimData:
         jnp.where(clip[..., None], 0, data.states.vel[..., :3])
     )
     return data.replace(states=data.states.replace(pos=clip_pos, vel=clip_vel))
+
+
+def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[Array | float, Array | float]:
+    """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
+    params = load_drone_params(drone)
+    thrust_min, thrust_max = params["thrust_min"], params["thrust_max"]
+    if dynamics == Dynamics.first_principles:
+        rpm = motor_force2rotor_vel(jnp.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
+        return rpm[0], rpm[1]
+    return 4 * thrust_min, 4 * thrust_max
+
+
+def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) -> SimData:
+    """Clip ``rotor_vel`` to ``[lower, upper]``."""
+    rotor_vel = jnp.clip(data.states.rotor_vel, lower, upper)
+    return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
+
+
+def clip_rotor_acc(
+    data: SimData,
+    deriv_fn: Callable[[SimData], SimData],
+    lower: Array | float,
+    upper: Array | float,
+) -> SimData:
+    """Evaluate ``deriv_fn`` and clamp ``rotor_acc`` at the ``rotor_vel`` limits.
+
+    ``rotor_acc`` is clamped to ``<= 0`` at the upper and ``>= 0`` at the lower limit, otherwise the
+    integrator would push ``rotor_vel`` beyond its limits.
+    """
+    data = deriv_fn(data)
+    rotor_vel, rotor_acc = data.states.rotor_vel, data.states_deriv.rotor_acc
+    rotor_acc = jnp.where(rotor_vel >= upper, jnp.minimum(rotor_acc, 0.0), rotor_acc)
+    rotor_acc = jnp.where(rotor_vel <= lower, jnp.maximum(rotor_acc, 0.0), rotor_acc)
+    return data.replace(states_deriv=data.states_deriv.replace(rotor_acc=rotor_acc))
 
 
 @partial(jax.jit, static_argnames="device")

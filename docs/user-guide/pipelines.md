@@ -22,15 +22,16 @@ Both pipelines are constructed at `Sim` initialisation and compiled into a singl
 `sim.step_pipeline` contains multiple stages by default:
 
 1. **Control functions** — convert the staged command through the control hierarchy (state → attitude → force/torque → rotor velocities, depending on the selected mode)
-2. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler)
-3. **Step counter** (`increment_steps`) — increment `data.core.steps`
-4. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
+2. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler). `clip_rotor_acc` clamps the rotor derivative at the physical motor limits so the integrator cannot push the state beyond them
+3. **Rotor clip** (`clip_rotor_vel`) — clip the motor speeds (first principles) or the collective thrust (fitted models) to the physical limits of the motors
+4. **Step counter** (`increment_steps`) — increment `data.core.steps`
+5. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
 
 ```pycon
 >>> from crazyflow.sim import Sim
 >>> sim = Sim()
 >>> print(tuple(sim.step_pipeline.keys()))
-('attitude_controller', 'force_torque_controller', 'integration', 'increment_steps', 'clip_floor_pos')
+('attitude_controller', 'force_torque_controller', 'integration', 'clip_rotor_vel', 'increment_steps', 'clip_floor_pos')
 
 ```
 
@@ -129,6 +130,9 @@ sim = Sim()
 remove_fn(sim.step_pipeline, "clip_floor_pos")
 sim.build_step_fn()
 ```
+
+!!! note
+    The rotor limits cannot be removed this way. `clip_rotor_vel` is a regular stage, but `clip_rotor_acc` is part of the `integration` stage and clamps the rotor derivative regardless of whether `clip_rotor_vel` is present. To lift the limits, increase `thrust_min` / `thrust_max` of the drone in `crazyflow/drones/params.toml` instead.
 
 ## Writing a custom stage
 

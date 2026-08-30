@@ -152,7 +152,7 @@ def _integrate(
     return next_pos, next_quat, next_vel, next_ang_vel, next_rotor_vel
 
 
-@partial(vectorize, signature="(3),(4),(3),(3),(M),(3),(3),(M)->(3),(4),(3),(3),(M)", excluded=[7])
+@partial(vectorize, signature="(3),(4),(3),(3),(M),(3),(3),(M)->(3),(4),(3),(3),(M)", excluded=[8])
 def _integrate_symplectic(
     pos: Array,
     quat: Array,
