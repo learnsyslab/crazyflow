@@ -150,9 +150,9 @@ def dynamics_euler(
     cmd_f = cmd[..., -1]
     cmd_rpy = cmd[..., 0:3]
     drone_z_axis = R.from_euler("xyz", rpy).as_matrix()[..., -1]
-    thrust = acc_coef + cmd_f_coef * cmd_f
+    thrust = acc_coef + cmd_f_coef * cmd_f[..., None]  # (..., 1)
     pos_dot = vel
-    vel_dot = 1.0 / mass * thrust[..., None] * drone_z_axis + gravity_vec
+    vel_dot = 1.0 / mass * thrust * drone_z_axis + gravity_vec
     rpy_rates_dot = rpy_coef * rpy + rpy_rates_coef * rpy_rates + cmd_rpy_coef * cmd_rpy
     return pos_dot, rpy_rates, vel_dot, rpy_rates_dot
 
@@ -328,10 +328,10 @@ class Params:
     J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (N, M, 3, 3)
     """Inverse of the inertia matrix of the drone."""
 
-    acc_coef: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
+    acc_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Coefficient for the acceleration."""
 
-    cmd_f_coef: Array = field(metadata={CORE_NDIM_KEY: 0})  # ()
+    cmd_f_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Coefficient for the collective thrust."""
 
     rpy_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
@@ -353,8 +353,8 @@ class Params:
             gravity_vec=jnp.asarray(p["gravity_vec"], device=device),
             J=J,
             J_inv=jnp.linalg.inv(J),
-            acc_coef=jnp.asarray(p["acc_coef"], device=device),
-            cmd_f_coef=jnp.asarray(p["cmd_f_coef"], device=device),
+            acc_coef=jnp.asarray([p["acc_coef"]], device=device),
+            cmd_f_coef=jnp.asarray([p["cmd_f_coef"]], device=device),
             rpy_coef=jnp.asarray(p["rpy_coef"], device=device),
             rpy_rates_coef=jnp.asarray(p["rpy_rates_coef"], device=device),
             cmd_rpy_coef=jnp.asarray(p["cmd_rpy_coef"], device=device),
