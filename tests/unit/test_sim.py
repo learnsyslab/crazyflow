@@ -17,7 +17,7 @@ from crazyflow.exception import ConfigError
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
 from crazyflow.sim.integration import Integrator
-from crazyflow.sim.sim import rotor_vel_limits, select_dynamics_fn, sync_sim2mjx, use_box_collision
+from crazyflow.sim.sim import rotor_vel_limits, sync_sim2mjx, use_box_collision
 from crazyflow.sim.visualize import change_material
 
 if TYPE_CHECKING:
@@ -450,47 +450,6 @@ def test_rotor_vel_clip(dynamics: Dynamics, integrator: Integrator):
         sim.step()
         assert jnp.all(sim.data.states.rotor_vel >= lower)
         assert jnp.all(sim.data.states.rotor_vel <= upper)
-    sim.close()
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    "dynamics", [Dynamics.first_principles, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag]
-)
-def test_rotor_acc_clip(dynamics: Dynamics):
-    """Test that the rotor derivative used by the integrator is clamped at the rotor limits.
-
-    The derivative must be <= 0 at the upper limit, >= 0 at the lower limit, and equal to the raw
-    dynamics derivative in between.
-    """
-    control = Control.rotor_vel if dynamics == Dynamics.first_principles else Control.attitude
-    sim = Sim(dynamics=dynamics, control=control, device="cpu")
-    lower, upper = rotor_vel_limits(dynamics, sim.drone)
-    deriv_fn = sim.step_pipeline["integration"].keywords["deriv_fn"]
-    raw_deriv_fn = select_dynamics_fn(dynamics)
-
-    def command(value: float):
-        if dynamics == Dynamics.first_principles:
-            sim.rotor_vel_control(np.full((1, 1, 4), value))
-        else:
-            sim.attitude_control(np.array([[[0.0, 0.0, 0.0, value]]]))
-        sim.step()  # Commit the staged command
-
-    def rotor_acc(value: float) -> tuple[Array, Array]:
-        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
-        data = sim.data.replace(states=states)
-        return deriv_fn(data).states_deriv.rotor_acc, raw_deriv_fn(data).states_deriv.rotor_acc
-
-    command(10 * upper)
-    acc, raw_acc = rotor_acc(upper)
-    assert jnp.all(raw_acc > 0), "Raw derivative should point beyond the upper limit"
-    assert jnp.all(acc <= 0), f"rotor_acc {acc} points beyond the upper limit"
-    acc, raw_acc = rotor_acc((lower + upper) / 2)
-    assert jnp.all(acc == raw_acc), "rotor_acc must not be modified within the limits"
-    command(0.0)
-    acc, raw_acc = rotor_acc(lower)
-    assert jnp.all(raw_acc < 0), "Raw derivative should point below the lower limit"
-    assert jnp.all(acc >= 0), f"rotor_acc {acc} points below the lower limit"
     sim.close()
 
 

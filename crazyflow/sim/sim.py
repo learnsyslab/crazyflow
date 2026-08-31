@@ -147,14 +147,10 @@ class Sim:
         # simulation pipeline.
         for name, fn in build_control_fns(self.control, self.dynamics):
             append_fn(self.step_pipeline, fn, name=name)
-        # Keep the rotor state (RPM or thrust, see ``rotor_vel_limits``) within its physical limits.
-        # Inside the integration, the derivative is clamped at the limits so that the integrator
-        # does not push the state beyond them. Since the clamp only acts at the limits, a single
-        # step can still overshoot from below, which the clip after the integration removes.
-        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
-        dynamics_fn = select_dynamics_fn(self.dynamics)
-        integrate_fn = select_integrate_fn(self.integrator, dynamics_fn, (lower, upper))
+        integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
+        # Keep the rotor state (RPM or thrust, see ``rotor_vel_limits``) within its physical limits
+        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
         clip_fn = partial(clip_rotor_vel, lower=lower, upper=upper)
         append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel")
         append_fn(self.step_pipeline, increment_steps)
@@ -610,17 +606,9 @@ def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
 
 
 def select_integrate_fn(
-    integrator: Integrator,
-    dynamics_fn: Callable[[SimData], SimData],
-    rotor_vel_limits: tuple[Array | float, Array | float],
+    integrator: Integrator, dynamics_fn: Callable[[SimData], SimData]
 ) -> Callable[[SimData], SimData]:
-    """Select the integration function for the given dynamics and integrator mode.
-
-    The dynamics function is wrapped with [clip_rotor_acc][crazyflow.sim.sim.clip_rotor_acc] so that
-    the integrator never pushes ``rotor_vel`` beyond ``rotor_vel_limits``.
-    """
-    lower, upper = rotor_vel_limits
-    dynamics_fn = partial(clip_rotor_acc, deriv_fn=dynamics_fn, lower=lower, upper=upper)
+    """Select the integration function for the given dynamics and integrator mode."""
     match integrator:
         case Integrator.euler:
             integrate_fn = euler
@@ -702,24 +690,6 @@ def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) ->
     """Clip ``rotor_vel`` to ``[lower, upper]``."""
     rotor_vel = jnp.clip(data.states.rotor_vel, lower, upper)
     return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
-
-
-def clip_rotor_acc(
-    data: SimData,
-    deriv_fn: Callable[[SimData], SimData],
-    lower: Array | float,
-    upper: Array | float,
-) -> SimData:
-    """Evaluate ``deriv_fn`` and clamp ``rotor_acc`` at the ``rotor_vel`` limits.
-
-    ``rotor_acc`` is clamped to ``<= 0`` at the upper and ``>= 0`` at the lower limit, otherwise the
-    integrator would push ``rotor_vel`` beyond its limits.
-    """
-    data = deriv_fn(data)
-    rotor_vel, rotor_acc = data.states.rotor_vel, data.states_deriv.rotor_acc
-    rotor_acc = jnp.where(rotor_vel >= upper, jnp.minimum(rotor_acc, 0.0), rotor_acc)
-    rotor_acc = jnp.where(rotor_vel <= lower, jnp.maximum(rotor_acc, 0.0), rotor_acc)
-    return data.replace(states_deriv=data.states_deriv.replace(rotor_acc=rotor_acc))
 
 
 @partial(jax.jit, static_argnames="device")

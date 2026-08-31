@@ -1,3 +1,15 @@
+"""Numerical integrators for the simulation dynamics.
+
+All integrators advance the full drone state, including the rotor state ``rotor_vel``, by one
+simulation step.
+
+Note:
+    The rotor limits are only enforced by clipping ``rotor_vel`` after the integration (see
+    [clip_rotor_vel][crazyflow.sim.sim.clip_rotor_vel]). Higher order integration methods like RK4
+    evaluate the dynamics at intermediate states that are not clipped, so the ``rotor_vel`` seen by
+    the model can transiently exceed the limits within a single step.
+"""
+
 from enum import StrEnum
 from functools import partial
 from typing import Callable
