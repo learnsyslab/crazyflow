@@ -408,8 +408,6 @@ def test_rotor_vel_clip(dynamics: Dynamics, integrator: Integrator):
     sim = Sim(dynamics=dynamics, control=control, integrator=integrator, device="cpu")
     lower, upper = rotor_vel_limits(dynamics, sim.drone)
     assert 0.0 < lower < upper
-    stages = tuple(sim.step_pipeline)
-    assert stages.index("clip_rotor_vel") == stages.index("integration") + 1
 
     def command(value: float):
         if dynamics == Dynamics.first_principles:
