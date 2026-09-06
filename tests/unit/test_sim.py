@@ -16,7 +16,8 @@ from crazyflow.control import Control
 from crazyflow.exception import ConfigError
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
-from crazyflow.sim.sim import sync_sim2mjx, use_box_collision
+from crazyflow.sim.integration import Integrator
+from crazyflow.sim.sim import rotor_vel_limits, sync_sim2mjx, use_box_collision
 from crazyflow.sim.visualize import change_material
 
 if TYPE_CHECKING:
@@ -393,6 +394,51 @@ def test_floor_penetration(dynamics: Dynamics):
     # Check that the drone ended up on the floor (very close to z=0)
     final_z_pos = sim.data.states.pos[..., 2]
     assert jnp.all(final_z_pos == -0.001), f"Drone should be on floor but z={final_z_pos}"
+    sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("integrator", Integrator)
+def test_rotor_vel_clip(integrator: Integrator):
+    """Test that the first-principles rotor state saturates at its physical limits."""
+    sim = Sim(
+        dynamics=Dynamics.first_principles,
+        control=Control.rotor_vel,
+        integrator=integrator,
+        device="cpu",
+    )
+    lower, upper = rotor_vel_limits(Dynamics.first_principles, sim.drone)
+    assert 0.0 < lower < upper
+
+    # States outside the limits are clipped after the integration
+    for value, target in ((2 * upper, upper), (-upper, lower)):
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        sim.rotor_vel_control(np.full((1, 1, 4), target))
+        sim.data = sim.data.replace(states=states)
+        sim.step()
+        assert jnp.all(sim.data.states.rotor_vel >= lower)
+        assert jnp.all(sim.data.states.rotor_vel <= upper)
+    sim.close()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "dynamics", [Dynamics.so_rpy, Dynamics.so_rpy_rotor, Dynamics.so_rpy_rotor_drag]
+)
+@pytest.mark.parametrize("integrator", Integrator)
+def test_thrust_clip(dynamics: Dynamics, integrator: Integrator):
+    """Test that the thrust state of every so_rpy model is clipped to its physical limits."""
+    sim = Sim(dynamics=dynamics, control=Control.attitude, integrator=integrator, device="cpu")
+    lower, upper = rotor_vel_limits(dynamics, sim.drone)
+    assert 0.0 < lower < upper
+
+    for value, target in ((2 * upper, upper), (-upper, lower)):
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        sim.attitude_control(np.array([[[0.0, 0.0, 0.0, target]]]))
+        sim.data = sim.data.replace(states=states)
+        sim.step()
+        assert jnp.all(sim.data.states.rotor_vel >= lower)
+        assert jnp.all(sim.data.states.rotor_vel <= upper)
     sim.close()
 
 

@@ -1,3 +1,12 @@
+"""Numerical integrators for the simulation dynamics.
+
+Note:
+    State limits are enforced by clipping after the integration (see e.g.
+    [clip_rotor_vel][crazyflow.sim.sim.clip_rotor_vel]). The derivatives are unclipped. Higher order
+    integration methods like RK4 evaluate the dynamics at intermediate states, so derivatives seen
+    by the model can transiently exceed the limits within a single step.
+"""
+
 from enum import StrEnum
 from functools import partial
 from typing import Callable
@@ -152,7 +161,7 @@ def _integrate(
     return next_pos, next_quat, next_vel, next_ang_vel, next_rotor_vel
 
 
-@partial(vectorize, signature="(3),(4),(3),(3),(M),(3),(3),(M)->(3),(4),(3),(3),(M)", excluded=[7])
+@partial(vectorize, signature="(3),(4),(3),(3),(M),(3),(3),(M)->(3),(4),(3),(3),(M)", excluded=[8])
 def _integrate_symplectic(
     pos: Array,
     quat: Array,

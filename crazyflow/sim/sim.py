@@ -22,6 +22,8 @@ from crazyflow.control.mellinger import (
     control_force_torque2rotor_vel,
     control_state2attitude,
 )
+from crazyflow.control.transform import motor_force2rotor_vel
+from crazyflow.drones import load_params as load_drone_params
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
 from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
@@ -147,6 +149,10 @@ class Sim:
             append_fn(self.step_pipeline, fn, name=name)
         integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
+        # Keep the rotor state (RPM or thrust, see ``rotor_vel_limits``) within its physical limits
+        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
+        clip_fn = partial(clip_rotor_vel, lower=lower, upper=upper)
+        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel")
         append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
@@ -668,6 +674,22 @@ def clip_floor_pos(data: SimData) -> SimData:
         jnp.where(clip[..., None], 0, data.states.vel[..., :3])
     )
     return data.replace(states=data.states.replace(pos=clip_pos, vel=clip_vel))
+
+
+def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[Array | float, Array | float]:
+    """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
+    params = load_drone_params(drone)
+    thrust_min, thrust_max = params["thrust_min"], params["thrust_max"]
+    if dynamics == Dynamics.first_principles:
+        rpm = motor_force2rotor_vel(jnp.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
+        return rpm[0], rpm[1]
+    return 4 * thrust_min, 4 * thrust_max
+
+
+def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) -> SimData:
+    """Clip ``rotor_vel`` to ``[lower, upper]``."""
+    rotor_vel = jnp.clip(data.states.rotor_vel, lower, upper)
+    return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
 
 
 @partial(jax.jit, static_argnames="device")
