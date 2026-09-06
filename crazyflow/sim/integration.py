@@ -1,9 +1,9 @@
 """Numerical integrators for the simulation dynamics.
 
 Note:
-    The rotor limits are only enforced by clipping ``rotor_vel`` after the integration (see
-    [clip_rotor_vel][crazyflow.sim.sim.clip_rotor_vel]). Higher order integration methods like RK4
-    evaluate the dynamics at intermediate states that are not clipped, so the ``rotor_vel`` seen by
+    State limits are enforced by clipping after the integration (see e.g.
+    [clip_rotor_vel][crazyflow.sim.sim.clip_rotor_vel]). The derivatives are unclipped. Higher order
+    integration methods like RK4 evaluate the dynamics at intermediate states, so derivatives seen by
     the model can transiently exceed the limits within a single step.
 """
 
