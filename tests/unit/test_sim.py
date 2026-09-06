@@ -403,11 +403,7 @@ def test_floor_penetration(dynamics: Dynamics):
 )
 @pytest.mark.parametrize("integrator", Integrator)
 def test_rotor_vel_clip(dynamics: Dynamics, integrator: Integrator):
-    """Test that the rotor state (RPM or thrust) saturates at its physical limits.
-
-    Commands beyond the limits must not push the state past them, not even transiently, and states
-    that already violate the limits (e.g. set by the user) must be clipped after one step.
-    """
+    """Test that the rotor state (RPM or thrust) saturates at its physical limits."""
     control = Control.rotor_vel if dynamics == Dynamics.first_principles else Control.attitude
     sim = Sim(dynamics=dynamics, control=control, integrator=integrator, device="cpu")
     lower, upper = rotor_vel_limits(dynamics, sim.drone)
