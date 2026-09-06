@@ -3,8 +3,8 @@
 Note:
     State limits are enforced by clipping after the integration (see e.g.
     [clip_rotor_vel][crazyflow.sim.sim.clip_rotor_vel]). The derivatives are unclipped. Higher order
-    integration methods like RK4 evaluate the dynamics at intermediate states, so derivatives seen by
-    the model can transiently exceed the limits within a single step.
+    integration methods like RK4 evaluate the dynamics at intermediate states, so derivatives seen
+    by the model can transiently exceed the limits within a single step.
 """
 
 from enum import StrEnum
