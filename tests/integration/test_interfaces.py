@@ -63,31 +63,23 @@ def test_body_rate_interface():
     body_rate = sim.data.controls.body_rate
     params = body_rate.params | {"kR": jnp.zeros(3), "ki_m": jnp.zeros(3)}
     controls = sim.data.controls.replace(body_rate=body_rate.replace(params=params))
-    sim.data = sim.data.replace(controls=controls)
-    target_pos = np.array([0.0, 0.0, 1.0])
-    jit_state2attitude = jax.jit(parametrize(state2attitude, drone=sim.drone))
-    kp_att = 8.0  # Proportional gain from attitude error to body rates
+    # Spawn the drone in the air so that it can roll freely without hitting the ground
+    states = sim.data.states.replace(pos=sim.data.states.pos.at[..., 2].set(2.0))
+    sim.data = sim.data.replace(controls=controls, states=states)
 
-    pos_err_i = np.zeros((1, 1, 3))
-    cmd = np.zeros((1, 1, 13))
-    body_rate_cmd = np.zeros((1, 1, 4))
-    steps = int(3 * sim.control_freq)
+    ang_vel_des = np.array([2.0, 0.0, 0.0])  # Roll rate command
+    thrust = sim.data.params.mass[0] * np.linalg.norm(sim.data.params.gravity_vec)
+    cmd = np.concatenate([ang_vel_des, [thrust]])[None, None, :]
+    sim.body_rate_control(cmd)
 
-    for i in range(steps):
-        cmd[..., :3] = target_pos * i / steps  # Linearly interpolate target position
-        pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
-        rpyt, pos_err_i = jit_state2attitude(pos, quat, vel, cmd, pos_err_i, ctrl_freq=500)
-        rpyt = np.asarray(rpyt)[0, 0]
-        rot_err = R.from_quat(np.asarray(quat[0, 0])).inv() * R.from_euler("xyz", rpyt[:3])
-        body_rate_cmd[0, 0, :3] = kp_att * rot_err.as_rotvec()
-        body_rate_cmd[0, 0, 3] = rpyt[3]
-        sim.body_rate_control(body_rate_cmd)
+    errors = []
+    for i in range(sim.control_freq):
         sim.step(sim.freq // sim.control_freq)
+        if i >= int(0.25 * sim.control_freq):  # Give the controller time to settle on the command
+            errors.append(sim.data.states.ang_vel[0, 0] - ang_vel_des)
 
-    # Check if drone maintained hover position
-    dpos = sim.data.states.pos[0, 0] - target_pos
-    distance = np.linalg.norm(dpos)
-    assert distance < 0.05, f"Failed to maintain hover with body rate control ({dpos})"
+    err_max = np.max(np.abs(errors))
+    assert err_max < 0.02, f"Failed to track the body rate command (max error {err_max:.2e})"
 
 
 @pytest.mark.integration

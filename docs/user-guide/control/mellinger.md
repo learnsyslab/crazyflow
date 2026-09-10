@@ -91,9 +91,9 @@ force.shape  # (1,)
 torque.shape  # (3,)
 ```
 
-## Body rates to force/torque {#body-rate-to-force-torque}
+## Stage 2b: Body rates to force/torque {#body-rate-to-force-torque}
 
-`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode: a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. The function reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
+`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode. Instead, a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. Our implementation reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
 
 **Inputs:**
 

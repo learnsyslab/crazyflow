@@ -1,6 +1,6 @@
 # Control Modes
 
-Crazyflow provides five control modes, from high-level position setpoints down to direct motor commands. Each mode is selected at construction time.
+Crazyflow provides multiple control modes, from high-level position setpoints down to direct motor commands. Each mode is selected at construction time.
 
 ## Control hierarchy
 
