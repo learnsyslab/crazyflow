@@ -3,7 +3,8 @@
 The controller is split into three pure functions that form a pipeline:
 ``state2attitude`` → ``attitude2force_torque`` → ``force_torque2rotor_vel``.
 Each stage can be used independently or chained together to produce per-motor
-RPM commands from a full-state setpoint.
+RPM commands from a full-state setpoint. ``body_rate2force_torque`` replaces
+the second stage for body rate setpoints.
 
 Reference: D. Mellinger and V. Kumar, "Minimum snap trajectory generation and
 control for quadrotors", ICRA 2011.
@@ -175,6 +176,8 @@ def attitude2force_torque(
         quat: Drone orientation as xyzw quaternion with shape (..., 4).
         ang_vel: Drone angular drone velocity in rad/s with shape (..., 3).
         cmd: Commanded attitude (roll, pitch, yaw) and total thrust [rad, rad, rad, N].
+        prev_ang_vel: Angular velocity in rad/s from the previous call. If None, it is initialised
+            to zero.
         r_int_error: Angular velocity integral error (..., 3) from the previous call. If None, it
             is initialised to zero.
         ctrl_freq: Control frequency in Hz
@@ -187,7 +190,6 @@ def attitude2force_torque(
         thrust_max: Maximum thrust in N.
         pwm_min: Minimum PWM value.
         pwm_max: Maximum PWM value.
-        prev_ang_vel: Previous angular velocity in rad/s.
         L: Distance from the center of the quadrotor to the center of the rotor in m.
         thrust2torque: Conversion factor (m).
         mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
@@ -196,8 +198,183 @@ def attitude2force_torque(
         Desired force (1,), torques (3,) and i_error_m
     """
     xp = array_namespace(quat)
-    force_des = cmd[..., 3]  # Total thrust in N
-    rpy_des = cmd[..., :3]
+    ang_vel_des = xp.zeros_like(ang_vel)  # Attitude control assumes a zero body rate setpoint
+    return _attitude2force_torque(
+        quat,
+        ang_vel,
+        cmd[..., :3],
+        ang_vel_des,
+        cmd[..., 3],
+        prev_ang_vel,
+        ang_vel_des,
+        r_int_error,
+        ctrl_freq,
+        kR=kR,
+        kw=kw,
+        ki_m=ki_m,
+        kd_omega=kd_omega,
+        int_err_max=int_err_max,
+        torque_pwm_max=torque_pwm_max,
+        thrust_max=thrust_max,
+        pwm_min=pwm_min,
+        pwm_max=pwm_max,
+        L=L,
+        thrust2torque=thrust2torque,
+        mixing_matrix=mixing_matrix,
+    )
+
+
+def body_rate2force_torque(
+    quat: Array,
+    ang_vel: Array,
+    cmd: Array,
+    prev_ang_vel: Array | None = None,
+    prev_cmd: Array | None = None,
+    r_int_error: Array | None = None,
+    ctrl_freq: int = 500,
+    *,
+    kR: Array,
+    kw: Array,
+    ki_m: Array,
+    kd_omega: Array,
+    int_err_max: Array,
+    torque_pwm_max: Array,
+    thrust_max: float,
+    pwm_min: float,
+    pwm_max: float,
+    L: float,
+    thrust2torque: float,
+    mixing_matrix: Array,
+) -> tuple[Array, Array, Array]:
+    """Compute the body rate to desired force-torque part of the Mellinger controller.
+
+    The firmware Mellinger controller has no dedicated body rate mode. A body rate setpoint enters
+    the angular velocity error and its derivative, while the attitude terms level the drone at its
+    current yaw. This function reproduces this behavior with the gains of the attitude controller.
+    Set ``kR`` and ``ki_m`` to zero to track body rates without the attitude terms.
+
+    Note:
+        We omit the axis flip in the firmware as it has only been introduced to make the controller
+        compatible with the new frame of the Crazyflie 2.1.
+
+    Args:
+        quat: Drone orientation as xyzw quaternion with shape (..., 4).
+        ang_vel: Drone angular velocity in the body frame in rad/s with shape (..., 3).
+        cmd: Commanded body rates (wx, wy, wz) and total thrust [rad/s, rad/s, rad/s, N].
+        prev_ang_vel: Angular velocity in rad/s from the previous call. If None, it is initialised
+            to zero.
+        prev_cmd: Command from the previous call with shape (..., 4). The firmware includes the
+            derivative of the body rate setpoint in the derivative term. If None, the setpoint is
+            assumed to be constant.
+        r_int_error: Angular velocity integral error (..., 3) from the previous call. If None, it
+            is initialised to zero.
+        ctrl_freq: Control frequency in Hz
+        kR: Proportional gain for the rotation error with shape (3,).
+        kw: Proportional gain for the angular velocity error with shape (3,).
+        ki_m: Integral gain for the rotation error with shape (3,).
+        kd_omega: Derivative gain for the angular velocity error with shape (3,).
+        int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
+        torque_pwm_max: Maximum torque in PWM.
+        thrust_max: Maximum thrust in N.
+        pwm_min: Minimum PWM value.
+        pwm_max: Maximum PWM value.
+        L: Distance from the center of the quadrotor to the center of the rotor in m.
+        thrust2torque: Conversion factor (m).
+        mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
+
+    Returns:
+        Desired force (1,), torques (3,) and i_error_m
+    """
+    xp = array_namespace(quat)
+    # l. 215 ff Without a position or attitude setpoint, the firmware levels the drone at the
+    # current yaw
+    yaw = R.from_quat(quat).as_euler("xyz", degrees=False)[..., 2]
+    rpy_des = xp.stack((xp.zeros_like(yaw), xp.zeros_like(yaw), yaw), axis=-1)
+    ang_vel_des = cmd[..., :3]
+    prev_ang_vel_des = ang_vel_des if prev_cmd is None else prev_cmd[..., :3]
+    return _attitude2force_torque(
+        quat,
+        ang_vel,
+        rpy_des,
+        ang_vel_des,
+        cmd[..., 3],
+        prev_ang_vel,
+        prev_ang_vel_des,
+        r_int_error,
+        ctrl_freq,
+        kR=kR,
+        kw=kw,
+        ki_m=ki_m,
+        kd_omega=kd_omega,
+        int_err_max=int_err_max,
+        torque_pwm_max=torque_pwm_max,
+        thrust_max=thrust_max,
+        pwm_min=pwm_min,
+        pwm_max=pwm_max,
+        L=L,
+        thrust2torque=thrust2torque,
+        mixing_matrix=mixing_matrix,
+    )
+
+
+def _attitude2force_torque(
+    quat: Array,
+    ang_vel: Array,
+    rpy_des: Array,
+    ang_vel_des: Array,
+    force_des: Array,
+    prev_ang_vel: Array | None,
+    prev_ang_vel_des: Array,
+    r_int_error: Array | None,
+    ctrl_freq: int,
+    *,
+    kR: Array,
+    kw: Array,
+    ki_m: Array,
+    kd_omega: Array,
+    int_err_max: Array,
+    torque_pwm_max: Array,
+    thrust_max: float,
+    pwm_min: float,
+    pwm_max: float,
+    L: float,
+    thrust2torque: float,
+    mixing_matrix: Array,
+) -> tuple[Array, Array, Array]:
+    """Attitude and body rate controller of the Mellinger controller.
+
+    This function follows the structure of the firmware implementation. The firmware setpoint
+    carries both an attitude and a body rate. The attitude and body rate controllers route their
+    commands into the respective setpoint.
+
+    Args:
+        quat: Drone orientation as xyzw quaternion with shape (..., 4).
+        ang_vel: Drone angular velocity in the body frame in rad/s with shape (..., 3).
+        rpy_des: Desired attitude as roll, pitch, yaw in rad with shape (..., 3).
+        ang_vel_des: Desired angular velocity in the body frame in rad/s with shape (..., 3).
+        force_des: Desired total thrust in N with shape (...,).
+        prev_ang_vel: Angular velocity from the previous call. If None, it is initialised to zero.
+        prev_ang_vel_des: Desired angular velocity from the previous call with shape (..., 3).
+        r_int_error: Rotation integral error (..., 3) from the previous call. If None, it is
+            initialised to zero.
+        ctrl_freq: Control frequency in Hz
+        kR: Proportional gain for the rotation error with shape (3,).
+        kw: Proportional gain for the angular velocity error with shape (3,).
+        ki_m: Integral gain for the rotation error with shape (3,).
+        kd_omega: Derivative gain for the angular velocity error with shape (3,).
+        int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
+        torque_pwm_max: Maximum torque in PWM.
+        thrust_max: Maximum thrust in N.
+        pwm_min: Minimum PWM value.
+        pwm_max: Maximum PWM value.
+        L: Distance from the center of the quadrotor to the center of the rotor in m.
+        thrust2torque: Conversion factor (m).
+        mixing_matrix: Mixing matrix for the motor forces with shape (4, 3).
+
+    Returns:
+        Desired force (..., 1), torques (..., 3) and i_error_m
+    """
+    xp = array_namespace(quat)
     dt = 1 / ctrl_freq
     # l. 220 ff [eR]. We're using the "inefficient" code path from the firmware
     rot = R.from_quat(quat)
@@ -210,11 +387,10 @@ def attitude2force_torque(
     # Vee operator (SO3 to R3)
     eR = xp.stack((eRM[..., 2, 1], eRM[..., 0, 2], eRM[..., 1, 0]), axis=-1)
     # l.248 ff [ew]
-    # Warning: We assume zero desired angular velocity
-    ang_vel_des = xp.zeros_like(ang_vel)
-    prev_ang_vel_des = xp.zeros_like(ang_vel)
+    # The firmware negates the pitch components of the gyro and the rate setpoint to convert them
+    # to the legacy Crazyflie frame, matching the sign flip of eR.y. We omit both flips and keep all
+    # terms in the standard body frame, so the setpoint enters without a sign change.
     ew = ang_vel_des - ang_vel
-    # WARNING: if the setpoint is ever != 0 => change sign of ew.y!
 
     # l.259 ff [err_d_rpy]
     prev_ang_vel = xp.zeros_like(ang_vel) if prev_ang_vel is None else prev_ang_vel
@@ -390,6 +566,46 @@ class MellingerAttitudeData:
 
 
 @dataclass
+class MellingerBodyRateData:
+    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
+    """Body rate control command for the drone.
+
+    A command consists of [roll_rate, pitch_rate, yaw_rate, collective thrust].
+    """
+    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
+    """Staging buffer to store the most recent command until the next controller tick."""
+    steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
+    """Last simulation steps that the body rate control command was applied."""
+    freq: int = field(pytree_node=False)
+    """Frequency of the body rate control command."""
+    r_int_error: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
+    """Integral errors of the body rate control command."""
+    last_ang_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
+    """Last angular velocity of the drone."""
+    # Parameters for the body rate controller
+    params: dict[str, Array]
+
+    @staticmethod
+    def create(
+        n_worlds: int, n_drones: int, freq: int, drone: str, device: Device
+    ) -> MellingerBodyRateData:
+        """Create a default set of body rate data for the simulation."""
+        cmd = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
+        zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
+        params = load_params(body_rate2force_torque, drone, xp=jnp, device=device)
+        return MellingerBodyRateData(
+            cmd=cmd,
+            staged_cmd=cmd,
+            steps=steps,
+            freq=freq,
+            r_int_error=zeros_3d,
+            last_ang_vel=zeros_3d,
+            params=params,
+        )
+
+
+@dataclass
 class MellingerForceTorqueData:
     cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Force-torque command for the drone.
@@ -466,6 +682,39 @@ def control_attitude2force_torque(data: SimData) -> SimData:
     )
     return data.replace(
         states=states, controls=data.controls.replace(attitude=attitude_ctrl, force_torque=ft_ctrl)
+    )
+
+
+def control_body_rate2force_torque(data: SimData) -> SimData:
+    """Compute the updated controls for the body rate controller."""
+    states = data.states
+    body_rate_ctrl: MellingerBodyRateData = data.controls.body_rate
+    assert body_rate_ctrl is not None, "Using body rate controller without initialized data"
+    mask = controllable(data.core.steps, data.core.freq, body_rate_ctrl.steps, body_rate_ctrl.freq)
+    prev_cmd = body_rate_ctrl.cmd
+    body_rate_ctrl = leaf_replace(body_rate_ctrl, mask, cmd=body_rate_ctrl.staged_cmd)
+    force, torque, r_int_error = body_rate2force_torque(
+        states.quat,
+        states.ang_vel,
+        body_rate_ctrl.cmd,
+        prev_ang_vel=body_rate_ctrl.last_ang_vel,
+        prev_cmd=prev_cmd,
+        r_int_error=body_rate_ctrl.r_int_error,
+        ctrl_freq=body_rate_ctrl.freq,
+        **body_rate_ctrl.params,
+    )
+    body_rate_ctrl = leaf_replace(
+        body_rate_ctrl,
+        mask,
+        r_int_error=r_int_error,
+        last_ang_vel=states.ang_vel,
+        steps=data.core.steps,
+    )
+    ft_ctrl = leaf_replace(
+        data.controls.force_torque, mask, staged_cmd=jnp.concat([force, torque], axis=-1)
+    )
+    return data.replace(
+        controls=data.controls.replace(body_rate=body_rate_ctrl, force_torque=ft_ctrl)
     )
 
 

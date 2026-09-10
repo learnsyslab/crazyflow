@@ -19,6 +19,7 @@ import crazyflow.sim.functional as F
 from crazyflow.control import Control
 from crazyflow.control.mellinger import (
     control_attitude2force_torque,
+    control_body_rate2force_torque,
     control_commit_attitude,
     control_force_torque2rotor_vel,
     control_state2attitude,
@@ -82,6 +83,7 @@ class Sim:
         freq: int = 500,
         state_freq: int = 100,
         attitude_freq: int = 500,
+        body_rate_freq: int = 500,
         force_torque_freq: int = 500,
         device: str = "cpu",
         xml_path: Path | None = None,
@@ -100,6 +102,7 @@ class Sim:
             freq: Dynamics step frequency in Hz.
             state_freq: Frequency in Hz at which the state controller runs.
             attitude_freq: Frequency in Hz at which the attitude controller runs.
+            body_rate_freq: Frequency in Hz at which the body rate controller runs.
             force_torque_freq: Frequency in Hz at which the force/torque controller runs.
             device: Device to place the simulation data on (e.g. ``"cpu"`` or ``"gpu"``).
             xml_path: Path to a custom scene XML. Defaults to ``crazyflow/scene.xml``.
@@ -111,7 +114,7 @@ class Sim:
         assert Dynamics(dynamics) in Dynamics, f"Dynamics mode {dynamics} not implemented"
         assert Control(control) in Control, f"Control mode {control} not implemented"
         if dynamics != Dynamics.first_principles:
-            if control in (Control.force_torque, Control.rotor_vel):
+            if control in (Control.body_rate, Control.force_torque, Control.rotor_vel):
                 raise ConfigError(f"Control mode {control} requires first principles dynamics")
         if freq > 10_000 and not jax.config.jax_enable_x64:
             raise ConfigError("High frequency simulations require double precision mode")
@@ -133,7 +136,9 @@ class Sim:
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
 
-        self.data = self.init_data(state_freq, attitude_freq, force_torque_freq, rng_key)
+        self.data = self.init_data(
+            state_freq, attitude_freq, body_rate_freq, force_torque_freq, rng_key
+        )
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
@@ -184,6 +189,10 @@ class Sim:
     def attitude_control(self, controls: Array):
         """Set the desired attitude for all drones in all worlds."""
         self.data = F.attitude_control(self.data, controls)
+
+    def body_rate_control(self, controls: Array):
+        """Set the desired body rates and collective thrust for all drones in all worlds."""
+        self.data = F.body_rate_control(self.data, controls)
 
     def force_torque_control(self, controls: Array):
         """Set the desired force and torque for all drones in all worlds."""
@@ -433,9 +442,10 @@ class Sim:
         """
         state_freq = 0 if (s := self.data.controls.state) is None else s.freq
         attitude_freq = 0 if (a := self.data.controls.attitude) is None else a.freq
+        body_rate_freq = 0 if (br := self.data.controls.body_rate) is None else br.freq
         force_torque_freq = 0 if (ft := self.data.controls.force_torque) is None else ft.freq
         self.data = self.init_data(
-            state_freq, attitude_freq, force_torque_freq, self.data.core.rng_key
+            state_freq, attitude_freq, body_rate_freq, force_torque_freq, self.data.core.rng_key
         )
         return self.data
 
@@ -475,7 +485,12 @@ class Sim:
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
 
     def init_data(
-        self, state_freq: int, attitude_freq: int, force_torque_freq: int, rng_key: Array
+        self,
+        state_freq: int,
+        attitude_freq: int,
+        body_rate_freq: int,
+        force_torque_freq: int,
+        rng_key: Array,
     ) -> SimData:
         """Initialize the simulation data."""
         drone_name = "drone_fused" if self.fused_mjx_model else "drone"
@@ -493,6 +508,7 @@ class Sim:
                 self.drone,
                 state_freq,
                 attitude_freq,
+                body_rate_freq,
                 force_torque_freq,
                 self.device,
             ),
@@ -515,6 +531,8 @@ class Sim:
             return self.data.controls.state.freq
         if self.control == Control.attitude:
             return self.data.controls.attitude.freq
+        if self.control == Control.body_rate:
+            return self.data.controls.body_rate.freq
         if self.control == Control.force_torque:
             return self.data.controls.force_torque.freq
         raise NotImplementedError(f"Control mode {self.control} not implemented")
@@ -567,6 +585,7 @@ def build_control_fns(
     """
     state = ("state_controller", control_state2attitude)
     attitude = ("attitude_controller", control_attitude2force_torque)
+    body_rate = ("body_rate_controller", control_body_rate2force_torque)
     force_torque = ("force_torque_controller", control_force_torque2rotor_vel)
     commit_attitude = ("commit_attitude", control_commit_attitude)
     match control:
@@ -581,6 +600,8 @@ def build_control_fns(
                 stages = (commit_attitude,)
             else:
                 raise NotImplementedError(f"Control mode {control} not implemented for {dynamics}")
+        case Control.body_rate:
+            stages = (body_rate, force_torque)
         case Control.force_torque:
             stages = (force_torque,)
         case Control.rotor_vel:

@@ -42,6 +42,18 @@ def attitude_control(data: SimData, controls: Array) -> SimData:
     return data
 
 
+def body_rate_control(data: SimData, controls: Array) -> SimData:
+    """Body rate control function."""
+    assert data.controls.mode == Control.body_rate, f"control type {data.controls.mode} not enabled"
+    assert controls.shape == (data.core.n_worlds, data.core.n_drones, 4), "controls shape mismatch"
+    controls = jnp.asarray(controls)
+    return data.replace(
+        controls=data.controls.replace(
+            body_rate=data.controls.body_rate.replace(staged_cmd=controls)
+        )
+    )
+
+
 def force_torque_control(data: SimData, controls: Array) -> SimData:
     """Force-torque control function."""
     assert data.controls.mode == Control.force_torque, (
@@ -76,6 +88,8 @@ def controllable(data: SimData) -> Array:
             control_steps, control_freq = controls.state.steps, controls.state.freq
         case Control.attitude:
             control_steps, control_freq = controls.attitude.steps, controls.attitude.freq
+        case Control.body_rate:
+            control_steps, control_freq = controls.body_rate.steps, controls.body_rate.freq
         case Control.force_torque:
             control_steps = controls.force_torque.steps
             control_freq = controls.force_torque.freq

@@ -5,10 +5,13 @@ See https://ieeexplore.ieee.org/document/5980409 for details.
 
 from crazyflow.control.mellinger.control import (
     MellingerAttitudeData,
+    MellingerBodyRateData,
     MellingerForceTorqueData,
     MellingerStateData,
     attitude2force_torque,
+    body_rate2force_torque,
     control_attitude2force_torque,
+    control_body_rate2force_torque,
     control_commit_attitude,
     control_force_torque2rotor_vel,
     control_state2attitude,
@@ -19,12 +22,15 @@ from crazyflow.control.mellinger.control import (
 __all__ = [
     "state2attitude",
     "attitude2force_torque",
+    "body_rate2force_torque",
     "force_torque2rotor_vel",
     "MellingerStateData",
     "MellingerAttitudeData",
+    "MellingerBodyRateData",
     "MellingerForceTorqueData",
     "control_state2attitude",
     "control_attitude2force_torque",
+    "control_body_rate2force_torque",
     "control_commit_attitude",
     "control_force_torque2rotor_vel",
 ]

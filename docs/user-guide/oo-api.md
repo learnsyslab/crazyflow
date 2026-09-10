@@ -77,7 +77,7 @@ import numpy as np
 from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-sim = Sim(n_worlds=1, n_drones=1, control=Control.attitude, dynamics=Dynamics.so_rpy)
+sim = Sim(n_worlds=1, n_drones=1, control=Control.attitude)
 sim.reset()
 
 # [roll, pitch, yaw, collective_thrust_N]
@@ -85,6 +85,26 @@ cmd = np.zeros((1, 1, 4), dtype=np.float32)
 cmd[0, 0, 3] = float(sim.data.params.mass[0]) * 9.81  # hover thrust
 
 sim.attitude_control(cmd)
+sim.step(sim.freq // sim.control_freq)
+```
+
+### Body rate control
+
+Commands body-frame angular rates (rad/s) and a collective thrust (N). The Mellinger controller tracks the rates and, as in the firmware, levels the drone with its attitude terms. Set `kR` and `ki_m` to zero for pure rate tracking, see [Control Modes](control/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+
+```python
+import numpy as np
+from crazyflow.sim import Sim, Dynamics
+from crazyflow.control import Control
+
+sim = Sim(n_worlds=1, n_drones=1, control=Control.body_rate)
+sim.reset()
+
+# [body_rate_x, body_rate_y, body_rate_z, collective_thrust_N]
+cmd = np.zeros((1, 1, 4), dtype=np.float32)
+cmd[0, 0, 3] = float(sim.data.params.mass[0]) * 9.81  # hover thrust
+
+sim.body_rate_control(cmd)
 sim.step(sim.freq // sim.control_freq)
 ```
 

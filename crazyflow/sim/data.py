@@ -11,6 +11,7 @@ from jax import Array, Device
 from crazyflow.control import Control
 from crazyflow.control.mellinger import (
     MellingerAttitudeData,
+    MellingerBodyRateData,
     MellingerForceTorqueData,
     MellingerStateData,
 )
@@ -111,6 +112,8 @@ class SimControls:
     """State control data."""
     attitude: ControlData | None
     """Attitude control data."""
+    body_rate: ControlData | None
+    """Body rate control data."""
     force_torque: ControlData | None
     """Force and torque control data."""
     rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
@@ -124,6 +127,7 @@ class SimControls:
         drone: str,
         state_freq: int | None,
         attitude_freq: int | None,
+        body_rate_freq: int | None,
         force_torque_freq: int | None,
         device: Device,
     ) -> SimControls:
@@ -142,11 +146,12 @@ class SimControls:
                     mode=control,
                     state=state,
                     attitude=attitude,
+                    body_rate=None,
                     force_torque=force_torque,
                     rotor_vel=rotor_vel,
                 )
             case Control.attitude:
-                attitude = attitude = MellingerAttitudeData.create(
+                attitude = MellingerAttitudeData.create(
                     n_worlds, n_drones, attitude_freq, drone, device
                 )
                 force_torque = MellingerForceTorqueData.create(
@@ -156,6 +161,22 @@ class SimControls:
                     mode=control,
                     state=None,
                     attitude=attitude,
+                    body_rate=None,
+                    force_torque=force_torque,
+                    rotor_vel=rotor_vel,
+                )
+            case Control.body_rate:
+                body_rate = MellingerBodyRateData.create(
+                    n_worlds, n_drones, body_rate_freq, drone, device
+                )
+                force_torque = MellingerForceTorqueData.create(
+                    n_worlds, n_drones, force_torque_freq, drone, device
+                )
+                return SimControls(
+                    mode=control,
+                    state=None,
+                    attitude=None,
+                    body_rate=body_rate,
                     force_torque=force_torque,
                     rotor_vel=rotor_vel,
                 )
@@ -167,12 +188,18 @@ class SimControls:
                     mode=control,
                     state=None,
                     attitude=None,
+                    body_rate=None,
                     force_torque=force_torque,
                     rotor_vel=rotor_vel,
                 )
             case Control.rotor_vel:
                 return SimControls(
-                    mode=control, state=None, attitude=None, force_torque=None, rotor_vel=rotor_vel
+                    mode=control,
+                    state=None,
+                    attitude=None,
+                    body_rate=None,
+                    force_torque=None,
+                    rotor_vel=rotor_vel,
                 )
             case _:
                 raise ValueError(f"Control mode {control} not implemented")

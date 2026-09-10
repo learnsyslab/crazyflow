@@ -1,4 +1,5 @@
 import jax
+import jax.numpy as jnp
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
@@ -53,6 +54,40 @@ def test_attitude_interface(dynamics: Dynamics):
     dpos = sim.data.states.pos[0, 0] - target_pos
     distance = np.linalg.norm(dpos)
     assert distance < 0.05, f"Failed to maintain hover with {dynamics} ({dpos})"
+
+
+@pytest.mark.integration
+def test_body_rate_interface():
+    sim = Sim(dynamics=Dynamics.first_principles, control=Control.body_rate)
+    # Disable the attitude terms of the firmware controller to track body rates directly
+    body_rate = sim.data.controls.body_rate
+    params = body_rate.params | {"kR": jnp.zeros(3), "ki_m": jnp.zeros(3)}
+    controls = sim.data.controls.replace(body_rate=body_rate.replace(params=params))
+    sim.data = sim.data.replace(controls=controls)
+    target_pos = np.array([0.0, 0.0, 1.0])
+    jit_state2attitude = jax.jit(parametrize(state2attitude, drone=sim.drone))
+    kp_att = 8.0  # Proportional gain from attitude error to body rates
+
+    pos_err_i = np.zeros((1, 1, 3))
+    cmd = np.zeros((1, 1, 13))
+    body_rate_cmd = np.zeros((1, 1, 4))
+    steps = int(3 * sim.control_freq)
+
+    for i in range(steps):
+        cmd[..., :3] = target_pos * i / steps  # Linearly interpolate target position
+        pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
+        rpyt, pos_err_i = jit_state2attitude(pos, quat, vel, cmd, pos_err_i, ctrl_freq=500)
+        rpyt = np.asarray(rpyt)[0, 0]
+        rot_err = R.from_quat(np.asarray(quat[0, 0])).inv() * R.from_euler("xyz", rpyt[:3])
+        body_rate_cmd[0, 0, :3] = kp_att * rot_err.as_rotvec()
+        body_rate_cmd[0, 0, 3] = rpyt[3]
+        sim.body_rate_control(body_rate_cmd)
+        sim.step(sim.freq // sim.control_freq)
+
+    # Check if drone maintained hover position
+    dpos = sim.data.states.pos[0, 0] - target_pos
+    distance = np.linalg.norm(dpos)
+    assert distance < 0.05, f"Failed to maintain hover with body rate control ({dpos})"
 
 
 @pytest.mark.integration
