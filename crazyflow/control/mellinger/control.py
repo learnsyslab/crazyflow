@@ -335,12 +335,17 @@ class MellingerStateData:
         n_worlds: int, n_drones: int, freq: int, drone: str, device: Device
     ) -> MellingerStateData:
         """Create a default set of state data for the simulation."""
-        cmd = jnp.zeros((n_worlds, n_drones, 13), device=device)
+        zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
+        zeros_13d = jnp.zeros((n_worlds, n_drones, 13), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        pos_err_i = jnp.zeros((n_worlds, n_drones, 3), device=device)
         params = load_params(state2attitude, drone, xp=jnp, device=device)
         return MellingerStateData(
-            cmd=cmd, staged_cmd=cmd, steps=steps, freq=freq, pos_err_i=pos_err_i, params=params
+            cmd=zeros_13d.copy(),
+            staged_cmd=zeros_13d.copy(),
+            steps=steps,
+            freq=freq,
+            pos_err_i=zeros_3d.copy(),
+            params=params,
         )
 
 
@@ -369,17 +374,17 @@ class MellingerAttitudeData:
         n_worlds: int, n_drones: int, freq: int, drone: str, device: Device
     ) -> MellingerAttitudeData:
         """Create a default set of attitude data for the simulation."""
-        cmd = jnp.zeros((n_worlds, n_drones, 4), device=device)
-        steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
+        zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         params = load_params(attitude2force_torque, drone, xp=jnp, device=device)
         return MellingerAttitudeData(
-            cmd=cmd,
-            staged_cmd=cmd,
+            cmd=zeros_4d.copy(),
+            staged_cmd=zeros_4d.copy(),
             steps=steps,
             freq=freq,
-            r_int_error=zeros_3d,
-            last_ang_vel=zeros_3d,
+            r_int_error=zeros_3d.copy(),
+            last_ang_vel=zeros_3d.copy(),
             params=params,
         )
 
@@ -404,11 +409,11 @@ class MellingerForceTorqueData:
     def create(
         n_worlds: int, n_drones: int, freq: int, drone: str, device: Device
     ) -> MellingerForceTorqueData:
-        zero_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         params = load_params(force_torque2rotor_vel, drone, xp=jnp, device=device)
         return MellingerForceTorqueData(
-            cmd=zero_4d, staged_cmd=zero_4d, steps=steps, freq=freq, params=params
+            cmd=zeros_4d.copy(), staged_cmd=zeros_4d.copy(), steps=steps, freq=freq, params=params
         )
 
 

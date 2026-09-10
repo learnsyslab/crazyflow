@@ -100,6 +100,24 @@ def test_sim_init(dynamics: Dynamics, device: str, control: Control, n_worlds: i
 
 @pytest.mark.unit
 @pytest.mark.parametrize("dynamics", Dynamics)
+@pytest.mark.parametrize("control", Control)
+def test_sim_data_buffers_are_distinct(dynamics: Dynamics, control: Control, device: str):
+    """Every leaf of SimData must own its buffer, or XLA refuses to donate the pytree."""
+    if dynamics != Dynamics.first_principles and control in (
+        Control.force_torque,
+        Control.rotor_vel,
+    ):
+        return
+    sim = Sim(n_worlds=2, dynamics=dynamics, device=device, control=control)
+    owners: dict[int, str] = {}
+    for path, leaf in jax.tree_util.tree_leaves_with_path(sim.data):
+        name, ptr = jax.tree_util.keystr(path), leaf.unsafe_buffer_pointer()
+        assert ptr not in owners, f"{name} shares its buffer with {owners[ptr]}"
+        owners[ptr] = name
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("dynamics", Dynamics)
 @pytest.mark.parametrize("n_worlds", [1, 2])
 @pytest.mark.parametrize("n_drones", [1, 3])
 def test_reset(device: str, dynamics: Dynamics, n_worlds: int, n_drones: int):

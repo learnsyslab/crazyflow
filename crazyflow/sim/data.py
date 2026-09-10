@@ -42,18 +42,17 @@ class SimState:
     @staticmethod
     def create(n_worlds: int, n_drones: int, device: Device) -> SimState:
         """Create a default set of states for the simulation."""
+        # Each field needs a buffer of its own so that SimData can be donated to XLA
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        q_identity = jnp.zeros((n_worlds, n_drones, 4), device=device)
-        q_identity = q_identity.at[..., -1].set(1.0)
-        rotor_vel = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         return SimState(
-            pos=zeros_3d,
-            quat=q_identity,
-            vel=zeros_3d,
-            ang_vel=zeros_3d,
-            force=zeros_3d,
-            torque=zeros_3d,
-            rotor_vel=rotor_vel,
+            pos=zeros_3d.copy(),
+            quat=zeros_4d.at[..., -1].set(1.0),
+            vel=zeros_3d.copy(),
+            ang_vel=zeros_3d.copy(),
+            force=zeros_3d.copy(),
+            torque=zeros_3d.copy(),
+            rotor_vel=zeros_4d.copy(),
         )
 
 
@@ -76,7 +75,11 @@ class SimStateDeriv:
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
         zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         return SimStateDeriv(
-            vel=zeros_3d, ang_vel=zeros_3d, acc=zeros_3d, ang_acc=zeros_3d, rotor_acc=zeros_4d
+            vel=zeros_3d.copy(),
+            ang_vel=zeros_3d.copy(),
+            acc=zeros_3d.copy(),
+            ang_acc=zeros_3d.copy(),
+            rotor_acc=zeros_4d.copy(),
         )
 
 
