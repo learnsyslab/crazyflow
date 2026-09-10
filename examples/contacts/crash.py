@@ -14,7 +14,7 @@ def main():
 
     print("Phase 1: Hovering at [0, 0, 0.5] for 3 seconds")
     hover_duration = 3.0
-    hover_cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    hover_cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     hover_cmd[..., :3] = [0.0, 0.0, 0.5]  # x, y, z position
     sim.state_control(hover_cmd)
 
@@ -26,7 +26,7 @@ def main():
 
     print("Phase 2: Dropping to [-5, 0, -0.5] for 3 seconds")
     drop_duration = 3.0
-    drop_cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    drop_cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     drop_cmd[..., :3] = [-5.0, 0.0, -0.5]  # x, y, z position
     sim.state_control(drop_cmd)
 

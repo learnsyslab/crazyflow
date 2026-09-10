@@ -17,7 +17,7 @@ def test_state_interface(dynamics: Dynamics):
 
     # Simple P controller for attitude to reach target height
     target_height = 0.5
-    cmd = np.zeros((1, 1, 13), dtype=np.float32)
+    cmd = np.zeros((1, 1, 16), dtype=np.float32)
     cmd[0, 0, 2] = target_height
     steps = int(2 * sim.control_freq)  # Run simulation for 2 seconds
 
@@ -32,6 +32,31 @@ def test_state_interface(dynamics: Dynamics):
 
 
 @pytest.mark.integration
+def test_state_interface_body_rate_feedforward():
+    """The body rates of the state command must reach the attitude controller as feedforward."""
+    yaw_rate = 1.5
+
+    def yaw_ramp_error(feedforward: bool) -> float:
+        sim = Sim(dynamics=Dynamics.first_principles, control=Control.state)
+        cmd = np.zeros((1, 1, 16))
+        cmd[..., 2] = 0.5
+        errors = []
+        for i in range(int(4 * sim.control_freq)):
+            yaw_des = yaw_rate * i / sim.control_freq
+            cmd[..., 9:13] = R.from_euler("z", yaw_des).as_quat()
+            cmd[..., 15] = yaw_rate if feedforward else 0.0
+            sim.state_control(cmd)
+            sim.step(sim.freq // sim.control_freq)
+            yaw = R.from_quat(sim.data.states.quat[0, 0]).as_euler("xyz")[2]
+            errors.append(abs((yaw - yaw_des + np.pi) % (2 * np.pi) - np.pi))
+        return np.mean(errors[sim.control_freq :])  # Skip the first second of transients
+
+    error_ff, error_no_ff = yaw_ramp_error(True), yaw_ramp_error(False)
+    assert error_ff < 0.05, f"Yaw lag with body rate feedforward: {error_ff}"
+    assert error_ff < error_no_ff / 2, f"Feedforward must reduce the yaw lag ({error_no_ff})"
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("dynamics", Dynamics)
 def test_attitude_interface(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.attitude)
@@ -39,7 +64,7 @@ def test_attitude_interface(dynamics: Dynamics):
     jit_state2attitude = jax.jit(parametrize(state2attitude, drone=sim.drone))
 
     pos_err_i = np.zeros((1, 1, 3))
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     cmd[0, 0, 2] = 1.0
     steps = int(3 * sim.control_freq)
 
@@ -69,7 +94,7 @@ def test_body_rate_interface():
     kp_att = 8.0  # Proportional gain from attitude error to body rates
 
     pos_err_i = np.zeros((1, 1, 3))
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     body_rate_cmd = np.zeros((1, 1, 4))
     steps = int(3 * sim.control_freq)
 
@@ -116,7 +141,7 @@ def test_swarm_control(dynamics: Dynamics):
     sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=dynamics, control=Control.state)
     start_pos = np.asarray(sim.data.states.pos)
     target_pos = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
-    cmd = np.zeros((n_worlds, n_drones, 13))
+    cmd = np.zeros((n_worlds, n_drones, 16))
     steps = int(3 * sim.control_freq)
 
     for i in range(steps):
@@ -138,9 +163,9 @@ def test_yaw_rotation(dynamics: Dynamics):
     sim = Sim(dynamics=dynamics, control=Control.state, state_freq=100)
     sim.reset()
 
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     cmd[..., :3] = 0.2
-    cmd[..., 9] = np.pi / 2  # Test if the drone can rotate in yaw
+    cmd[..., 9:13] = R.from_euler("z", np.pi / 2).as_quat()  # Test if the drone can rotate in yaw
 
     sim.state_control(cmd)
     sim.step(200 * sim.freq // sim.control_freq)  # Run simulation for 2 seconds

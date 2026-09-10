@@ -42,10 +42,11 @@ def control(t: float) -> np.ndarray:
         A state command placing the drone on the ellipse with its yaw along the tangent.
     """
     angle = 2 * np.pi * t
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     cmd[..., :2] = CENTER + RADII * np.array([np.cos(angle), np.sin(angle)])
     cmd[..., 2] = HEIGHT
-    cmd[..., 9] = np.arctan2(RADII[1] * np.cos(angle), -RADII[0] * np.sin(angle))
+    yaw = np.arctan2(RADII[1] * np.cos(angle), -RADII[0] * np.sin(angle))
+    cmd[..., 9:13] = R.from_euler("z", yaw).as_quat()
     return cmd
 
 
@@ -60,7 +61,7 @@ def main(show_plot: bool = False):
     # Start on the lap so the controller does not have to fly in from the origin first
     cmd = control(0.0)
     states = sim.data.states.replace(pos=sim.data.states.pos.at[..., :].set(cmd[..., :3]))
-    states = states.replace(quat=states.quat.at[...].set(R.from_euler("z", cmd[..., 9]).as_quat()))
+    states = states.replace(quat=states.quat.at[...].set(cmd[..., 9:13]))
     sim.data = sim.data.replace(states=states)
 
     fig, ax = plt.subplots(figsize=(7, 5))

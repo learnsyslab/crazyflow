@@ -30,11 +30,12 @@ def control(t: float, n_worlds: int, n_drones: int) -> np.ndarray:
     """Circle both drones around the center, each yawed to look across at its partner."""
     drones = np.arange(n_drones)[None, :]
     angle = t + (2 * np.pi / n_drones) * drones
-    cmd = np.zeros((n_worlds, n_drones, 13))
+    cmd = np.zeros((n_worlds, n_drones, 16))
     cmd[..., 0] = RADIUS * np.cos(angle)
     cmd[..., 1] = RADIUS * np.sin(angle)
     cmd[..., 2] = HEIGHT
-    cmd[..., 9] = angle + np.pi  # yaw faces the opposite point on the circle, where the partner is
+    yaw = angle + np.pi  # yaw faces the opposite point on the circle, where the partner is
+    cmd[..., 11], cmd[..., 12] = np.sin(yaw / 2), np.cos(yaw / 2)
     return cmd
 
 

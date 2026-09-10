@@ -50,7 +50,7 @@ def main():
         rgbas[..., 3] = 1.0
 
         init_pos = np.array(sim.data.states.pos[0, :, :])
-        cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+        cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
         cmd[:, :, :3] = init_pos
         cmd[:, :, 2] += 1.5
 

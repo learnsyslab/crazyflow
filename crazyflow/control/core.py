@@ -41,7 +41,7 @@ def parametrize(
 
     ctrl = parametrize(state2attitude, "cf2x_L250")
     pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
-    vel, cmd = np.zeros(3), np.zeros(13)
+    vel, cmd = np.zeros(3), np.zeros(16)
     rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
     ```
 
@@ -85,14 +85,18 @@ class Control(StrEnum):
     """Control type of the simulated onboard controller."""
 
     state = "state"
-    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
-    
+    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
+
+    The attitude setpoint qx, qy, qz, qw is an xyzw quaternion. The body rates wx, wy, wz are the
+    angular velocity in the body frame in rad/s. The position controller forwards them to the
+    attitude controller as its body rate setpoint.
+
     Note:
         Recommended frequency is >=20 Hz.
 
     Warning:
-        Currently, we only use positions, velocities, and yaw. The rest of the state is ignored.
-        This is subject to change in the future.
+        Only the yaw of the attitude quaternion is used, as in the firmware. The fitted dynamics
+        (so_rpy family) take the attitude command directly and ignore the body rates.
     """
     attitude = "attitude"
     """Attitude control takes [roll, pitch, yaw, collective thrust].
@@ -101,7 +105,9 @@ class Control(StrEnum):
         Recommended frequency is >=100 Hz.
     """
     body_rate = "body_rate"
-    """Body rate control takes [roll_rate, pitch_rate, yaw_rate, collective thrust].
+    """Body rate control takes [wx, wy, wz, collective thrust].
+
+    The body rates wx, wy, wz are the angular velocity in the body frame in rad/s.
 
     Note:
         Recommended frequency is >=200 Hz.

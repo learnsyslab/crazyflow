@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def control(t: float) -> np.ndarray:
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     cmd[..., :3] = [np.cos(t) - 1, np.sin(t), 0.2 * t]
     return cmd
 

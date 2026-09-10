@@ -138,7 +138,7 @@ def main():
     fps = 60
 
     for _ in range(3):
-        cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+        cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
         cmd[..., 2] = 0.4
         cmd[..., :2] = grid_2d(sim.n_drones) * 0.25
 

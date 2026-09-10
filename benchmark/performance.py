@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 def profile_step(sim_config: config_dict.ConfigDict, n_steps: int, device: str):
     sim = Sim(**sim_config)
     device = jax.devices(device)[0]
-    ndim = 13 if sim.control == "state" else 4
+    ndim = 16 if sim.control == "state" else 4
     control_fn = sim.state_control if sim.control == "state" else sim.attitude_control
     cmd = np.zeros((sim.n_worlds, sim.n_drones, ndim))
     # Ensure JIT compiled dynamics and control

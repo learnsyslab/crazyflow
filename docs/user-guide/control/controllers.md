@@ -12,7 +12,7 @@ The Mellinger controller [[1]](#references) is split into three stages that form
 
 | Stage | Function | Takes | Produces |
 |---|---|---|---|
-| 1 | [`state2attitude`](mellinger.md#state-to-attitude) | State + 13-element setpoint | RPYT command + position integral error |
+| 1 | [`state2attitude`](mellinger.md#state-to-attitude) | State + 16-element setpoint | RPYT command + position integral error |
 | 2 | [`attitude2force_torque`](mellinger.md#attitude-to-force-torque) | Attitude + RPYT command | Collective force, body torques + angular velocity integral error |
 | 3 | [`force_torque2rotor_vel`](mellinger.md#force-torque-to-rotor-velocities) | Force + torques | 4 motor speeds [RPM] |
 

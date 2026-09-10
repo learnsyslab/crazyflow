@@ -75,7 +75,7 @@ from crazyflow.control import Control
 
 sim = Sim(freq=500, control=Control.state)
 sim.reset()
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 sim.state_control(cmd)
 sim.step(sim.freq // sim.control_freq)  # 500 // 100 = 5 dynamics steps, controller fires once
 ```

@@ -123,7 +123,7 @@ def test_functional_state_control(state_freq: int):
     can_control_2 = np.array([0, 0, 1, 2, 3, 4]) * state_freq % sim.freq < state_freq
 
     for i in range(6):
-        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
         # Check controllable status
         controllable = F.controllable(data)
         assert jnp.all(controllable[0] == can_control_1[i]), f"Controllable 1 mismatch at t={i}"
@@ -160,7 +160,7 @@ def test_functional_state_control_device(device: str):
     """Test that functional state control maintains JAX arrays on correct device."""
     sim = Sim(n_worlds=2, n_drones=3, control=Control.state, device=device)
     data = sim.build_data()
-    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
     data = F.state_control(data, cmd)
     controls = data.controls.state
     assert isinstance(controls.cmd, jnp.ndarray), "Buffers must remain JAX arrays"

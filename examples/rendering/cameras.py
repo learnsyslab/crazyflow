@@ -16,7 +16,7 @@ from crazyflow.sim.integration import Integrator
 def control(t: float, t_tot: float) -> np.ndarray:
     phi = 2 * np.pi * t / t_tot + np.pi
     circle = np.array([np.cos(phi), np.sin(phi)])
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     cmd[..., :2] = circle  # xy
     cmd[..., 2] = 0.1 + 0.5 * t / t_tot  # z
     cmd[..., -4] = 1.9 * np.pi * t / t_tot  # yaw

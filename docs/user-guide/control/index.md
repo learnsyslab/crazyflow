@@ -4,12 +4,12 @@ Crazyflow provides five control modes, from high-level position setpoints down t
 
 ## Control hierarchy
 
-Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger controller; an attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
+Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller, and its body rates are forwarded as the body rate setpoint; the attitude command and the body rate setpoint are converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
 
 ```
 State (13D)
-  └─ Mellinger controller
-       └─ Attitude (4D: roll, pitch, yaw, thrust)  |  Body rates (4D: ωx, ωy, ωz, thrust)
+  └─ Mellinger position controller
+       └─ Attitude (4D: roll, pitch, yaw, thrust) + body rates (3D: ωx, ωy, ωz)  |  Body rates (4D: ωx, ωy, ωz, thrust)
             └─ Geometric controller
                  └─ Force/torque (4D: Fc, Tx, Ty, Tz)
                       └─ Mixer
@@ -28,19 +28,19 @@ sim = Sim(control=Control.state, state_freq=100, attitude_freq=500)
 sim.reset()
 ```
 
-Command shape: `(n_worlds, n_drones, 13)`
+Command shape: `(n_worlds, n_drones, 16)`
 
 | Index | Variable | Units |
 |---|---|---|
 | 0–2 | Target position \(x, y, z\) | m |
 | 3–5 | Target velocity \(\dot{x}, \dot{y}, \dot{z}\) | m/s |
 | 6–8 | Target acceleration \(\ddot{x}, \ddot{y}, \ddot{z}\) | m/s² |
-| 9 | Yaw | rad |
-| 10 | Roll rate | rad/s |
-| 11 | Pitch rate | rad/s |
-| 12 | Yaw rate | rad/s |
+| 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
+| 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-Set unused elements to zero. A common hover command sets only the z position:
+As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The position controller does not use them and forwards them to the attitude controller as its body rate setpoint. The fitted dynamics take the attitude command directly and ignore the body rates.
+
+Set unused elements to zero. A zero quaternion is treated as zero yaw. A common hover command sets only the z position:
 
 ```python
 import numpy as np
@@ -50,7 +50,7 @@ from crazyflow.control import Control
 sim = Sim(control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 1.0  # hover at 1 m
 
 sim.state_control(cmd)
@@ -96,7 +96,7 @@ sim.step(sim.freq // sim.control_freq)
 
 ## Body rate control
 
-Commands body-frame angular rates and a collective thrust. The Mellinger controller tracks the rates with the same gains as in attitude control. As in the firmware, its attitude terms level the drone at the current yaw. Set the `kR` and `ki_m` parameters of the body rate controller to zero to track body rates without the levelling terms, see the [body rate example](../../examples/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+Commands body rates, i.e. the angular velocity in the body frame, and a collective thrust. The Mellinger controller tracks the rates with the same gains as in attitude control. As in the firmware, its attitude terms level the drone at the current yaw. Set the `kR` and `ki_m` parameters of the body rate controller to zero to track body rates without the levelling terms, see the [body rate example](../../examples/index.md#body-rate-control). Requires `Dynamics.first_principles`.
 
 ```python
 from crazyflow.sim import Sim, Dynamics
@@ -110,9 +110,9 @@ Command shape: `(n_worlds, n_drones, 4)`
 
 | Index | Variable | Units |
 |---|---|---|
-| 0 | Roll rate \(\omega_x\) | rad/s |
-| 1 | Pitch rate \(\omega_y\) | rad/s |
-| 2 | Yaw rate \(\omega_z\) | rad/s |
+| 0 | Body rate \(\omega_x\) | rad/s |
+| 1 | Body rate \(\omega_y\) | rad/s |
+| 2 | Body rate \(\omega_z\) | rad/s |
 | 3 | Collective thrust | N |
 
 Zero rates and hover thrust hold the current attitude:

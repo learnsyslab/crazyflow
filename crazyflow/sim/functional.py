@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def state_control(data: SimData, controls: Array) -> SimData:
     """State control function."""
     assert data.controls.mode == Control.state, f"control type {data.controls.mode} not enabled"
-    assert controls.shape == (data.core.n_worlds, data.core.n_drones, 13), "controls shape mismatch"
+    assert controls.shape == (data.core.n_worlds, data.core.n_drones, 16), "controls shape mismatch"
     controls = jnp.asarray(controls)
     data = data.replace(
         controls=data.controls.replace(state=data.controls.state.replace(staged_cmd=controls))

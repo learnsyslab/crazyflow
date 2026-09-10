@@ -25,7 +25,7 @@ def test_state_cmd_gradients(dynamics: Dynamics):
         )
         return sim_step(data, sim.freq // sim.control_freq).states.pos[0, 0, 2]
 
-    cmd = jnp.zeros((1, 1, 13), dtype=jnp.float32)
+    cmd = jnp.zeros((1, 1, 16), dtype=jnp.float32)
     cmd = cmd.at[..., 2].set(1.01)
 
     grad = jax.jit(jax.grad(height))(cmd, data)

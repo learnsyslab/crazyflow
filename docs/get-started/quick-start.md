@@ -17,19 +17,17 @@ sim.reset()
 
 ## State and command
 
-The default control mode is `Control.state`. A state command is a 13-element vector that sets the desired position, velocity, acceleration, yaw, and body angular rates.
+The default control mode is `Control.state`. A state command is a 16-element vector that sets the desired position, velocity, acceleration, attitude, and body rates.
 
 | Index | Variable | Units |
 |---|---|---|
 | 0–2 | Position \(x, y, z\) | m |
 | 3–5 | Velocity \(\dot{x}, \dot{y}, \dot{z}\) | m/s |
 | 6–8 | Acceleration \(\ddot{x}, \ddot{y}, \ddot{z}\) | m/s² |
-| 9 | Yaw | rad |
-| 10 | Roll rate | rad/s |
-| 11 | Pitch rate | rad/s |
-| 12 | Yaw rate | rad/s |
+| 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
+| 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-The command array has shape `(n_worlds, n_drones, 13)`.
+Only the yaw of the attitude quaternion is used, as in the firmware. A zero quaternion is treated as zero yaw. The command array has shape `(n_worlds, n_drones, 16)`.
 
 ```python
 import numpy as np
@@ -39,7 +37,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 0.5  # target height: 0.5 m
 ```
 
@@ -55,7 +53,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 0.5
 
 for _ in range(10):
@@ -75,7 +73,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 0.5
 
 for _ in range(10):
@@ -100,7 +98,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=4, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((4, 1, 13), dtype=np.float32)
+cmd = np.zeros((4, 1, 16), dtype=np.float32)
 cmd[:, 0, 2] = np.array([0.2, 0.4, 0.6, 0.8])  # different target heights per world
 
 for _ in range(10):
@@ -112,7 +110,7 @@ pos = sim.data.states.pos[:, 0, :]  # (4, 3) — position of drone 0 in each wor
 
 ## Simulate multiple drones
 
-Increase `n_drones` to place multiple drones inside a single world. Each drone has its own independent state; all receive commands from the same `(n_worlds, n_drones, 13)` array.
+Increase `n_drones` to place multiple drones inside a single world. Each drone has its own independent state; all receive commands from the same `(n_worlds, n_drones, 16)` array.
 
 ```python
 import numpy as np
@@ -122,7 +120,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=4, freq=500, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 4, 13), dtype=np.float32)
+cmd = np.zeros((1, 4, 16), dtype=np.float32)
 cmd[0, :, 2] = np.array([0.2, 0.4, 0.6, 0.8])  # different height per drone
 
 for _ in range(10):

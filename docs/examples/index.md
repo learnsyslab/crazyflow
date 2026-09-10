@@ -32,7 +32,7 @@ Commanding roll, pitch, yaw, and collective thrust directly. This level bypasses
 
 ## Body rate control
 
-Commanding body-frame angular rates and collective thrust. The firmware controller has no dedicated body rate mode and levels the drone with its attitude terms, so the example sets the `kR` and `ki_m` gains of the body rate controller to zero. 
+Commanding body rates and collective thrust. The firmware controller has no dedicated body rate mode and levels the drone with its attitude terms, so the example sets the `kR` and `ki_m` gains of the body rate controller to zero. 
 
 <!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }

@@ -14,7 +14,7 @@ jit_ctrl = jax.jit(ctrl)
 pos = jnp.zeros(3)
 quat = jnp.array([0.0, 0.0, 0.0, 1.0])
 vel = jnp.zeros(3)
-cmd = jnp.zeros(13)
+cmd = jnp.zeros(16)
 
 rpyt, int_pos_err = jit_ctrl(pos, quat, vel, cmd)
 ```
@@ -35,7 +35,7 @@ jit_ctrl = jax.jit(ctrl)
 pos = jnp.zeros(3)
 quat = jnp.array([0.0, 0.0, 0.0, 1.0])
 vel = jnp.zeros(3)
-cmd = jnp.zeros(13)
+cmd = jnp.zeros(16)
 
 pos_err_i = jnp.zeros(3)  # initialise to zero, so the function compiles only once
 for _ in range(10):
@@ -59,7 +59,7 @@ N = 1_000
 pos = jnp.zeros((N, 3))
 quat = jnp.broadcast_to(jnp.array([0.0, 0.0, 0.0, 1.0]), (N, 4))
 vel = jnp.zeros((N, 3))
-cmd = jnp.zeros((N, 13))
+cmd = jnp.zeros((N, 16))
 
 rpyt, _ = jit_ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (1000, 4)

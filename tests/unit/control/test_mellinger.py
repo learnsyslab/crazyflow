@@ -30,12 +30,12 @@ def test_state2attitude(drone: str) -> None:
     controller = parametrize(state2attitude, drone)
     # Single input
     pos, quat, vel, ang_vel = create_rnd_states()
-    rpyt, pos_err_i = controller(pos, quat, vel, np.ones(13), ctrl_freq=100)
+    rpyt, pos_err_i = controller(pos, quat, vel, np.ones(16), ctrl_freq=100)
     assert rpyt.shape == (4,)
     assert pos_err_i.shape == (3,)
     # Batch input
     pos, quat, vel, ang_vel = create_rnd_states((5, 4))
-    rpyt, pos_err_i = controller(pos, quat, vel, np.ones((5, 4, 13)), ctrl_freq=100)
+    rpyt, pos_err_i = controller(pos, quat, vel, np.ones((5, 4, 16)), ctrl_freq=100)
     assert rpyt.shape == (5, 4, 4)
     assert pos_err_i.shape == (5, 4, 3)
 
@@ -67,7 +67,7 @@ def test_body_rate2force_torque(drone: str) -> None:
     controller = parametrize(body_rate2force_torque, drone)
     # Single input
     _, quat, _, ang_vel = create_rnd_states()
-    cmd = np.array([0.1, 0.1, 0.1, 1.0])  # roll rate, pitch rate, yaw rate, thrust command
+    cmd = np.array([0.1, 0.1, 0.1, 1.0])  # body rates and thrust command
     force_des, torque_des, r_int_error = controller(quat, ang_vel, cmd)
     assert force_des.shape == (1,)
     assert torque_des.shape == (3,)
@@ -110,7 +110,7 @@ def test_state2attitude_at_setpoint(drone: str) -> None:
     pos = np.zeros(3)
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)
-    cmd = np.zeros(13)  # setpoint at origin, zero vel/acc, yaw=0
+    cmd = np.zeros(16)  # setpoint at origin, zero vel/acc, yaw=0
     rpyt, _ = controller(pos, quat, vel, cmd)
     assert np.allclose(rpyt[:3], 0.0, atol=1e-6), f"RPY at setpoint should be ~0, got {rpyt[:3]}"
     assert rpyt[3] > 0.0, "Hovering thrust must be positive"
@@ -126,7 +126,7 @@ def test_state2attitude_integral_error_accumulation(drone: str) -> None:
     pos = np.zeros(3)
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)
-    cmd = np.zeros(13)
+    cmd = np.zeros(16)
     cmd[0] = 1.0  # 1 m setpoint error in x
     ctrl_freq = 100.0
     dt = 1.0 / ctrl_freq
@@ -261,7 +261,7 @@ def test_state2attitude_batch_consistency(drone: str):
     controller = parametrize(state2attitude, drone)
     batch = (3, 2)
     pos, quat, vel, _ = create_rnd_states(batch)
-    cmd = np.random.randn(*batch, 13)
+    cmd = np.random.randn(*batch, 16)
     rpyt_batch, err_batch = controller(pos, quat, vel, cmd)
     for i in range(batch[0]):
         for j in range(batch[1]):

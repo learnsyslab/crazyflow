@@ -25,7 +25,7 @@ ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 
 def control(t: float) -> np.ndarray:
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
     cmd[..., :3] = [0.5 * (np.cos(t) - 1), 0.5 * np.sin(t), 1.0 + 0.2 * np.sin(0.5 * t)]
     return cmd
 

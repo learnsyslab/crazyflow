@@ -29,7 +29,7 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
 
 # Simulate with a heavier drone for this call only.
 rpyt, _ = ctrl(pos, quat, vel, cmd, mass=0.035)
@@ -71,7 +71,7 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
 rpyt, _ = ctrl(pos, quat, vel, cmd)
 ```
 

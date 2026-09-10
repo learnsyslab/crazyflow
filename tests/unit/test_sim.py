@@ -78,8 +78,8 @@ def test_sim_init(dynamics: Dynamics, device: str, control: Control, n_worlds: i
     # Test control buffer shapes
     if control == Control.state:
         assert isinstance(sim.data.controls.state, ControlData)
-        array_meta_assert(sim.data.controls.state.staged_cmd, (n_worlds, n_drones, 13), device)
-        array_meta_assert(sim.data.controls.state.cmd, (n_worlds, n_drones, 13), device)
+        array_meta_assert(sim.data.controls.state.staged_cmd, (n_worlds, n_drones, 16), device)
+        array_meta_assert(sim.data.controls.state.cmd, (n_worlds, n_drones, 16), device)
     else:
         assert sim.data.controls.state is None
     # Test attitude buffer shapes
@@ -228,6 +228,22 @@ def test_sim_step(n_worlds: int, n_drones: int, dynamics: Dynamics, control: Con
 
 
 @pytest.mark.unit
+def test_state_control_forwards_body_rates():
+    """State control must forward the body rates of the command to the attitude controller."""
+    sim = Sim(n_worlds=2, n_drones=3, control=Control.state)
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    cmd[..., 13:16] = np.random.rand(sim.n_worlds, sim.n_drones, 3)
+    sim.state_control(cmd)
+    sim.step()
+    assert np.allclose(sim.data.controls.attitude.ang_vel_des, cmd[..., 13:16])
+    # Attitude control never sets a body rate setpoint
+    sim = Sim(n_worlds=2, n_drones=3, control=Control.attitude)
+    sim.attitude_control(np.random.rand(sim.n_worlds, sim.n_drones, 4))
+    sim.step()
+    assert np.all(sim.data.controls.attitude.ang_vel_des == 0.0)
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("attitude_freq", [33, 50, 100, 200])
 def test_sim_attitude_control(attitude_freq: int):
     sim = Sim(n_worlds=2, n_drones=3, control="attitude", freq=100, attitude_freq=attitude_freq)
@@ -271,7 +287,7 @@ def test_sim_state_control(state_freq: int):
     can_control_1 = np.arange(6) * state_freq % sim.freq < state_freq
     can_control_2 = np.array([0, 0, 1, 2, 3, 4]) * state_freq % sim.freq < state_freq
     for i in range(6):
-        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
         assert jnp.all(sim.controllable[0] == can_control_1[i]), f"Controllable 1 mismatch at t={i}"
         assert jnp.all(sim.controllable[1] == can_control_2[i]), f"Controllable 2 mismatch at t={i}"
         sim.state_control(cmd)
@@ -295,7 +311,7 @@ def test_sim_state_control(state_freq: int):
 @pytest.mark.unit
 def test_sim_state_control_device(device: str):
     sim = Sim(n_worlds=2, n_drones=3, control=Control.state, device=device)
-    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
     sim.state_control(cmd)
     controls = sim.data.controls.state
     assert isinstance(controls.cmd, jnp.ndarray), "Buffers must remain JAX arrays"
@@ -348,7 +364,7 @@ def test_control_frequency(dynamics: Dynamics):
     sim_1000 = Sim(freq=1000, dynamics=dynamics, control="state")
 
     # Set same initial state and controls
-    cmd = np.zeros((1, 1, 13))  # Single world, single drone, state control
+    cmd = np.zeros((1, 1, 16))  # Single world, single drone, state control
     # Target position of (1, 1, 1). Needs to be off-center to check attitude integration error
     cmd[..., :3] = 1.0
 
@@ -634,7 +650,7 @@ def test_compile(dynamics: Dynamics, device: str):
 def test_scan_results(dynamics: Dynamics):
     sim = Sim(n_worlds=2, n_drones=3, dynamics=dynamics, control=Control.state, device="cpu")
     sim.reset()
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     cmd[..., :3] = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
     sim.state_control(cmd)
     n_steps, n_iters = sim.freq // sim.control_freq, 100  # 1 second at 100Hz

@@ -229,8 +229,8 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=1, control=Control.state)
 sim.reset()
 
-# State command: [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate]
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+# State command: [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 0.5  # hover at 0.5 m
 
 sim.state_control(cmd)

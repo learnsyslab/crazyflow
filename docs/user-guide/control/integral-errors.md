@@ -18,7 +18,7 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
 
 # Option 1: let the controller initialise the integral error.
 rpyt, pos_err_i = ctrl(pos, quat, vel, cmd, pos_err_i=None)
@@ -42,7 +42,7 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
 cmd[0] = 1.0  # 1 m setpoint error in x
 
 pos_err_i = None
@@ -68,7 +68,7 @@ pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
 ang_vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
 
 pos_err_i = None
 r_int_error = None

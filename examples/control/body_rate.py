@@ -37,15 +37,14 @@ def control(
         pos_err_i: Integral error of the position controller from the previous call.
 
     Returns:
-        The body rate command [roll_rate, pitch_rate, yaw_rate, thrust] in rad/s and N, and the
-        updated integral error.
+        The body rate command [wx, wy, wz, thrust] in rad/s and N, and the updated integral error.
     """
     # Full state command with velocity and acceleration feedforward
-    cmd = np.zeros(13)
+    cmd = np.zeros(16)
     cmd[:3] = pos_start + np.array([np.cos(t) - 1, np.sin(t), 0.2 * t])
     cmd[3:6] = np.array([-np.sin(t), np.cos(t), 0.2])
     cmd[6:9] = np.array([-np.cos(t), -np.sin(t), 0.0])
-    cmd[9] = t  # Yaw
+    cmd[9:13] = np.array([0.0, 0.0, np.sin(t / 2), np.cos(t / 2)])  # Yaw quaternion
     rpyt, pos_err_i = position_ctrl(obs["pos"], obs["quat"], obs["vel"], cmd, pos_err_i)
     rot_err = (R.from_quat(obs["quat"]).inv() * R.from_euler("xyz", rpyt[:3])).as_rotvec()
     return np.concatenate([kp_att * rot_err, rpyt[3:]]), pos_err_i
@@ -69,7 +68,7 @@ def main():
     # controller that outputs [roll, pitch, yaw, thrust], e.g. a learned policy.
     position_ctrl = partial(parametrize(state2attitude, sim.drone), ctrl_freq=sim.control_freq)
     pos_err_i = np.zeros(3)
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [roll_rate, pitch_rate, yaw_rate, thrust]
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [wx, wy, wz, thrust]
     pos_start = np.asarray(sim.data.states.pos[0, 0])
     for i in range(int(duration * sim.control_freq)):
         # Convert the states to numpy so that the controller runs in numpy instead of eager JAX

@@ -50,7 +50,7 @@ All control methods take an array of shape `(n_worlds, n_drones, command_dim)` a
 
 ### State control
 
-The highest-level interface. A 13-element command sets desired position, velocity, acceleration, yaw, and angular rates. An internal Mellinger controller converts this to attitude commands.
+The highest-level interface. A 16-element command sets desired position, velocity, acceleration, attitude, and body rates. Only the yaw of the attitude quaternion is used, as in the firmware. An internal Mellinger controller converts this to attitude commands and forwards the body rates to the attitude controller.
 
 ```python
 import numpy as np
@@ -60,8 +60,8 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=1, n_drones=1, control=Control.state)
 sim.reset()
 
-# [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate]
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+# [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[0, 0, 2] = 0.5  # hover at 0.5 m
 
 sim.state_control(cmd)
@@ -90,7 +90,7 @@ sim.step(sim.freq // sim.control_freq)
 
 ### Body rate control
 
-Commands body-frame angular rates (rad/s) and a collective thrust (N). The Mellinger controller tracks the rates and, as in the firmware, levels the drone with its attitude terms. Set `kR` and `ki_m` to zero for pure rate tracking, see [Control Modes](control/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+Commands body rates (rad/s) and a collective thrust (N). The Mellinger controller tracks the rates and, as in the firmware, levels the drone with its attitude terms. Set `kR` and `ki_m` to zero for pure rate tracking, see [Control Modes](control/index.md#body-rate-control). Requires `Dynamics.first_principles`.
 
 ```python
 import numpy as np
@@ -169,7 +169,7 @@ sim = Sim(n_worlds=4, n_drones=1, control=Control.state)
 sim.reset()  # reset all worlds
 
 # Stage a command and advance 50 dynamics steps (controllers fire at their rate)
-cmd = np.zeros((4, 1, 13), dtype=np.float32)
+cmd = np.zeros((4, 1, 16), dtype=np.float32)
 cmd[..., 2] = 0.5
 sim.state_control(cmd)
 sim.step(50)
@@ -193,7 +193,7 @@ from crazyflow.control import Control
 sim = Sim(n_worlds=2, n_drones=3, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((2, 3, 13), dtype=np.float32)
+cmd = np.zeros((2, 3, 16), dtype=np.float32)
 for _ in range(10):
     sim.state_control(cmd)
     sim.step(sim.freq // sim.control_freq)

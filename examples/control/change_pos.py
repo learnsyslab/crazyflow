@@ -18,7 +18,7 @@ def main():
             rotor_vel=sim.data.states.rotor_vel.at[0, 0].set(np.ones(4) * 20000),
         )
     )
-    control = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    control = np.zeros((sim.n_worlds, sim.n_drones, 16))
     control[..., :3] = np.array([[0.0, 0.0, 0.3]])
 
     for _ in range(3 * sim.control_freq):

@@ -58,8 +58,12 @@ def state2attitude(
         pos: Drone position with shape (..., 3).
         quat: Drone orientation as xyzw quaternion with shape (..., 4).
         vel: Drone velocity with shape (..., 3).
-        cmd: Full state command in SI units and rad with shape (..., 13). The entries are
-            [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
+        cmd: Full state command in SI units with shape (..., 16). The entries are
+            [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz], where qx, qy, qz, qw is
+            the attitude setpoint as xyzw quaternion and wx, wy, wz are the body rates in rad/s. As
+            in the firmware, only the yaw of the attitude setpoint is used. The body rates are not
+            used by the position controller. They are the body rate setpoint of the attitude
+            controller.
         pos_err_i: Position integral error (..., 3) from the previous call. If None, it is
             initialised to zero.
         ctrl_freq: Control frequency in Hz
@@ -83,9 +87,8 @@ def state2attitude(
     setpoint_pos = cmd[..., 0:3]
     setpoint_vel = cmd[..., 3:6]
     setpoint_acc = cmd[..., 6:9]
-    setpoint_yaw = cmd[..., 9]
+    setpoint_quat = cmd[..., 9:13]
     dt = 1 / ctrl_freq
-    # setpointRPY_rates = cmd[..., 10:13]
     # From firmware controller_mellinger
     pos_err = setpoint_pos - pos  # l. 145 Position Error (ep)
     vel_err = setpoint_vel - vel  # l. 148 Velocity Error (ev)
@@ -98,9 +101,10 @@ def state2attitude(
     target_thrust = (
         mass * (setpoint_acc - gravity_vec) + kp * pos_err + kd * vel_err + ki * int_pos_err
     )
-    # l. 178 Rate-controlled YAW is moving YAW angle setpoint
-    # => only one case here, since the setpoint is always in absolute mode
-    desired_yaw = setpoint_yaw
+    # l. 166 ff Desired yaw from the quaternion setpoint. Only the yaw of the setpoint attitude is
+    # used, as in the firmware
+    qx, qy, qz, qw = (setpoint_quat[..., i] for i in range(4))
+    desired_yaw = xp.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
     # l. 189 Z-Axis [zB]
     rot = R.from_quat(quat).as_matrix()
     z_axis = rot[..., -1]  # 3rd column or roation matrix is z axis
@@ -489,13 +493,14 @@ def force_torque2rotor_vel(
 
 @dataclass
 class MellingerStateData:
-    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 13)
+    cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 16)
     """Full state control command for the drone.
 
-    A command consists of [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
-    We currently do not use the acceleration and angle rate components. This is subject to change.
+    A command consists of [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]. Only the
+    yaw of the attitude quaternion is used. The body rates wx, wy, wz are forwarded to the attitude
+    controller as its body rate setpoint.
     """
-    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 13)
+    staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 16)
     """Staging buffer to store the most recent command until the next controller tick."""
     steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the state control command was applied."""
@@ -512,12 +517,12 @@ class MellingerStateData:
     ) -> MellingerStateData:
         """Create a default set of state data for the simulation."""
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        zeros_13d = jnp.zeros((n_worlds, n_drones, 13), device=device)
+        cmd = jnp.zeros((n_worlds, n_drones, 16), device=device).at[..., 12].set(1.0)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         params = load_params(state2attitude, drone, xp=jnp, device=device)
         return MellingerStateData(
-            cmd=zeros_13d.copy(),
-            staged_cmd=zeros_13d.copy(),
+            cmd=cmd,
+            staged_cmd=cmd.copy(),
             steps=steps,
             freq=freq,
             pos_err_i=zeros_3d.copy(),
@@ -534,6 +539,13 @@ class MellingerAttitudeData:
     """
     staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Staging buffer to store the most recent command until the next controller tick."""
+    ang_vel_des: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
+    """Body rate setpoint [wx, wy, wz] of the attitude controller.
+
+    Zero for attitude control. State control forwards the body rates of the state command.
+    """
+    staged_ang_vel_des: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
+    """Staging buffer to store the most recent body rate setpoint until the next controller tick."""
     steps: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, 1)
     """Last simulation steps that the attitude control command was applied."""
     freq: int = field(pytree_node=False)
@@ -557,6 +569,8 @@ class MellingerAttitudeData:
         return MellingerAttitudeData(
             cmd=zeros_4d.copy(),
             staged_cmd=zeros_4d.copy(),
+            ang_vel_des=zeros_3d.copy(),
+            staged_ang_vel_des=zeros_3d.copy(),
             steps=steps,
             freq=freq,
             r_int_error=zeros_3d.copy(),
@@ -570,7 +584,7 @@ class MellingerBodyRateData:
     cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Body rate control command for the drone.
 
-    A command consists of [roll_rate, pitch_rate, yaw_rate, collective thrust].
+    A command consists of [wx, wy, wz, collective thrust].
     """
     staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
     """Staging buffer to store the most recent command until the next controller tick."""
@@ -650,7 +664,9 @@ def control_state2attitude(data: SimData) -> SimData:
         **state_ctrl.params,
     )
     state_ctrl = leaf_replace(state_ctrl, mask, steps=data.core.steps, pos_err_i=pos_err_i)
-    attitude_ctrl = leaf_replace(data.controls.attitude, mask, staged_cmd=rpyt)
+    attitude_ctrl = leaf_replace(
+        data.controls.attitude, mask, staged_cmd=rpyt, staged_ang_vel_des=state_ctrl.cmd[..., 13:16]
+    )
     return data.replace(controls=data.controls.replace(state=state_ctrl, attitude=attitude_ctrl))
 
 
@@ -660,14 +676,23 @@ def control_attitude2force_torque(data: SimData) -> SimData:
     attitude_ctrl: MellingerAttitudeData = data.controls.attitude
     assert attitude_ctrl is not None, "Using attitude controller without initialized data"
     mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
-    attitude_ctrl = leaf_replace(attitude_ctrl, mask, cmd=attitude_ctrl.staged_cmd)
-    force, torque, r_int_error = attitude2force_torque(
+    prev_ang_vel_des = attitude_ctrl.ang_vel_des
+    attitude_ctrl = leaf_replace(
+        attitude_ctrl,
+        mask,
+        cmd=attitude_ctrl.staged_cmd,
+        ang_vel_des=attitude_ctrl.staged_ang_vel_des,
+    )
+    force, torque, r_int_error = _attitude2force_torque(
         states.quat,
         states.ang_vel,
-        attitude_ctrl.cmd,
-        r_int_error=attitude_ctrl.r_int_error,
-        ctrl_freq=attitude_ctrl.freq,
-        prev_ang_vel=attitude_ctrl.last_ang_vel,
+        attitude_ctrl.cmd[..., :3],
+        attitude_ctrl.ang_vel_des,
+        attitude_ctrl.cmd[..., 3],
+        attitude_ctrl.last_ang_vel,
+        prev_ang_vel_des,
+        attitude_ctrl.r_int_error,
+        attitude_ctrl.freq,
         **attitude_ctrl.params,
     )
     attitude_ctrl = leaf_replace(
@@ -722,7 +747,12 @@ def control_commit_attitude(data: SimData) -> SimData:
     """Commit the staged attitude command to the controller setpoint."""
     attitude_ctrl: MellingerAttitudeData = data.controls.attitude
     mask = controllable(data.core.steps, data.core.freq, attitude_ctrl.steps, attitude_ctrl.freq)
-    attitude_ctrl = leaf_replace(attitude_ctrl, mask, cmd=attitude_ctrl.staged_cmd)
+    attitude_ctrl = leaf_replace(
+        attitude_ctrl,
+        mask,
+        cmd=attitude_ctrl.staged_cmd,
+        ang_vel_des=attitude_ctrl.staged_ang_vel_des,
+    )
     return data.replace(controls=data.controls.replace(attitude=attitude_ctrl))
 
 

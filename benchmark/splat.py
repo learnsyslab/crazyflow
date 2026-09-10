@@ -118,7 +118,7 @@ def benchmark(
 
             # Hold a constant target so the drone keeps moving and each frame renders a distinct
             # pose. A static scene would let XLA hoist the render out of the loop.
-            cmd = np.zeros((sim.n_worlds, sim.n_drones, 13), dtype=np.float32)
+            cmd = np.zeros((sim.n_worlds, sim.n_drones, 16), dtype=np.float32)
             cmd[..., 2] = 0.5
             sim.reset()
             sim.state_control(jnp.asarray(cmd, device=sim.device))

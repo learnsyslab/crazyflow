@@ -20,8 +20,8 @@ def main():
     duration = 5.0
     fps = 60
 
-    # State cmd is [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate]
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    # State cmd is [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     cmd[..., :3] = 0.1
 
     for i in range(int(duration * sim.control_freq)):
