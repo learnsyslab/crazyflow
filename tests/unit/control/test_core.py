@@ -9,12 +9,18 @@ import pytest
 from crazyflow.control import load_params, parametrize
 from crazyflow.control.mellinger import (
     attitude2force_torque,
+    body_rate2force_torque,
     force_torque2rotor_vel,
     state2attitude,
 )
 from crazyflow.drones import available_drones
 
-_MELLINGER_FNS = [state2attitude, attitude2force_torque, force_torque2rotor_vel]
+_MELLINGER_FNS = [
+    state2attitude,
+    attitude2force_torque,
+    body_rate2force_torque,
+    force_torque2rotor_vel,
+]
 
 
 @pytest.mark.unit

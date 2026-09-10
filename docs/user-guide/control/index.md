@@ -1,22 +1,22 @@
 # Control Modes
 
-Crazyflow provides four levels of control abstraction, from high-level position setpoints down to direct motor commands. Each level is a separate control mode selected at construction time.
+Crazyflow provides five control modes, from high-level position setpoints down to direct motor commands. Each mode is selected at construction time.
 
 ## Control hierarchy
 
-Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger controller; an attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer.
+Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger controller; an attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
 
 ```
 State (13D)
   └─ Mellinger controller
-       └─ Attitude (4D: roll, pitch, yaw, thrust)
+       └─ Attitude (4D: roll, pitch, yaw, thrust)  |  Body rates (4D: ωx, ωy, ωz, thrust)
             └─ Geometric controller
                  └─ Force/torque (4D: Fc, Tx, Ty, Tz)
                       └─ Mixer
                            └─ Rotor velocities (4D: ω₁…ω₄)
 ```
 
-When you select `Control.state`, the full chain runs on every control tick. When you select `Control.attitude`, only the lower two stages run.
+When you select `Control.state`, the full chain runs on every control tick. When you select `Control.attitude` or `Control.body_rate`, only the lower two stages run.
 
 ## State control
 
@@ -94,6 +94,45 @@ sim.attitude_control(cmd)
 sim.step(sim.freq // sim.control_freq)
 ```
 
+## Body rate control
+
+Commands body-frame angular rates and a collective thrust. The Mellinger controller tracks the rates with the same gains as in attitude control. As in the firmware, its attitude terms level the drone at the current yaw. Set the `kR` and `ki_m` parameters of the body rate controller to zero to track body rates without the levelling terms, see the [body rate example](../../examples/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+
+```python
+from crazyflow.sim import Sim, Dynamics
+from crazyflow.control import Control
+
+sim = Sim(control=Control.body_rate, dynamics=Dynamics.first_principles, body_rate_freq=500)
+sim.reset()
+```
+
+Command shape: `(n_worlds, n_drones, 4)`
+
+| Index | Variable | Units |
+|---|---|---|
+| 0 | Roll rate \(\omega_x\) | rad/s |
+| 1 | Pitch rate \(\omega_y\) | rad/s |
+| 2 | Yaw rate \(\omega_z\) | rad/s |
+| 3 | Collective thrust | N |
+
+Zero rates and hover thrust hold the current attitude:
+
+```python
+import numpy as np
+from crazyflow.sim import Sim, Dynamics
+from crazyflow.control import Control
+
+sim = Sim(control=Control.body_rate, dynamics=Dynamics.first_principles)
+sim.reset()
+
+mass = float(sim.data.params.mass[0])
+cmd = np.zeros((1, 1, 4), dtype=np.float32)
+cmd[0, 0, 3] = mass * 9.81
+
+sim.body_rate_control(cmd)
+sim.step(sim.freq // sim.control_freq)
+```
+
 ## Force-torque control
 
 Direct force and torque input. Requires `Dynamics.first_principles`.
@@ -157,6 +196,7 @@ Each control mode has its own update rate. The dynamics tick (`freq`) is always 
 |---|---|---|
 | `state` | `state_freq` | 100 Hz |
 | `attitude` | `attitude_freq` | 500 Hz |
+| `body_rate` | `body_rate_freq` | 500 Hz |
 | `force_torque` | `force_torque_freq` | 500 Hz |
 | `rotor_vel` | — | every dynamics step |
 
@@ -167,7 +207,7 @@ The simulator applies a new command only when the control tick fires. Between ti
 The control modes above are how the simulator drives the onboard controllers. Those controllers also live in `crazyflow.control` as a self-contained library of pure functions, usable on their own for control design, learning-based policies, or as a reference implementation, independent of `Sim`. The following guides cover that standalone API:
 
 - [Controllers](controllers.md): the controller interface and the Mellinger pipeline
-- [Mellinger controller](mellinger.md): the three stages, their inputs and outputs
+- [Mellinger controller](mellinger.md): the three stages and the body rate variant, their inputs and outputs
 - [Parametrization](parametrize.md): binding a controller to a drone configuration
 - [Integral errors](integral-errors.md): carrying controller state across calls
 - [Batching](batching.md): evaluating many drones at once

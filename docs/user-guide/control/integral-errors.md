@@ -54,7 +54,7 @@ for _ in range(10):
 
 ## Both stages have integral errors
 
-`state2attitude` tracks position error via `pos_err_i`. `attitude2force_torque` tracks angular velocity error via `r_int_error`. Manage them independently:
+`state2attitude` tracks position error via `pos_err_i`. `attitude2force_torque` and `body_rate2force_torque` track angular velocity error via `r_int_error`. Manage them independently:
 
 ```python
 import numpy as np

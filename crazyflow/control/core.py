@@ -100,6 +100,12 @@ class Control(StrEnum):
     Note:
         Recommended frequency is >=100 Hz.
     """
+    body_rate = "body_rate"
+    """Body rate control takes [roll_rate, pitch_rate, yaw_rate, collective thrust].
+
+    Note:
+        Recommended frequency is >=200 Hz.
+    """
     force_torque = "force_torque"
     """Force and torque control takes [fc, tx, ty, tz].
 

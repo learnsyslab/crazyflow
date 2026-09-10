@@ -27,7 +27,7 @@ The first-principles dynamics derives forces and torques analytically from motor
 from crazyflow.sim import Sim, Dynamics
 from crazyflow.control import Control
 
-# Force-torque and rotor_vel control modes require first_principles
+# Body rate, force-torque and rotor_vel control modes require first_principles
 sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
 sim.reset()
 ```
@@ -69,15 +69,15 @@ The `so_rpy_rotor_drag` variant includes translational drag, which captures the 
 
 ## Control mode compatibility
 
-| Dynamics | `Control.state` | `Control.attitude` | `Control.force_torque` | `Control.rotor_vel` |
-|---|---|---|---|---|
-| `first_principles` | ✓ | ✓ | ✓ | ✓ |
-| `so_rpy` | ✓ | ✓ | ✗ | ✗ |
-| `so_rpy_rotor` | ✓ | ✓ | ✗ | ✗ |
-| `so_rpy_rotor_drag` | ✓ | ✓ | ✗ | ✗ |
+| Dynamics | `Control.state` | `Control.attitude` | `Control.body_rate` | `Control.force_torque` | `Control.rotor_vel` |
+|---|---|---|---|---|---|
+| `first_principles` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `so_rpy` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `so_rpy_rotor` | ✓ | ✓ | ✗ | ✗ | ✗ |
+| `so_rpy_rotor_drag` | ✓ | ✓ | ✗ | ✗ | ✗ |
 
 !!! warning
-    Using `Control.force_torque` or `Control.rotor_vel` with a fitted dynamics raises `ConfigError` at construction time.
+    Using `Control.body_rate`, `Control.force_torque` or `Control.rotor_vel` with a fitted dynamics raises `ConfigError` at construction time.
 
 ## Using the dynamics standalone
 

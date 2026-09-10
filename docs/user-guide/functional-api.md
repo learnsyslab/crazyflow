@@ -58,7 +58,7 @@ From this point, `data` is a plain JAX pytree and `step` and `reset` are compile
 
 ## Purely functional controller functions
 
-`crazyflow.sim.functional` mirrors all four `Sim` control methods as pure functions:
+`crazyflow.sim.functional` mirrors all five `Sim` control methods as pure functions:
 
 ```python
 import crazyflow.sim.functional as F
@@ -68,6 +68,7 @@ import crazyflow.sim.functional as F
 |---|---|
 | `F.state_control(data, controls)` | Stage a state command |
 | `F.attitude_control(data, controls)` | Stage an attitude command |
+| `F.body_rate_control(data, controls)` | Stage a body rate command |
 | `F.force_torque_control(data, controls)` | Stage a force/torque command |
 | `F.rotor_vel_control(data, controls)` | Stage rotor velocity commands |
 | `F.controllable(data)` | Boolean mask — which worlds may update their controller this step |

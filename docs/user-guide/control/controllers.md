@@ -16,11 +16,13 @@ The Mellinger controller [[1]](#references) is split into three stages that form
 | 2 | [`attitude2force_torque`](mellinger.md#attitude-to-force-torque) | Attitude + RPYT command | Collective force, body torques + angular velocity integral error |
 | 3 | [`force_torque2rotor_vel`](mellinger.md#force-torque-to-rotor-velocities) | Force + torques | 4 motor speeds [RPM] |
 
+[`body_rate2force_torque`](mellinger.md#body-rate-to-force-torque) replaces stage 2 when the command is a body rate setpoint instead of an attitude. It runs the same controller with the rate setpoint in the angular velocity error and a level attitude setpoint, as the firmware does.
+
 ## Available controllers
 
 | Module | Controller | Stages |
 |---|---|---|
-| `crazyflow.control.mellinger` | Mellinger | `state2attitude`, `attitude2force_torque`, `force_torque2rotor_vel` |
+| `crazyflow.control.mellinger` | Mellinger | `state2attitude`, `attitude2force_torque`, `body_rate2force_torque`, `force_torque2rotor_vel` |
 
 ## References
 

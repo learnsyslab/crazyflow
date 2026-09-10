@@ -16,11 +16,13 @@ __all__ = []
 
 from crazyflow.control.core import Control, load_params, parametrize
 from crazyflow.control.mellinger import attitude2force_torque as mellinger_attitude2force_torque
+from crazyflow.control.mellinger import body_rate2force_torque as mellinger_body_rate2force_torque
 from crazyflow.control.mellinger import state2attitude as mellinger_state2attitude
 
 available_controller: dict[str, Callable] = {
     "mellinger_state2attitude": mellinger_state2attitude,
     "mellinger_attitude2force_torque": mellinger_attitude2force_torque,
+    "mellinger_body_rate2force_torque": mellinger_body_rate2force_torque,
 }
 
 __all__ = ["Control", "load_params", "parametrize"]
