@@ -590,17 +590,17 @@ class MellingerBodyRateData:
         n_worlds: int, n_drones: int, freq: int, drone: str, device: Device
     ) -> MellingerBodyRateData:
         """Create a default set of body rate data for the simulation."""
-        cmd = jnp.zeros((n_worlds, n_drones, 4), device=device)
-        steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
+        zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
         params = load_params(body_rate2force_torque, drone, xp=jnp, device=device)
         return MellingerBodyRateData(
-            cmd=cmd,
-            staged_cmd=cmd,
+            cmd=zeros_4d.copy(),
+            staged_cmd=zeros_4d.copy(),
             steps=steps,
             freq=freq,
-            r_int_error=zeros_3d,
-            last_ang_vel=zeros_3d,
+            r_int_error=zeros_3d.copy(),
+            last_ang_vel=zeros_3d.copy(),
             params=params,
         )
 

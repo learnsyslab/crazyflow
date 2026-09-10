@@ -111,6 +111,7 @@ def test_sim_init(dynamics: Dynamics, device: str, control: Control, n_worlds: i
 def test_sim_data_buffers_are_distinct(dynamics: Dynamics, control: Control, device: str):
     """Every leaf of SimData must own its buffer, or XLA refuses to donate the pytree."""
     if dynamics != Dynamics.first_principles and control in (
+        Control.body_rate,
         Control.force_torque,
         Control.rotor_vel,
     ):
