@@ -11,6 +11,7 @@ import jax
 import jax.numpy as jnp
 import mujoco
 import mujoco.mjx as mjx
+import numpy as np
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 
@@ -676,13 +677,13 @@ def clip_floor_pos(data: SimData) -> SimData:
     return data.replace(states=data.states.replace(pos=clip_pos, vel=clip_vel))
 
 
-def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[Array | float, Array | float]:
+def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
     """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
     params = load_drone_params(drone)
     thrust_min, thrust_max = params["thrust_min"], params["thrust_max"]
     if dynamics == Dynamics.first_principles:
-        rpm = motor_force2rotor_vel(jnp.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
-        return rpm[0], rpm[1]
+        rpm = motor_force2rotor_vel(np.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
+        return float(rpm[0]), float(rpm[1])
     return 4 * thrust_min, 4 * thrust_max
 
 
