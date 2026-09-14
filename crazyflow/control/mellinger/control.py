@@ -492,8 +492,7 @@ class MellingerStateData:
     cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 16)
     """Full state control command for the drone.
 
-    A command consists of [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]. Only the 
-    yaw of the attitude quaternion is used. The body rates are forwarded to the attitude controller.
+    A command consists of [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
     """
     staged_cmd: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 16)
     """Staging buffer to store the most recent command until the next controller tick."""

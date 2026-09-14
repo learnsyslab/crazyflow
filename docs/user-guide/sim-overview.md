@@ -75,7 +75,6 @@ from crazyflow.control import Control
 from scipy.spatial.transform import Rotation as R
 
 sim = Sim(freq=500, control=Control.state)
-sim.reset()
 cmd = np.zeros((1, 1, 16), dtype=np.float32)
 cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 sim.state_control(cmd)

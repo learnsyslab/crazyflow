@@ -35,7 +35,7 @@ All three stages share the same state convention:
 | `rpyt` | `(..., 4)` | Attitude + thrust: `[roll_rad, pitch_rad, yaw_rad, thrust_N]` |
 | `pos_err_i` | `(..., 3)` | Position integral error. Pass back as `pos_err_i` on the next call |
 
-As in the firmware, only the yaw of the quaternion `qx, qy, qz, qw` is used. The body rates are forwarded to the attitude stage automatically.
+As in the firmware, only the yaw of the quaternion `qx, qy, qz, qw` is used.
 
 ```python
 import numpy as np

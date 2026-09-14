@@ -1,10 +1,10 @@
 # Control Modes
 
-Crazyflow provides five control modes, from high-level position setpoints down to direct motor commands. Each mode is selected at construction time.
+Crazyflow provides multiple control modes, from high-level position setpoints down to direct motor commands. Each mode is selected at construction time.
 
 ## Control hierarchy
 
-Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller; the attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control. The rate setpoint in the state command is forwarded to the rate controller.
+Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller, the attitude command is converted to force/torque by the geometric controller, and force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control. The rate setpoint in the state command is forwarded to the rate controller.
 
 ```
 State (16D)
@@ -38,7 +38,7 @@ Command shape: `(n_worlds, n_drones, 16)`
 | 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
 | 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The position controller does not use them and forwards them to the attitude controller as its body rate setpoint. The so_rpy family ignores the body rate setpoint.
+As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The so_rpy family ignores them.
 
 Set unused elements to zero. The attitude quaternion must be valid. A common hover command sets only the z position:
 
