@@ -130,21 +130,21 @@ def test_functional_state_control(state_freq: int):
         assert jnp.all(controllable[1] == can_control_2[i]), f"Controllable 2 mismatch at t={i}"
         # Apply control
         data = F.state_control(data, cmd)
-        last_attitude = data.controls.attitude.staged_cmd
+        prev_attitude = data.controls.attitude.staged_cmd
         data = step_fn(data, 1)
         attitude = data.controls.attitude.staged_cmd
 
-        last_att, att = last_attitude[0], attitude[0]
+        prev_att, att = prev_attitude[0], attitude[0]
         if can_control_1[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
 
-        last_att, att = last_attitude[1], attitude[1]
+        prev_att, att = prev_attitude[1], attitude[1]
         if can_control_2[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
         if i == 0:  # Make world 2 asynchronous
             data = reset_fn(data, default_data, np.array([False, True]))
 

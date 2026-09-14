@@ -50,7 +50,7 @@ All control methods take an array of shape `(n_worlds, n_drones, command_dim)` a
 
 ### State control
 
-The highest-level interface. A 16-element command sets desired position, velocity, acceleration, attitude, and body rates. Only the yaw of the attitude quaternion is used, as in the firmware. An internal Mellinger controller converts this to attitude commands and forwards the body rates to the attitude controller.
+The highest-level interface. A 16-element command sets desired position, velocity, acceleration, attitude, and body rates. The yaw part of the attitude commands the heading. The body rate setpoint is forwarded to the attitude controller.
 
 ```python
 import numpy as np

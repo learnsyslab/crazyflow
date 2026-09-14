@@ -293,19 +293,19 @@ def test_sim_state_control(state_freq: int):
         assert jnp.all(sim.controllable[0] == can_control_1[i]), f"Controllable 1 mismatch at t={i}"
         assert jnp.all(sim.controllable[1] == can_control_2[i]), f"Controllable 2 mismatch at t={i}"
         sim.state_control(cmd)
-        last_attitude = sim.data.controls.attitude.staged_cmd
+        prev_attitude = sim.data.controls.attitude.staged_cmd
         sim.step()
         attitude = sim.data.controls.attitude.staged_cmd
-        last_att, att = last_attitude[0], attitude[0]
+        prev_att, att = prev_attitude[0], attitude[0]
         if can_control_1[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
-        last_att, att = last_attitude[1], attitude[1]
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
+        prev_att, att = prev_attitude[1], attitude[1]
         if can_control_2[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
         if i == 0:
             sim.reset(np.array([False, True]))  # Make world 2 asynchronous
 

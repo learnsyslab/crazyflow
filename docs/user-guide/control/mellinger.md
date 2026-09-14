@@ -24,7 +24,7 @@ All three stages share the same state convention:
 | `pos` | `(..., 3)` | Current position [m] |
 | `quat` | `(..., 4)` | Current attitude, xyzw |
 | `vel` | `(..., 3)` | Current velocity [m/s] |
-| `cmd` | `(..., 16)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]`. Only the yaw of the quaternion `qx, qy, qz, qw` is used, as in the firmware. The body rates `wx, wy, wz` are not used by this stage, see below |
+| `cmd` | `(..., 16)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]` |
 | `pos_err_i` | `(..., 3)` or `None` | Position integral error from the previous call. `None` initialises to zero |
 | `ctrl_freq` | `float` | Control frequency in Hz (default 100) |
 
@@ -35,7 +35,7 @@ All three stages share the same state convention:
 | `rpyt` | `(..., 4)` | Attitude + thrust: `[roll_rad, pitch_rad, yaw_rad, thrust_N]` |
 | `pos_err_i` | `(..., 3)` | Position integral error. Pass back as `pos_err_i` on the next call |
 
-As in the firmware, the position controller does not use the body rates of the setpoint. They are the body rate setpoint of the attitude controller. `Control.state` forwards them to the attitude stage automatically. `attitude2force_torque` assumes a zero body rate setpoint.
+As in the firmware, only the yaw of the quaternion `qx, qy, qz, qw` is used. The body rates are forwarded to the attitude stage automatically.
 
 ```python
 import numpy as np

@@ -58,7 +58,7 @@ From this point, `data` is a plain JAX pytree and `step` and `reset` are compile
 
 ## Purely functional controller functions
 
-`crazyflow.sim.functional` mirrors all five `Sim` control methods as pure functions:
+`crazyflow.sim.functional` mirrors all `Sim` control methods as pure functions:
 
 ```python
 import crazyflow.sim.functional as F
