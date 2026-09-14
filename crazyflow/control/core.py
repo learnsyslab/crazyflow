@@ -89,10 +89,6 @@ class Control(StrEnum):
     state = "state"
     """State control takes [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
 
-    The attitude setpoint qx, qy, qz, qw is an xyzw quaternion. The body rates wx, wy, wz are the
-    angular velocity in the body frame in rad/s. The position controller forwards them to the
-    attitude controller as its body rate setpoint.
-
     Note:
         Recommended frequency is >=20 Hz.
 
@@ -108,8 +104,6 @@ class Control(StrEnum):
     """
     body_rate = "body_rate"
     """Body rate control takes [wx, wy, wz, collective thrust].
-
-    The body rates wx, wy, wz are the angular velocity in the body frame in rad/s.
 
     Note:
         Recommended frequency is >=200 Hz.

@@ -101,7 +101,8 @@ def state2attitude(
     target_thrust = (
         mass * (setpoint_acc - gravity_vec) + kp * pos_err + kd * vel_err + ki * int_pos_err
     )
-    # l. 166 ff Only the yaw of the setpoint attitude is used, as in the firmware
+    # l. 178 Rate-controlled YAW is moving YAW angle setpoint
+    # => only one case here, since the setpoint is always in absolute mode
     desired_yaw = R.from_quat(setpoint_quat).as_euler("xyz")[..., 2]
     # l. 189 Z-Axis [zB]
     rot = R.from_quat(quat).as_matrix()

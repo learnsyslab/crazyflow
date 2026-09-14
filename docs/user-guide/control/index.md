@@ -4,7 +4,7 @@ Crazyflow provides five control modes, from high-level position setpoints down t
 
 ## Control hierarchy
 
-Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller, and its body rates are forwarded as the body rate setpoint; the attitude command and the body rate setpoint are converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
+Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller; the attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control. The rate setpoint in the state command is forwarded to the rate controller.
 
 ```
 State (16D)
