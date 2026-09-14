@@ -1,5 +1,4 @@
 from functools import partial
-from typing import Callable
 
 import numpy as np
 
@@ -8,34 +7,14 @@ from crazyflow.control.mellinger import state2attitude
 from crazyflow.sim import Sim
 
 
-def control(
-    t: float,
-    obs: dict[str, np.ndarray],
-    pos_start: np.ndarray,
-    position_ctrl: Callable,
-    pos_err_i: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Compute the attitude command to track a circle with a slow climb.
-
-    Args:
-        t: Time since the start of the trajectory in s.
-        obs: Drone position, orientation, and velocity.
-        pos_start: Start position of the drone.
-        position_ctrl: Controller that maps the state and a full state command to an attitude
-            command. Any controller that outputs [roll, pitch, yaw, thrust] can be used here.
-        pos_err_i: Integral error of the position controller from the previous call.
-
-    Returns:
-        The attitude command [roll, pitch, yaw, thrust] in rad and N, and the updated integral
-        error.
-    """
-    # Full state command with velocity and acceleration feedforward
+def control(t: float, pos_start: np.ndarray) -> np.ndarray:
+    """Compute the full state command of a circle with a slow climb."""
     cmd = np.zeros(16)
     cmd[:3] = pos_start + np.array([np.cos(t) - 1, np.sin(t), 0.2 * t])
     cmd[3:6] = np.array([-np.sin(t), np.cos(t), 0.2])
     cmd[6:9] = np.array([-np.cos(t), -np.sin(t), 0.0])
     cmd[9:13] = np.array([0.0, 0.0, np.sin(t / 2), np.cos(t / 2)])  # Yaw quaternion
-    return position_ctrl(obs["pos"], obs["quat"], obs["vel"], cmd, pos_err_i)
+    return cmd
 
 
 def main():
@@ -51,15 +30,10 @@ def main():
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [roll, pitch, yaw, thrust]
     pos_start = np.asarray(sim.data.states.pos[0, 0])
     for i in range(int(duration * sim.control_freq)):
-        # Convert the states to numpy so that the controller runs in numpy instead of eager JAX
-        obs = {
-            "pos": np.asarray(sim.data.states.pos[0, 0]),
-            "quat": np.asarray(sim.data.states.quat[0, 0]),
-            "vel": np.asarray(sim.data.states.vel[0, 0]),
-        }
-        cmd[0, 0, :], pos_err_i = control(
-            i / sim.control_freq, obs, pos_start, position_ctrl, pos_err_i
-        )
+        pos, quat = np.asarray(sim.data.states.pos[0, 0]), np.asarray(sim.data.states.quat[0, 0])
+        vel = np.asarray(sim.data.states.vel[0, 0])
+        ref = control(i / sim.control_freq, pos_start)
+        cmd[0, 0, :], pos_err_i = position_ctrl(pos, quat, vel, ref, pos_err_i)
         sim.attitude_control(cmd)
         sim.step(sim.freq // sim.control_freq)
         if ((i * fps) % sim.control_freq) < fps:

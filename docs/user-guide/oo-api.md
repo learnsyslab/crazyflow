@@ -90,7 +90,7 @@ sim.step(sim.freq // sim.control_freq)
 
 ### Body rate control
 
-Commands body rates (rad/s) and a collective thrust (N). The Mellinger controller tracks the rates and, as in the firmware, levels the drone with its attitude terms. Set `kR` and `ki_m` to zero for pure rate tracking, see [Control Modes](control/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+Commands body-frame angular rates (rad/s) and a collective thrust (N). The Mellinger controller tracks the rates and, as in the firmware, levels the drone with its attitude terms. Set `kR` and `ki_m` to zero for pure rate tracking, see [Control Modes](control/index.md#body-rate-control). Requires `Dynamics.first_principles`.
 
 ```python
 import numpy as np

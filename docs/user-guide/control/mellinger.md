@@ -93,9 +93,9 @@ force.shape  # (1,)
 torque.shape  # (3,)
 ```
 
-## Body rates to force/torque {#body-rate-to-force-torque}
+## Stage 2b: Body rates to force/torque {#body-rate-to-force-torque}
 
-`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode: a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. The function reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
+`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode. Instead, a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. Our implementation reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
 
 **Inputs:**
 
@@ -103,7 +103,7 @@ torque.shape  # (3,)
 |---|---|---|
 | `quat` | `(..., 4)` | Current attitude, xyzw |
 | `ang_vel` | `(..., 3)` | Current angular velocity in body frame [rad/s] |
-| `cmd` | `(..., 4)` | Body rate command: `[wx, wy, wz, thrust_N]` |
+| `cmd` | `(..., 4)` | Body rate command: `[roll_rate, pitch_rate, yaw_rate, thrust_N]` |
 | `prev_ang_vel` | `(..., 3)` or `None` | Angular velocity from the previous call. `None` initialises to zero |
 | `prev_cmd` | `(..., 4)` or `None` | Command from the previous call, used for the setpoint derivative. `None` assumes a constant setpoint |
 | `r_int_error` | `(..., 3)` or `None` | Angular velocity integral error from the previous call. `None` initialises to zero |
@@ -127,7 +127,7 @@ params["kR"], params["ki_m"] = np.zeros(3), np.zeros(3)  # pure body rate tracki
 
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 ang_vel = np.zeros(3)
-cmd = np.array([0.5, 0.0, 0.0, 0.3])  # 0.5 rad/s body rate about x, 0.3 N thrust
+cmd = np.array([0.5, 0.0, 0.0, 0.3])  # 0.5 rad/s roll rate, 0.3 N thrust
 
 force, torque, r_int_err = body_rate2force_torque(quat, ang_vel, cmd, **params)
 force.shape  # (1,)

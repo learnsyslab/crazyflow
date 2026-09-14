@@ -67,7 +67,7 @@ def test_body_rate2force_torque(drone: str) -> None:
     controller = parametrize(body_rate2force_torque, drone)
     # Single input
     _, quat, _, ang_vel = create_rnd_states()
-    cmd = np.array([0.1, 0.1, 0.1, 1.0])  # body rates and thrust command
+    cmd = np.array([0.1, 0.1, 0.1, 1.0])  # roll rate, pitch rate, yaw rate, thrust command
     force_des, torque_des, r_int_error = controller(quat, ang_vel, cmd)
     assert force_des.shape == (1,)
     assert torque_des.shape == (3,)
