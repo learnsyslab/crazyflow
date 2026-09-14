@@ -5,10 +5,14 @@ Here, we implement an action delay of 0.03s in the attitude control loop.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
+
+os.environ["SCIPY_ARRAY_API"] = "1"
 
 import jax.numpy as jnp
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow import Sim
 from crazyflow.sim.pipeline import prepend_fn
@@ -20,6 +24,7 @@ if TYPE_CHECKING:
 
 def control(t: float) -> np.ndarray:
     cmd = np.zeros((1, 1, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :3] = [np.cos(t) - 1, np.sin(t), 0.2 * t]
     return cmd
 

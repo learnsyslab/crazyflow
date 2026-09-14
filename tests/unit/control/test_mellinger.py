@@ -110,7 +110,8 @@ def test_state2attitude_at_setpoint(drone: str) -> None:
     pos = np.zeros(3)
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)
-    cmd = np.zeros(16)  # setpoint at origin, zero vel/acc, yaw=0
+    cmd = np.zeros(16)  # setpoint at origin, zero vel/acc
+    cmd[9:13] = R.from_euler("z", 0.0).as_quat()
     rpyt, _ = controller(pos, quat, vel, cmd)
     assert np.allclose(rpyt[:3], 0.0, atol=1e-6), f"RPY at setpoint should be ~0, got {rpyt[:3]}"
     assert rpyt[3] > 0.0, "Hovering thrust must be positive"
@@ -127,6 +128,7 @@ def test_state2attitude_integral_error_accumulation(drone: str) -> None:
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)
     cmd = np.zeros(16)
+    cmd[9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[0] = 1.0  # 1 m setpoint error in x
     ctrl_freq = 100.0
     dt = 1.0 / ctrl_freq

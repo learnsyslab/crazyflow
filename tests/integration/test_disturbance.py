@@ -1,6 +1,7 @@
 import jax
 import numpy as np
 import pytest
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
@@ -20,6 +21,7 @@ def disturbance_fn(data: SimData) -> SimData:
 def test_disturbance(dynamics: Dynamics):
     sim = Sim(n_worlds=2, n_drones=3, control="state", dynamics=dynamics)
     control = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    control[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     control[..., :3] = 1.0
     n_steps = 10
 

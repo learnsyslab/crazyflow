@@ -1,6 +1,11 @@
 """Simple example on how to change the camera configuration for rendering."""
 
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim import Sim
 
@@ -15,6 +20,7 @@ def main(cam_config: dict | None = None):
     fps = 60
 
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :3] = 0.2
 
     for i in range(int(duration * sim.control_freq)):

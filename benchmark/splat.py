@@ -24,12 +24,14 @@ from typing import TYPE_CHECKING, Callable
 # splax rasterizes with warp, which needs GPU memory outside JAX's pool. Disable JAX preallocation
 # before it initializes so both share the device. Must run before the first jax import.
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["SCIPY_ARRAY_API"] = "1"
 
 import fire
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.errors import JaxRuntimeError
+from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
 
 from crazyflow.sim import Sim
@@ -119,6 +121,7 @@ def benchmark(
             # Hold a constant target so the drone keeps moving and each frame renders a distinct
             # pose. A static scene would let XLA hoist the render out of the loop.
             cmd = np.zeros((sim.n_worlds, sim.n_drones, 16), dtype=np.float32)
+            cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
             cmd[..., 2] = 0.5
             sim.reset()
             sim.state_control(jnp.asarray(cmd, device=sim.device))

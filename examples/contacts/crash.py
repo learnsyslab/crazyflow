@@ -1,4 +1,9 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
@@ -15,6 +20,7 @@ def main():
     print("Phase 1: Hovering at [0, 0, 0.5] for 3 seconds")
     hover_duration = 3.0
     hover_cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    hover_cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     hover_cmd[..., :3] = [0.0, 0.0, 0.5]  # x, y, z position
     sim.state_control(hover_cmd)
 
@@ -27,6 +33,7 @@ def main():
     print("Phase 2: Dropping to [-5, 0, -0.5] for 3 seconds")
     drop_duration = 3.0
     drop_cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    drop_cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     drop_cmd[..., :3] = [-5.0, 0.0, -0.5]  # x, y, z position
     sim.state_control(drop_cmd)
 

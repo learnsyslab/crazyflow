@@ -22,7 +22,7 @@ dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.17.0",
     "jax>=0.7.0,!=0.10.2", # 0.10.2 XLA:GPU miscompiles for larger swarms. See https://github.com/jax-ml/jax/issues/39157
-    "mujoco>=3.3.0",
+    "mujoco>=3.3.0,<3.11",  # 3.11 breaks the viewer. Undo when gymnasium 1.4 lands: https://github.com/Farama-Foundation/Gymnasium/pull/1678
     "mujoco-mjx>=3.3.0",
     "gymnasium[mujoco]>=1.2.0",
     "imageio",

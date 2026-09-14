@@ -1,4 +1,9 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim import Sim
 
@@ -19,6 +24,7 @@ def main():
         )
     )
     control = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    control[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     control[..., :3] = np.array([[0.0, 0.0, 0.3]])
 
     for _ in range(3 * sim.control_freq):

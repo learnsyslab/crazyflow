@@ -7,7 +7,7 @@ Crazyflow provides five control modes, from high-level position setpoints down t
 Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller, and its body rates are forwarded as the body rate setpoint; the attitude command and the body rate setpoint are converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
 
 ```
-State (13D)
+State (16D)
   └─ Mellinger position controller
        └─ Attitude (4D: roll, pitch, yaw, thrust) + body rates (3D: ωx, ωy, ωz)  |  Body rates (4D: ωx, ωy, ωz, thrust)
             └─ Geometric controller
@@ -38,19 +38,21 @@ Command shape: `(n_worlds, n_drones, 16)`
 | 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
 | 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The position controller does not use them and forwards them to the attitude controller as its body rate setpoint. The fitted dynamics take the attitude command directly and ignore the body rates.
+As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The position controller does not use them and forwards them to the attitude controller as its body rate setpoint. The so_rpy family ignores the body rate setpoint.
 
-Set unused elements to zero. A zero quaternion is treated as zero yaw. A common hover command sets only the z position:
+Set unused elements to zero. The attitude quaternion must be valid. A common hover command sets only the z position:
 
 ```python
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(control=Control.state)
 sim.reset()
 
 cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 1.0  # hover at 1 m
 
 sim.state_control(cmd)
@@ -96,7 +98,7 @@ sim.step(sim.freq // sim.control_freq)
 
 ## Body rate control
 
-Commands body rates, i.e. the angular velocity in the body frame, and a collective thrust. The Mellinger controller tracks the rates with the same gains as in attitude control. As in the firmware, its attitude terms level the drone at the current yaw. Set the `kR` and `ki_m` parameters of the body rate controller to zero to track body rates without the levelling terms, see the [body rate example](../../examples/index.md#body-rate-control). Requires `Dynamics.first_principles`.
+Commands body-frame angular rates and a collective thrust. The Mellinger controller tracks the rates with the same gains as in attitude control. As in the firmware, its attitude terms level the drone at the current yaw. Set the `kR` and `ki_m` parameters of the body rate controller to zero to track body rates without the levelling terms, see the [body rate example](../../examples/index.md#body-rate-control). Requires `Dynamics.first_principles`.
 
 ```python
 from crazyflow.sim import Sim, Dynamics

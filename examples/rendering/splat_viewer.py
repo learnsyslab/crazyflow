@@ -12,9 +12,13 @@ requires a GPU.
 from __future__ import annotations
 
 import logging
+import os
 import time
 
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
 
 from crazyflow.sim import Sim
@@ -26,6 +30,7 @@ ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
 
 def control(t: float) -> np.ndarray:
     cmd = np.zeros((1, 1, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :3] = [0.5 * (np.cos(t) - 1), 0.5 * np.sin(t), 1.0 + 0.2 * np.sin(0.5 * t)]
     return cmd
 

@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 from conftest import skip_if_headless
 from jax import Array
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.exception import ConfigError
@@ -232,6 +233,7 @@ def test_state_control_forwards_body_rates():
     """State control must forward the body rates of the command to the attitude controller."""
     sim = Sim(n_worlds=2, n_drones=3, control=Control.state)
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., 13:16] = np.random.rand(sim.n_worlds, sim.n_drones, 3)
     sim.state_control(cmd)
     sim.step()
@@ -365,6 +367,7 @@ def test_control_frequency(dynamics: Dynamics):
 
     # Set same initial state and controls
     cmd = np.zeros((1, 1, 16))  # Single world, single drone, state control
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     # Target position of (1, 1, 1). Needs to be off-center to check attitude integration error
     cmd[..., :3] = 1.0
 
@@ -651,6 +654,7 @@ def test_scan_results(dynamics: Dynamics):
     sim = Sim(n_worlds=2, n_drones=3, dynamics=dynamics, control=Control.state, device="cpu")
     sim.reset()
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :3] = sim.data.states.pos + np.array([0.3, 0.3, 0.3])
     sim.state_control(cmd)
     n_steps, n_iters = sim.freq // sim.control_freq, 100  # 1 second at 100Hz

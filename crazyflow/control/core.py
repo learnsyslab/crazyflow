@@ -38,10 +38,12 @@ def parametrize(
     import numpy as np
     from crazyflow.control import parametrize
     from crazyflow.control.mellinger import state2attitude
+    from scipy.spatial.transform import Rotation as R
 
     ctrl = parametrize(state2attitude, "cf2x_L250")
     pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
     vel, cmd = np.zeros(3), np.zeros(16)
+    cmd[9:13] = R.from_euler("z", 0.0).as_quat()
     rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
     ```
 
@@ -95,8 +97,8 @@ class Control(StrEnum):
         Recommended frequency is >=20 Hz.
 
     Warning:
-        Only the yaw of the attitude quaternion is used, as in the firmware. The fitted dynamics
-        (so_rpy family) take the attitude command directly and ignore the body rates.
+        Only the yaw of the attitude quaternion is used, as in the firmware. The so_rpy family
+        ignores the body rate setpoint.
     """
     attitude = "attitude"
     """Attitude control takes [roll, pitch, yaw, collective thrust].

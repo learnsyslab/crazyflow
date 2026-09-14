@@ -101,10 +101,8 @@ def state2attitude(
     target_thrust = (
         mass * (setpoint_acc - gravity_vec) + kp * pos_err + kd * vel_err + ki * int_pos_err
     )
-    # l. 166 ff Desired yaw from the quaternion setpoint. Only the yaw of the setpoint attitude is
-    # used, as in the firmware
-    qx, qy, qz, qw = (setpoint_quat[..., i] for i in range(4))
-    desired_yaw = xp.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
+    # l. 166 ff Only the yaw of the setpoint attitude is used, as in the firmware
+    desired_yaw = R.from_quat(setpoint_quat).as_euler("xyz")[..., 2]
     # l. 189 Z-Axis [zB]
     rot = R.from_quat(quat).as_matrix()
     z_axis = rot[..., -1]  # 3rd column or roation matrix is z axis

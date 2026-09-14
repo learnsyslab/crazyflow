@@ -27,17 +27,19 @@ The default control mode is `Control.state`. A state command is a 16-element vec
 | 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
 | 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-Only the yaw of the attitude quaternion is used, as in the firmware. A zero quaternion is treated as zero yaw. The command array has shape `(n_worlds, n_drones, 16)`.
+Only the yaw of the attitude quaternion is used, as in the firmware. The setpoint must contain a valid quaternion. The command array has shape `(n_worlds, n_drones, 16)`.
 
 ```python
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
 cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 0.5  # target height: 0.5 m
 ```
 
@@ -49,11 +51,13 @@ cmd[0, 0, 2] = 0.5  # target height: 0.5 m
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
 cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 0.5
 
 for _ in range(10):
@@ -69,11 +73,13 @@ All simulation state lives in `sim.data.states`. Arrays are indexed as `[world, 
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=1, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
 cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 0.5
 
 for _ in range(10):
@@ -94,11 +100,13 @@ Increase `n_worlds` to run independent simulations in a single batched call. All
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=4, n_drones=1, freq=500, control=Control.state)
 sim.reset()
 
 cmd = np.zeros((4, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[:, 0, 2] = np.array([0.2, 0.4, 0.6, 0.8])  # different target heights per world
 
 for _ in range(10):
@@ -116,11 +124,13 @@ Increase `n_drones` to place multiple drones inside a single world. Each drone h
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=1, n_drones=4, freq=500, control=Control.state)
 sim.reset()
 
 cmd = np.zeros((1, 4, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, :, 2] = np.array([0.2, 0.4, 0.6, 0.8])  # different height per drone
 
 for _ in range(10):

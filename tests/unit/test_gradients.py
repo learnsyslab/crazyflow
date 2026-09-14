@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import pytest
 from jax import Array
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
@@ -26,6 +27,7 @@ def test_state_cmd_gradients(dynamics: Dynamics):
         return sim_step(data, sim.freq // sim.control_freq).states.pos[0, 0, 2]
 
     cmd = jnp.zeros((1, 1, 16), dtype=jnp.float32)
+    cmd = cmd.at[..., 9:13].set(R.from_euler("z", 0.0).as_quat())
     cmd = cmd.at[..., 2].set(1.01)
 
     grad = jax.jit(jax.grad(height))(cmd, data)

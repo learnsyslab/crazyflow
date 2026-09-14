@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
+
+os.environ["SCIPY_ARRAY_API"] = "1"
 
 import gymnasium
 import jax
@@ -8,6 +11,7 @@ import numpy as np
 from ml_collections import config_dict
 from pyinstrument import Profiler
 from pyinstrument.renderers.html import HTMLRenderer
+from scipy.spatial.transform import Rotation as R
 
 import crazyflow  # noqa: F401, ensure gymnasium envs are registered
 from crazyflow.sim import Sim
@@ -22,6 +26,8 @@ def profile_step(sim_config: config_dict.ConfigDict, n_steps: int, device: str):
     ndim = 16 if sim.control == "state" else 4
     control_fn = sim.state_control if sim.control == "state" else sim.attitude_control
     cmd = np.zeros((sim.n_worlds, sim.n_drones, ndim))
+    if sim.control == "state":
+        cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     # Ensure JIT compiled dynamics and control
     sim.reset()
     control_fn(cmd)

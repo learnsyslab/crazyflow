@@ -41,13 +41,15 @@ As in the firmware, the position controller does not use the body rates of the s
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(16)  # setpoint at origin, yaw = 0
+cmd = np.zeros(16)  # setpoint at origin
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 
 rpyt, pos_err_i = ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (4,)
@@ -93,9 +95,9 @@ force.shape  # (1,)
 torque.shape  # (3,)
 ```
 
-## Body rates to force/torque {#body-rate-to-force-torque}
+## Stage 2b: Body rates to force/torque {#body-rate-to-force-torque}
 
-`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode: a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. The function reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
+`body_rate2force_torque` replaces stage 2 when the command is a body rate setpoint. The firmware has no dedicated body rate mode. Instead, a rate setpoint enters the angular velocity error and its derivative, while the attitude terms level the drone at its current yaw. Our implementation reproduces this behaviour with the same gains as `attitude2force_torque`. To track body rates without the levelling terms, set `kR` and `ki_m` to zero.
 
 **Inputs:**
 
@@ -175,6 +177,7 @@ from crazyflow.control.mellinger import (
     force_torque2rotor_vel,
     state2attitude,
 )
+from scipy.spatial.transform import Rotation as R
 
 state_ctrl = parametrize(state2attitude, "cf2x_L250")
 att_ctrl = parametrize(attitude2force_torque, "cf2x_L250")
@@ -185,6 +188,7 @@ quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
 ang_vel = np.zeros(3)
 cmd = np.zeros(16)
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[:3] = np.array([0.0, 0.0, 1.0])  # hover at 1 m
 
 rpyt, _ = state_ctrl(pos, quat, vel, cmd)
