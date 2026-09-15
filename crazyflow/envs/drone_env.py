@@ -33,7 +33,9 @@ def action_space(control_type: Control, drone: str) -> spaces.Box:
     match control_type:
         case Control.attitude:
             params = load_params(drone)
-            thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
+            n_motors = np.asarray(params["mixing_matrix"]).shape[-1]
+            thrust_min = params["thrust_min"] * n_motors
+            thrust_max = params["thrust_max"] * n_motors
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),
                 np.array([np.pi / 2, np.pi / 2, np.pi / 2, thrust_max], dtype=np.float32),

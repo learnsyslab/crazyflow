@@ -37,15 +37,16 @@ class SimState:
     """Force applied to the drone's center of mass in the world frame."""
     torque: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3) CoM torque
     """Torque applied to the drone's center of mass in the world frame."""
-    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4) in RPM
+    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, n_motors) in RPM
     """Motor forces along body frame z axis."""
 
     @staticmethod
-    def create(n_worlds: int, n_drones: int, device: Device) -> SimState:
+    def create(n_worlds: int, n_drones: int, n_motors: int, device: Device) -> SimState:
         """Create a default set of states for the simulation."""
         # Each field needs a buffer of its own so that SimData can be donated to XLA
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
         zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        zeros_motors = jnp.zeros((n_worlds, n_drones, n_motors), device=device)
         return SimState(
             pos=zeros_3d.copy(),
             quat=zeros_4d.at[..., -1].set(1.0),
@@ -53,7 +54,7 @@ class SimState:
             ang_vel=zeros_3d.copy(),
             force=zeros_3d.copy(),
             torque=zeros_3d.copy(),
-            rotor_vel=zeros_4d.copy(),
+            rotor_vel=zeros_motors.copy(),
         )
 
 
@@ -67,20 +68,20 @@ class SimStateDeriv:
     """Derivative of the velocity of the drone's center of mass."""
     ang_acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 3)
     """Derivative of the angular velocity of the drone's center of mass."""
-    rotor_acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
+    rotor_acc: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, n_motors)
     """Derivative of the rotor velocity."""
 
     @staticmethod
-    def create(n_worlds: int, n_drones: int, device: Device) -> SimStateDeriv:
+    def create(n_worlds: int, n_drones: int, n_motors: int, device: Device) -> SimStateDeriv:
         """Create a default set of state derivatives for the simulation."""
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
-        zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        zeros_motors = jnp.zeros((n_worlds, n_drones, n_motors), device=device)
         return SimStateDeriv(
             vel=zeros_3d.copy(),
             ang_vel=zeros_3d.copy(),
             acc=zeros_3d.copy(),
             ang_acc=zeros_3d.copy(),
-            rotor_acc=zeros_4d.copy(),
+            rotor_acc=zeros_motors.copy(),
         )
 
 
@@ -116,13 +117,14 @@ class SimControls:
     """Body rate control data."""
     force_torque: ControlData | None
     """Force and torque control data."""
-    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, 4)
+    rotor_vel: Array = field(metadata={CORE_NDIM_KEY: 1})  # (N, M, n_motors)
     """Desired motor speed."""
 
     @staticmethod
     def create(
         n_worlds: int,
         n_drones: int,
+        n_motors: int,
         control: Control,
         drone: str,
         state_freq: int | None,
@@ -132,7 +134,7 @@ class SimControls:
         device: Device,
     ) -> SimControls:
         """Create a default set of controls for the simulation."""
-        rotor_vel = jnp.zeros((n_worlds, n_drones, 4), device=device)
+        rotor_vel = jnp.zeros((n_worlds, n_drones, n_motors), device=device)
         match control:
             case Control.state:
                 state = MellingerStateData.create(n_worlds, n_drones, state_freq, drone, device)

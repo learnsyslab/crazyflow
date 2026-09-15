@@ -48,6 +48,7 @@ def state2attitude(
     int_err_max: Array,
     thrust_max: float,
     pwm_max: float,
+    mixing_matrix: Array,
 ) -> tuple[Array, Array]:
     """Compute the positional part of the mellinger controller.
 
@@ -73,6 +74,7 @@ def state2attitude(
         int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
         thrust_max: Maximum thrust in N.
         pwm_max: Maximum PWM value.
+        mixing_matrix: Mixing matrix for the motor forces with shape (n_motors, 3).
 
     Returns:
         The RPY collective thrust command [rad, rad, rad, N], and the integral error of the position
@@ -140,7 +142,7 @@ def state2attitude(
     # instead of dynamically scaling with the mass parameter of the controller! Hence, we include
     # this conversion here and thus effectively rescale the thrust slightly. The conversion below
     # maps thrust -> PWM -> rescaled thrust.
-    thrust = pwm2force(mass_thrust * current_thrust, thrust_max * 4, pwm_max)
+    thrust = pwm2force(mass_thrust * current_thrust, thrust_max * mixing_matrix.shape[-1], pwm_max)
     command_rpyt = xp.concat((command_RPY, thrust[..., None]), axis=-1)
     return command_rpyt, int_pos_err
 
@@ -407,7 +409,7 @@ def _attitude2force_torque(
     # l. 297 ff
     torque_pwm = xp.clip(torque_pwm, -torque_pwm_max, torque_pwm_max)
     torque_pwm = xp.where((force_des > 0)[..., None], torque_pwm, 0.0)
-    force_des_pwm = force2pwm(force_des / 4, thrust_max, pwm_max)
+    force_des_pwm = force2pwm(force_des / mixing_matrix.shape[-1], thrust_max, pwm_max)
     pwms = force_torque_pwms2pwms(force_des_pwm, torque_pwm, mixing_matrix)
     idle = xp.all(pwms == 0, axis=-1, keepdims=True)
     pwms = xp.where(idle, 0.0, xp.clip(pwms, pwm_min, pwm_max))
@@ -479,7 +481,7 @@ def force_torque2rotor_vel(
     assert torque.shape[-1] == 3, f"Torque must have shape (..., 3), but has {torque.shape}"
     assert force.shape[-1] == 1, f"Force must have shape (..., 1), but has {force.shape}"
     torque_forces = (torque * xp.asarray([1 / L, 1 / L, 1 / thrust2torque])) @ mixing_matrix
-    motor_forces = (torque_forces + force) / 4
+    motor_forces = (torque_forces + force) / mixing_matrix.shape[-1]
     # Clip motor forces on the thrust instead of PWM level.
     idle = xp.all(force == 0, axis=-1, keepdims=True)
     motor_forces = xp.where(idle, 0.0, xp.clip(motor_forces, thrust_min, thrust_max))

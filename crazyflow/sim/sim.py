@@ -497,13 +497,15 @@ class Sim:
         drone_mocap_ids = [
             self.mj_model.body(f"{drone_name}:{i}").mocapid.item() for i in range(self.n_drones)
         ]
+        n_motors = len(load_drone_params(self.drone)["mixing_matrix"][-1])
         N, D = self.n_worlds, self.n_drones
         data = SimData(
-            states=SimState.create(N, D, self.device),
-            states_deriv=SimStateDeriv.create(N, D, self.device),
+            states=SimState.create(N, D, n_motors, self.device),
+            states_deriv=SimStateDeriv.create(N, D, n_motors, self.device),
             controls=SimControls.create(
                 N,
                 D,
+                n_motors,
                 self.control,
                 self.drone,
                 state_freq,
@@ -701,11 +703,12 @@ def clip_floor_pos(data: SimData) -> SimData:
 def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
     """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
     params = load_drone_params(drone)
+    n_motors = np.asarray(params["mixing_matrix"]).shape[-1]
     thrust_min, thrust_max = params["thrust_min"], params["thrust_max"]
     if dynamics == Dynamics.first_principles:
         rpm = motor_force2rotor_vel(np.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
         return float(rpm[0]), float(rpm[1])
-    return 4 * thrust_min, 4 * thrust_max
+    return n_motors * thrust_min, n_motors * thrust_max
 
 
 def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) -> SimData:

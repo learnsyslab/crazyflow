@@ -75,7 +75,9 @@ def rotor_vel_control(data: SimData, controls: Array) -> SimData:
     Directly set the desired rotor velocities of the drone.
     """
     assert data.controls.mode == Control.rotor_vel, f"control type {data.controls.mode} not enabled"
-    assert controls.shape == (data.core.n_worlds, data.core.n_drones, 4), "controls shape mismatch"
+    n_motors = data.states.rotor_vel.shape[-1]
+    expected_shape = (data.core.n_worlds, data.core.n_drones, n_motors)
+    assert controls.shape == expected_shape, "controls shape mismatch"
     controls = jnp.asarray(controls)
     return data.replace(controls=data.controls.replace(rotor_vel=controls))
 
