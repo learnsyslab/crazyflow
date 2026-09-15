@@ -19,6 +19,7 @@ class Drone(StrEnum):
     cf2x_L250 = "cf2x_L250"
     cf2x_P250 = "cf2x_P250"
     cf2x_T350 = "cf2x_T350"
+    hb_x500 = "hb_x500"
 
 
 # Sanity check at startup
