@@ -22,6 +22,52 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
+class Control(StrEnum):
+    """Control type of the simulated onboard controller."""
+
+    state = "state"
+    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
+
+    The attitude setpoint qx, qy, qz, qw is an xyzw quaternion. The body rates wx, wy, wz are the
+    angular velocity in the body frame in rad/s. The position controller forwards them to the
+    attitude controller as its body rate setpoint.
+
+    Note:
+        Recommended frequency is >=20 Hz.
+
+    Warning:
+        Only the yaw of the attitude quaternion is used, as in the firmware. The fitted dynamics
+        (so_rpy family) take the attitude command directly and ignore the body rates.
+    """
+    attitude = "attitude"
+    """Attitude control takes [roll, pitch, yaw, collective thrust].
+
+    Note:
+        Recommended frequency is >=100 Hz.
+    """
+    body_rate = "body_rate"
+    """Body rate control takes [wx, wy, wz, collective thrust].
+
+    The body rates wx, wy, wz are the angular velocity in the body frame in rad/s.
+
+    Note:
+        Recommended frequency is >=200 Hz.
+    """
+    force_torque = "force_torque"
+    """Force and torque control takes [fc, tx, ty, tz].
+
+    Note:
+        Recommended frequency is >=500 Hz.
+    """
+    rotor_vel = "rotor_vel"
+    """Rotor velocity control takes [w1, w2, w3, w4] in RPMs.
+
+    Note:
+        Recommended frequency is >=500 Hz.
+    """
+    default = attitude
+
+
 def parametrize(
     fn: Callable[P, R], drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> Callable[P, R]:
@@ -79,52 +125,6 @@ def load_params(
         raise KeyError(f"Drone `{drone}` not found in {controller}/params.toml")
     merged = params[drone].get("core", {}) | params[drone].get(fn.__name__, {})
     return to_xp(filter_to_signature(merged, fn), xp=xp, device=device)
-
-
-class Control(StrEnum):
-    """Control type of the simulated onboard controller."""
-
-    state = "state"
-    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
-
-    The attitude setpoint qx, qy, qz, qw is an xyzw quaternion. The body rates wx, wy, wz are the
-    angular velocity in the body frame in rad/s. The position controller forwards them to the
-    attitude controller as its body rate setpoint.
-
-    Note:
-        Recommended frequency is >=20 Hz.
-
-    Warning:
-        Only the yaw of the attitude quaternion is used, as in the firmware. The fitted dynamics
-        (so_rpy family) take the attitude command directly and ignore the body rates.
-    """
-    attitude = "attitude"
-    """Attitude control takes [roll, pitch, yaw, collective thrust].
-
-    Note:
-        Recommended frequency is >=100 Hz.
-    """
-    body_rate = "body_rate"
-    """Body rate control takes [wx, wy, wz, collective thrust].
-
-    The body rates wx, wy, wz are the angular velocity in the body frame in rad/s.
-
-    Note:
-        Recommended frequency is >=200 Hz.
-    """
-    force_torque = "force_torque"
-    """Force and torque control takes [fc, tx, ty, tz].
-
-    Note:
-        Recommended frequency is >=500 Hz.
-    """
-    rotor_vel = "rotor_vel"
-    """Rotor velocity control takes [w1, w2, w3, w4] in RPMs.
-
-    Note:
-        Recommended frequency is >=500 Hz.
-    """
-    default = attitude
 
 
 @jax.jit

@@ -21,7 +21,7 @@ The following configurations ship with pre-fitted parameters. They cover both th
 ```python
 from crazyflow.drones import available_drones
 
-available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
+available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500', 'hb_x500')
 ```
 
 | `drone` | Platform |
@@ -30,6 +30,7 @@ available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
 | `"cf2x_P250"` | Crazyflie 2.x, plus propellers |
 | `"cf2x_T350"` | Crazyflie 2.x, thrust upgrade kit |
 | `"cf21B_500"` | Crazyflie 2.1 Brushless |
+| `"hb_x500"` | Holybro X500 V2 |
 
 If your drone is not listed, you can identify the parameters from flight data using the [system identification pipeline](system-identification.md) and inject them into any dynamics.
 
