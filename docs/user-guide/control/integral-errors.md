@@ -13,12 +13,14 @@ You have two ways to start the integral error at zero:
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 
 # Option 1: let the controller initialise the integral error.
 rpyt, pos_err_i = ctrl(pos, quat, vel, cmd, pos_err_i=None)
@@ -37,12 +39,14 @@ Pass the returned error straight back as `pos_err_i` on the next call:
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0] = 1.0  # 1 m setpoint error in x
 
 pos_err_i = None
@@ -60,6 +64,7 @@ for _ in range(10):
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import attitude2force_torque, state2attitude
+from scipy.spatial.transform import Rotation as R
 
 state_ctrl = parametrize(state2attitude, "cf2x_L250")
 att_ctrl = parametrize(attitude2force_torque, "cf2x_L250")
@@ -68,7 +73,8 @@ pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
 ang_vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 
 pos_err_i = None
 r_int_error = None

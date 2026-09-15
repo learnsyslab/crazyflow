@@ -28,7 +28,8 @@ def disturbance_fn(data: SimData) -> SimData:
 
 def main(plot: bool = False):
     sim = Sim(control="state")
-    control = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    control = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    control[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     control[..., :3] = 0.2
 
     # First run

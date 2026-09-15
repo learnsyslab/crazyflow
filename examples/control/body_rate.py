@@ -17,11 +17,11 @@ kp_att = 8.0  # Proportional gain from the attitude error to body rates
 
 def trajectory(t: float, pos_start: np.ndarray) -> np.ndarray:
     """Compute the full state command of a circle with a slow climb."""
-    cmd = np.zeros(13)
+    cmd = np.zeros(16)
     cmd[:3] = pos_start + np.array([np.cos(t) - 1, np.sin(t), 0.2 * t])
     cmd[3:6] = np.array([-np.sin(t), np.cos(t), 0.2])
     cmd[6:9] = np.array([-np.cos(t), -np.sin(t), 0.0])
-    cmd[9] = t  # Yaw
+    cmd[9:13] = R.from_euler("z", t).as_quat()
     return cmd
 
 
@@ -48,7 +48,7 @@ def main():
     # to body rates. This could be any controller that outputs [w_x, w_y, w_z, thrust].
     position_ctrl = partial(parametrize(state2attitude, sim.drone), ctrl_freq=sim.control_freq)
     pos_err_i = np.zeros(3)
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [roll_rate, pitch_rate, yaw_rate, thrust]
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [wx, wy, wz, thrust]
     pos_start = np.asarray(sim.data.states.pos[0, 0])
     for i in range(int(duration * sim.control_freq)):
         pos, quat = np.asarray(sim.data.states.pos[0, 0]), np.asarray(sim.data.states.quat[0, 0])

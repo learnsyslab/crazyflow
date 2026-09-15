@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250", xp=jnp)
 jit_ctrl = jax.jit(ctrl)
@@ -14,7 +15,7 @@ jit_ctrl = jax.jit(ctrl)
 pos = jnp.zeros(3)
 quat = jnp.array([0.0, 0.0, 0.0, 1.0])
 vel = jnp.zeros(3)
-cmd = jnp.zeros(13)
+cmd = jnp.zeros(16).at[9:13].set(R.from_euler("z", 0.0).as_quat())
 
 rpyt, int_pos_err = jit_ctrl(pos, quat, vel, cmd)
 ```
@@ -28,6 +29,7 @@ import jax
 import jax.numpy as jnp
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250", xp=jnp)
 jit_ctrl = jax.jit(ctrl)
@@ -35,7 +37,7 @@ jit_ctrl = jax.jit(ctrl)
 pos = jnp.zeros(3)
 quat = jnp.array([0.0, 0.0, 0.0, 1.0])
 vel = jnp.zeros(3)
-cmd = jnp.zeros(13)
+cmd = jnp.zeros(16).at[9:13].set(R.from_euler("z", 0.0).as_quat())
 
 pos_err_i = jnp.zeros(3)  # initialise to zero, so the function compiles only once
 for _ in range(10):
@@ -51,6 +53,7 @@ import jax
 import jax.numpy as jnp
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250", xp=jnp)
 jit_ctrl = jax.jit(ctrl)
@@ -59,7 +62,7 @@ N = 1_000
 pos = jnp.zeros((N, 3))
 quat = jnp.broadcast_to(jnp.array([0.0, 0.0, 0.0, 1.0]), (N, 4))
 vel = jnp.zeros((N, 3))
-cmd = jnp.zeros((N, 13))
+cmd = jnp.zeros((N, 16)).at[..., 9:13].set(R.from_euler("z", 0.0).as_quat())
 
 rpyt, _ = jit_ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (1000, 4)

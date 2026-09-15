@@ -1,5 +1,10 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import jax.numpy as jnp
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.control.transform import motor_force2rotor_vel
@@ -15,7 +20,8 @@ def figure_eight(t: float) -> np.ndarray:
     """Return the position, velocity, and acceleration reference at time ``t``."""
     omega = 2.0 * np.pi / DURATION
     phase = omega * t
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., 0:3] = TRAJECTORY_CENTER + TRAJECTORY_SIZE * np.array(
         [np.sin(phase), 0.0, np.sin(2.0 * phase)]
     )

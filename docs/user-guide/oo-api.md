@@ -50,18 +50,20 @@ All control methods take an array of shape `(n_worlds, n_drones, command_dim)` a
 
 ### State control
 
-The highest-level interface. A 13-element command sets desired position, velocity, acceleration, yaw, and angular rates. An internal Mellinger controller converts this to attitude commands.
+The highest-level interface. A 16-element command sets desired position, velocity, acceleration, attitude, and body rates. The yaw part of the attitude commands the heading. The body rate setpoint is forwarded to the attitude controller.
 
 ```python
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=1, n_drones=1, control=Control.state)
 sim.reset()
 
-# [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate]
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+# [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 0.5  # hover at 0.5 m
 
 sim.state_control(cmd)
@@ -164,12 +166,14 @@ A full reset restores everything except the rng key. A mask selects along the wo
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=4, n_drones=1, control=Control.state)
 sim.reset()  # reset all worlds
 
 # Stage a command and advance 50 dynamics steps (controllers fire at their rate)
-cmd = np.zeros((4, 1, 13), dtype=np.float32)
+cmd = np.zeros((4, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[..., 2] = 0.5
 sim.state_control(cmd)
 sim.step(50)
@@ -189,11 +193,13 @@ Access any state field through `sim.data.states`:
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=2, n_drones=3, control=Control.state)
 sim.reset()
 
-cmd = np.zeros((2, 3, 13), dtype=np.float32)
+cmd = np.zeros((2, 3, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 for _ in range(10):
     sim.state_control(cmd)
     sim.step(sim.freq // sim.control_freq)

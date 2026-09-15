@@ -1,6 +1,11 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 from functools import partial
 
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control, parametrize
 from crazyflow.control.mellinger import state2attitude
@@ -9,11 +14,11 @@ from crazyflow.sim import Sim
 
 def control(t: float, pos_start: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Compute the attitude command to track a circle with a slow climb."""
-    cmd = np.zeros(13)
+    cmd = np.zeros(16)
     cmd[:3] = pos_start + np.array([np.cos(t) - 1, np.sin(t), 0.2 * t])
     cmd[3:6] = np.array([-np.sin(t), np.cos(t), 0.2])
     cmd[6:9] = np.array([-np.cos(t), -np.sin(t), 0.0])
-    cmd[9] = t  # Yaw
+    cmd[9:13] = R.from_euler("z", t).as_quat()
     return cmd
 
 

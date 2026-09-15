@@ -5,11 +5,15 @@ WARNING: This is an advanced example meant for advanced Crazyflow users.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
+
+os.environ["SCIPY_ARRAY_API"] = "1"
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow import Sim
 from crazyflow.control.transform import motor_force2rotor_vel
@@ -40,7 +44,8 @@ def trajectory(t: float, t_total: float = 20.0) -> np.ndarray:
     center = np.array([0.0, 0.0, 1.0])
     size = np.array([1.0, 0.75, 0.0])
     omega = 2 * np.pi / t_total
-    cmd = np.zeros((1, 1, 13))
+    cmd = np.zeros((1, 1, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     pos = center + size * np.array([np.sin(omega * t), np.sin(2 * omega * t), 0.0])
     vel = size * omega * np.array([np.cos(omega * t), 2 * np.cos(2 * omega * t), 0.0])
     acc = size * omega**2 * np.array([-np.sin(omega * t), -4 * np.sin(2 * omega * t), 0.0])

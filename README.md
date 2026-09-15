@@ -18,9 +18,11 @@ Crazyflow is a research simulator for quadrotors. It runs batched, differentiabl
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(n_worlds=4096, n_drones=1, control=Control.state)
-cmd = np.zeros((4096, 1, 13))
+cmd = np.zeros((4096, 1, 16))
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[..., 2] = 0.5  # hover at 0.5 m across all worlds
 
 for _ in range(100):

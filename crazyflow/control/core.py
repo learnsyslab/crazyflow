@@ -38,10 +38,12 @@ def parametrize(
     import numpy as np
     from crazyflow.control import parametrize
     from crazyflow.control.mellinger import state2attitude
+    from scipy.spatial.transform import Rotation as R
 
     ctrl = parametrize(state2attitude, "cf2x_L250")
     pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
-    vel, cmd = np.zeros(3), np.zeros(13)
+    vel, cmd = np.zeros(3), np.zeros(16)
+    cmd[9:13] = R.from_euler("z", 0.0).as_quat()
     rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
     ```
 
@@ -85,14 +87,14 @@ class Control(StrEnum):
     """Control type of the simulated onboard controller."""
 
     state = "state"
-    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate].
-    
+    """State control takes [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz].
+
     Note:
         Recommended frequency is >=20 Hz.
 
     Warning:
-        Currently, we only use positions, velocities, and yaw. The rest of the state is ignored.
-        This is subject to change in the future.
+        Only the yaw of the attitude quaternion is used, as in the firmware. The so_rpy family
+        ignores the body rate setpoint.
     """
     attitude = "attitude"
     """Attitude control takes [roll, pitch, yaw, collective thrust].
@@ -101,7 +103,7 @@ class Control(StrEnum):
         Recommended frequency is >=100 Hz.
     """
     body_rate = "body_rate"
-    """Body rate control takes [roll_rate, pitch_rate, yaw_rate, collective thrust].
+    """Body rate control takes [wx, wy, wz, collective thrust].
 
     Note:
         Recommended frequency is >=200 Hz.

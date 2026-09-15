@@ -6,6 +6,7 @@ All controllers are built on Array API operations that broadcast over leading di
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 
@@ -13,7 +14,8 @@ N = 100
 pos = np.zeros((N, 3))
 quat = np.tile(np.array([0.0, 0.0, 0.0, 1.0]), (N, 1))
 vel = np.zeros((N, 3))
-cmd = np.zeros((N, 13))
+cmd = np.zeros((N, 16))
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 
 rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (100, 4)
@@ -27,6 +29,7 @@ Any number of leading dimensions works. A common pattern is a grid of environmen
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 
@@ -34,7 +37,8 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 pos = np.zeros((10, 5, 3))
 quat = np.broadcast_to(np.array([0.0, 0.0, 0.0, 1.0]), (10, 5, 4)).copy()
 vel = np.zeros((10, 5, 3))
-cmd = np.zeros((10, 5, 13))
+cmd = np.zeros((10, 5, 16))
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 
 rpyt, _ = ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (10, 5, 4)

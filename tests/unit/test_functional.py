@@ -123,28 +123,28 @@ def test_functional_state_control(state_freq: int):
     can_control_2 = np.array([0, 0, 1, 2, 3, 4]) * state_freq % sim.freq < state_freq
 
     for i in range(6):
-        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+        cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
         # Check controllable status
         controllable = F.controllable(data)
         assert jnp.all(controllable[0] == can_control_1[i]), f"Controllable 1 mismatch at t={i}"
         assert jnp.all(controllable[1] == can_control_2[i]), f"Controllable 2 mismatch at t={i}"
         # Apply control
         data = F.state_control(data, cmd)
-        last_attitude = data.controls.attitude.staged_cmd
+        prev_attitude = data.controls.attitude.staged_cmd
         data = step_fn(data, 1)
         attitude = data.controls.attitude.staged_cmd
 
-        last_att, att = last_attitude[0], attitude[0]
+        prev_att, att = prev_attitude[0], attitude[0]
         if can_control_1[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
 
-        last_att, att = last_attitude[1], attitude[1]
+        prev_att, att = prev_attitude[1], attitude[1]
         if can_control_2[i]:
-            assert not jnp.all(att == last_att), f"Controls haven't been applied at t={i}"
+            assert not jnp.all(att == prev_att), f"Controls haven't been applied at t={i}"
         else:
-            assert jnp.all(att == last_att), f"Controls should be unchanged at t={i}"
+            assert jnp.all(att == prev_att), f"Controls should be unchanged at t={i}"
         if i == 0:  # Make world 2 asynchronous
             data = reset_fn(data, default_data, np.array([False, True]))
 
@@ -160,7 +160,7 @@ def test_functional_state_control_device(device: str):
     """Test that functional state control maintains JAX arrays on correct device."""
     sim = Sim(n_worlds=2, n_drones=3, control=Control.state, device=device)
     data = sim.build_data()
-    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 13)
+    cmd = np.random.rand(sim.n_worlds, sim.n_drones, 16)
     data = F.state_control(data, cmd)
     controls = data.controls.state
     assert isinstance(controls.cmd, jnp.ndarray), "Buffers must remain JAX arrays"

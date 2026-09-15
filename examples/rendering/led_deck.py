@@ -1,7 +1,11 @@
+import os
 import tempfile
 from pathlib import Path
 
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
@@ -50,7 +54,8 @@ def main():
         rgbas[..., 3] = 1.0
 
         init_pos = np.array(sim.data.states.pos[0, :, :])
-        cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+        cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+        cmd[:, :, 9:13] = R.from_euler("z", 0.0).as_quat()
         cmd[:, :, :3] = init_pos
         cmd[:, :, 2] += 1.5
 

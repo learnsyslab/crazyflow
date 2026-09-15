@@ -5,10 +5,15 @@ element of the default parameters by an independent uniform factor in [1 - x, 1 
 default parameters as the base value ensures that repeated resets do not compound.
 """
 
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 from jax import Array
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
@@ -138,7 +143,8 @@ def main():
     fps = 60
 
     for _ in range(3):
-        cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+        cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+        cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
         cmd[..., 2] = 0.4
         cmd[..., :2] = grid_2d(sim.n_drones) * 0.25
 

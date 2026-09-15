@@ -1,4 +1,9 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
@@ -6,7 +11,8 @@ from crazyflow.sim import Sim
 
 def control(start_xy: np.ndarray, t: float) -> np.ndarray:
     circle = np.array([np.cos(t) - 1, np.sin(t)])
-    cmd = np.zeros((*start_xy.shape[:-1], 13))
+    cmd = np.zeros((*start_xy.shape[:-1], 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :2] = start_xy + circle
     cmd[..., 2] = 0.2 * t
     return cmd

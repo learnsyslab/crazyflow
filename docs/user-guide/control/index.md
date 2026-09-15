@@ -4,12 +4,12 @@ Crazyflow provides multiple control modes, from high-level position setpoints do
 
 ## Control hierarchy
 
-Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger controller; an attitude command is converted to force/torque by the geometric controller; force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control.
+Commands flow down a hierarchy. A state command is converted to an attitude command by the Mellinger position controller, the attitude command is converted to force/torque by the geometric controller, and force/torque is converted to rotor velocities by the mixer. Body rate control feeds the geometric controller with a rate setpoint instead of an attitude, so it enters the hierarchy at the same level as attitude control. The rate setpoint in the state command is forwarded to the rate controller.
 
 ```
-State (13D)
-  └─ Mellinger controller
-       └─ Attitude (4D: roll, pitch, yaw, thrust)  |  Body rates (4D: ωx, ωy, ωz, thrust)
+State (16D)
+  └─ Mellinger position controller
+       └─ Attitude (4D: roll, pitch, yaw, thrust) + body rates (3D: ωx, ωy, ωz)  |  Body rates (4D: ωx, ωy, ωz, thrust)
             └─ Geometric controller
                  └─ Force/torque (4D: Fc, Tx, Ty, Tz)
                       └─ Mixer
@@ -28,29 +28,31 @@ sim = Sim(control=Control.state, state_freq=100, attitude_freq=500)
 sim.reset()
 ```
 
-Command shape: `(n_worlds, n_drones, 13)`
+Command shape: `(n_worlds, n_drones, 16)`
 
 | Index | Variable | Units |
 |---|---|---|
 | 0–2 | Target position \(x, y, z\) | m |
 | 3–5 | Target velocity \(\dot{x}, \dot{y}, \dot{z}\) | m/s |
 | 6–8 | Target acceleration \(\ddot{x}, \ddot{y}, \ddot{z}\) | m/s² |
-| 9 | Yaw | rad |
-| 10 | Roll rate | rad/s |
-| 11 | Pitch rate | rad/s |
-| 12 | Yaw rate | rad/s |
+| 9–12 | Attitude quaternion \(q_x, q_y, q_z, q_w\) | |
+| 13–15 | Body rates \(\omega_x, \omega_y, \omega_z\) | rad/s |
 
-Set unused elements to zero. A common hover command sets only the z position:
+As in the firmware's full state setpoint, only the yaw of the attitude quaternion is used. The body rates are the angular velocity in the body frame. The so_rpy family ignores them.
+
+Set unused elements to zero. The attitude quaternion must be valid. A common hover command sets only the z position:
 
 ```python
 import numpy as np
 from crazyflow.sim import Sim
 from crazyflow.control import Control
+from scipy.spatial.transform import Rotation as R
 
 sim = Sim(control=Control.state)
 sim.reset()
 
-cmd = np.zeros((1, 1, 13), dtype=np.float32)
+cmd = np.zeros((1, 1, 16), dtype=np.float32)
+cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[0, 0, 2] = 1.0  # hover at 1 m
 
 sim.state_control(cmd)
@@ -110,9 +112,9 @@ Command shape: `(n_worlds, n_drones, 4)`
 
 | Index | Variable | Units |
 |---|---|---|
-| 0 | Roll rate \(\omega_x\) | rad/s |
-| 1 | Pitch rate \(\omega_y\) | rad/s |
-| 2 | Yaw rate \(\omega_z\) | rad/s |
+| 0 | Body rate \(\omega_x\) | rad/s |
+| 1 | Body rate \(\omega_y\) | rad/s |
+| 2 | Body rate \(\omega_z\) | rad/s |
 | 3 | Collective thrust | N |
 
 Zero rates and hover thrust hold the current attitude:

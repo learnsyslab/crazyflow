@@ -24,7 +24,7 @@ All three stages share the same state convention:
 | `pos` | `(..., 3)` | Current position [m] |
 | `quat` | `(..., 4)` | Current attitude, xyzw |
 | `vel` | `(..., 3)` | Current velocity [m/s] |
-| `cmd` | `(..., 13)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, yaw, avx, avy, avz]` |
+| `cmd` | `(..., 16)` | Setpoint: `[x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]` |
 | `pos_err_i` | `(..., 3)` or `None` | Position integral error from the previous call. `None` initialises to zero |
 | `ctrl_freq` | `float` | Control frequency in Hz (default 100) |
 
@@ -35,17 +35,21 @@ All three stages share the same state convention:
 | `rpyt` | `(..., 4)` | Attitude + thrust: `[roll_rad, pitch_rad, yaw_rad, thrust_N]` |
 | `pos_err_i` | `(..., 3)` | Position integral error. Pass back as `pos_err_i` on the next call |
 
+As in the firmware, only the yaw of the quaternion `qx, qy, qz, qw` is used.
+
 ```python
 import numpy as np
 from crazyflow.control import parametrize
 from crazyflow.control.mellinger import state2attitude
+from scipy.spatial.transform import Rotation as R
 
 ctrl = parametrize(state2attitude, "cf2x_L250")
 
 pos = np.zeros(3)
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
-cmd = np.zeros(13)  # setpoint at origin, yaw = 0
+cmd = np.zeros(16)  # setpoint at origin
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 
 rpyt, pos_err_i = ctrl(pos, quat, vel, cmd)
 rpyt.shape  # (4,)
@@ -101,7 +105,7 @@ torque.shape  # (3,)
 |---|---|---|
 | `quat` | `(..., 4)` | Current attitude, xyzw |
 | `ang_vel` | `(..., 3)` | Current angular velocity in body frame [rad/s] |
-| `cmd` | `(..., 4)` | Body rate command: `[roll_rate, pitch_rate, yaw_rate, thrust_N]` |
+| `cmd` | `(..., 4)` | Body rate command: `[wx, wy, wz, thrust_N]` |
 | `prev_ang_vel` | `(..., 3)` or `None` | Angular velocity from the previous call. `None` initialises to zero |
 | `prev_cmd` | `(..., 4)` or `None` | Command from the previous call, used for the setpoint derivative. `None` assumes a constant setpoint |
 | `r_int_error` | `(..., 3)` or `None` | Angular velocity integral error from the previous call. `None` initialises to zero |
@@ -125,7 +129,7 @@ params["kR"], params["ki_m"] = np.zeros(3), np.zeros(3)  # pure body rate tracki
 
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 ang_vel = np.zeros(3)
-cmd = np.array([0.5, 0.0, 0.0, 0.3])  # 0.5 rad/s roll rate, 0.3 N thrust
+cmd = np.array([0.5, 0.0, 0.0, 0.3])  # 0.5 rad/s body rate about x, 0.3 N thrust
 
 force, torque, r_int_err = body_rate2force_torque(quat, ang_vel, cmd, **params)
 force.shape  # (1,)
@@ -173,6 +177,7 @@ from crazyflow.control.mellinger import (
     force_torque2rotor_vel,
     state2attitude,
 )
+from scipy.spatial.transform import Rotation as R
 
 state_ctrl = parametrize(state2attitude, "cf2x_L250")
 att_ctrl = parametrize(attitude2force_torque, "cf2x_L250")
@@ -182,7 +187,8 @@ pos = np.array([0.0, 0.0, 1.0])  # 1 m altitude
 quat = np.array([0.0, 0.0, 0.0, 1.0])
 vel = np.zeros(3)
 ang_vel = np.zeros(3)
-cmd = np.zeros(13)
+cmd = np.zeros(16)
+cmd[9:13] = R.from_euler("z", 0.0).as_quat()
 cmd[:3] = np.array([0.0, 0.0, 1.0])  # hover at 1 m
 
 rpyt, _ = state_ctrl(pos, quat, vel, cmd)

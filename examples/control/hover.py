@@ -1,4 +1,9 @@
+import os
+
+os.environ["SCIPY_ARRAY_API"] = "1"
+
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
 from crazyflow.sim import Dynamics, Sim
@@ -20,8 +25,9 @@ def main():
     duration = 5.0
     fps = 60
 
-    # State cmd is [x, y, z, vx, vy, vz, ax, ay, az, yaw, roll_rate, pitch_rate, yaw_rate]
-    cmd = np.zeros((sim.n_worlds, sim.n_drones, 13))
+    # State cmd is [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
+    cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
+    cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[..., :3] = 0.1
 
     for i in range(int(duration * sim.control_freq)):
