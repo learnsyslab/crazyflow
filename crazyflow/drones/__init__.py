@@ -17,7 +17,8 @@ from pathlib import Path
 # * **cf2x_P250** — Crazyflie 2.x with plus propellers
 # * **cf2x_T350** — Crazyflie 2.x with thrust upgrade kit
 # * **cf21B_500** — Crazyflie 2.1 Brushless with 500 mAh battery
-available_drones: tuple[str, ...] = ("cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500")
+# * **hb_x500** — Holybro X500 V2
+available_drones: tuple[str, ...] = ("cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500", "hb_x500")
 
 __all__ = ["available_drones", "load_params"]
 

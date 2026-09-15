@@ -3,7 +3,7 @@
 [cf2x_L250]
 gravity_vec = [0.0, 0.0, -9.81]
 mass = 0.0319
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 J = [  # TODO
     [16.8e-6, 0.0, 0.0],
     [0.0, 16.8e-6, 0.0],
@@ -41,7 +41,7 @@ prop_inertia = 34.52e-9 # TODO seems off
 [cf2x_P250]
 gravity_vec = [0.0, 0.0, -9.81]
 mass = 0.0318
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 J = [  # TODO from L250
     [16.8e-6, 0.0, 0.0],
     [0.0, 16.8e-6, 0.0],
@@ -79,7 +79,7 @@ prop_inertia = 26.97e-9
 [cf2x_T350]
 gravity_vec = [0.0, 0.0, -9.81]
 mass = 0.0379
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 J = [ 
     [15.7e-6, 0.0, 0.0],
     [0.0, 17.1e-6, 0.0],
@@ -117,7 +117,7 @@ prop_inertia = 38.93e-9 # TODO value from B500, currenty unknown
 [cf21B_500]
 gravity_vec = [0.0, 0.0, -9.81]
 mass = 0.04338
-L = 0.035355
+L = 0.035355  # Distance from axis to rotor, i.e., arm / sqrt(2)
 J = [
     [25e-6, 0.0,   0.0],
     [0.0,   28e-6, 0.0],
@@ -150,3 +150,37 @@ vmotor2torque = [-0.00016088354909542246, 0.0003960426420309137, -4.627412241432
 vmotor2rpm = [2938.3995608848436, 6001.834195381014]  # Index is order
 prop_radius = 27.5e-3 # TODO check
 prop_inertia = 38.93e-9
+
+[hb_x500]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 2.28
+L = 0.17678  # Distance from axis to rotor, i.e., arm / sqrt(2)
+J = [ # approximated
+    [24e-3, 0.0,   0.0],
+    [0.0,   24e-3, 0.0],
+    [0.0,   0.0,   44e-3]
+]
+rpm2thrust = [0.0, 1e-6, 1e-9] # Unknown
+rpm2torque = [0.0, 1e-9, 1e-12] # Unknown
+thrust2torque = 0.01 # Unknown
+rotor_dyn_coef = [ 20.0, 0.0, 10.0, 0.0001,] # Unknown
+rotor_dyn_coef_simple = 20.0 # Unknown
+thrust_dyn_coef = 14.06 # Unknown
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+drag_matrix = [ # This term is from the so_rpy_rotor_drag dynamics
+    [ -0.8031707417931839, 0.0, 0.0,], 
+    [ 0.0, -0.8031707417931839, 0.0,], 
+    [ 0.0, 0.0, -1.013867567938818,],
+]
+# The following parameters are for the platform, but are maybe not actually used by the dynamics. However, 
+# we still keep them here in one place, since some other things (sim, estimator, firmware) might need them.
+pwm_min = 0
+pwm_max = 1
+thrust_min = 1 # in N per motor
+thrust_max = 12.13 # in N per motor
+prop_radius = 126.0e-3 
+prop_inertia = 70.0e-6 # approximated

@@ -7,6 +7,7 @@ os.environ["XLA_FLAGS"] = "--xla_force_host_platform_device_count=2"
 
 import jax
 import pytest
+from _pytest.mark import ParameterSet
 
 # The cache dir is per-user. A shared dir like /tmp/jax_cache breaks on multi-user machines, since
 # jax hard-fails on GPU autotune cache writes when another user owns the directory.
@@ -43,3 +44,24 @@ skip_if_headless = pytest.mark.skipif(
     os.environ.get("DISPLAY") is None,
     reason="DISPLAY is not set, skipping test in headless environment",
 )
+
+
+def drone_dynamics_fns() -> list[ParameterSet]:
+    from crazyflow.dynamics import available_dynamics, supported_drones
+
+    return [
+        pytest.param(name, fn, drone, id=f"{drone}-{name}")
+        for name, fn in available_dynamics.items()
+        for drone in supported_drones(name)
+    ]
+
+
+def drone_dynamics() -> list[ParameterSet]:
+    from crazyflow.drones import available_drones
+    from crazyflow.dynamics import supported_dynamics
+
+    return [
+        pytest.param(dynamics, drone, id=f"{drone}-{dynamics}")
+        for drone in available_drones
+        for dynamics in supported_dynamics(drone)
+    ]

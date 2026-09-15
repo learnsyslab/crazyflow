@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
 
+from crazyflow.drones import available_drones
 from crazyflow.drones import load_params as load_physical_params
 from crazyflow.utils import filter_to_signature, to_xp
 from crazyflow.utils import parametrize as _parametrize
@@ -19,6 +20,16 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+class Dynamics(StrEnum):
+    """Dynamics mode for the simulation."""
+
+    first_principles = "first_principles"
+    so_rpy = "so_rpy"
+    so_rpy_rotor = "so_rpy_rotor"
+    so_rpy_rotor_drag = "so_rpy_rotor_drag"
+    default = first_principles
 
 
 def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
@@ -104,8 +115,9 @@ def load_params(
         dynamics-specific coefficients for ``dynamics``.
 
     Raises:
-        KeyError: If ``drone`` is not found in either TOML file, or if ``dynamics`` does not
+        KeyError: If ``drone`` is not found in ``drones/params.toml``, or if ``dynamics`` does not
             correspond to a known sub-package.
+        NotImplementedError: If ``dynamics`` is not available for ``drone``.
     """
     assert isinstance(fn, Callable), f"Expected a function, got {type(fn)}"
     dynamics = fn.__module__.split(".")[-2]
@@ -114,7 +126,10 @@ def load_params(
     with open(Path(__file__).parent / f"{dynamics}/params.toml", "rb") as f:
         dynamics_params = tomllib.load(f)
     if drone not in dynamics_params:
-        raise KeyError(f"Drone `{drone}` not found in {dynamics}/params.toml")
+        raise NotImplementedError(
+            f"Dynamics `{dynamics}` not available for drone `{drone}`: not found in "
+            f"{dynamics}/params.toml"
+        )
     params = load_physical_params(drone) | dynamics_params[drone]
     # Make sure J_inv does not have a dtype fixed before conversion to xp arrays to avoid fixing it
     # to np.float64 when other frameworks might prefer a different dtype.
@@ -122,11 +137,22 @@ def load_params(
     return to_xp(filter_to_signature(params, fn), xp=xp, device=device)
 
 
-class Dynamics(StrEnum):
-    """Dynamics mode for the simulation."""
+def _param_sections(dynamics: str) -> set[str]:
+    """Return the drone sections declared in a dynamics' ``params.toml``."""
+    if dynamics not in Dynamics:
+        raise KeyError(f"Dynamics `{dynamics}` not found. Available dynamics: {tuple(Dynamics)}")
+    with open(Path(__file__).parent / f"{dynamics}/params.toml", "rb") as f:
+        return set(tomllib.load(f))
 
-    first_principles = "first_principles"
-    so_rpy = "so_rpy"
-    so_rpy_rotor = "so_rpy_rotor"
-    so_rpy_rotor_drag = "so_rpy_rotor_drag"
-    default = first_principles
+
+def supported_drones(dynamics: str) -> tuple[str, ...]:
+    """Return the drones that ``dynamics`` can be parametrized for."""
+    sections = _param_sections(dynamics)
+    return tuple(drone for drone in available_drones if drone in sections)
+
+
+def supported_dynamics(drone: str) -> tuple[str, ...]:
+    """Return the dynamics that ``drone`` can be simulated with."""
+    if drone not in available_drones:
+        raise KeyError(f"Drone `{drone}` not found. Available drones: {available_drones}")
+    return tuple(str(d) for d in Dynamics if drone in _param_sections(d))
