@@ -15,9 +15,9 @@ from jax.sharding import AxisType, NamedSharding, PartitionSpec
 from crazyflow.utils import world_mask
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
-    from jax import Device
+    from jax import Array, Device
     from jax.sharding import Mesh
 
     from crazyflow.sim.data import SimData
@@ -71,3 +71,24 @@ def shard(data: SimData, mesh: Mesh) -> SimData:
         The placed simulation data.
     """
     return jax.device_put(data, placement(data, mesh))
+
+
+def build_sharded_data(
+    create: Callable[[int | Array], SimData], rng_key: int | Array, mesh: Mesh
+) -> SimData:
+    """Build simulation data distributed over a mesh.
+
+    Tracing the construction lets us put the result directly on the mesh and prevents data from
+    being materialised on a single device.
+
+    Args:
+        create: Callable that builds the data from an rng key.
+        rng_key: Random number generator key for the simulation, or a seed to derive one from.
+        mesh: Mesh to distribute the worlds over.
+
+    Returns:
+        The placed simulation data.
+    """
+    if isinstance(rng_key, int):  # Tracing turns a seed into an array that is not a key
+        rng_key = jax.random.key(rng_key)
+    return jax.jit(create, out_shardings=placement(jax.eval_shape(create, rng_key), mesh))(rng_key)
