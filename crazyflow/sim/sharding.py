@@ -73,7 +73,7 @@ def shard(data: SimData, mesh: Mesh) -> SimData:
     return jax.device_put(data, placement(data, mesh))
 
 
-def build_sharded(
+def build_sharded_data(
     create: Callable[[int | Array], SimData], rng_key: int | Array, mesh: Mesh
 ) -> SimData:
     """Build simulation data distributed over a mesh.

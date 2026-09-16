@@ -35,7 +35,7 @@ from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.sim.sharding import build_sharded, placement
+from crazyflow.sim.sharding import build_sharded_data, placement
 from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
@@ -143,7 +143,7 @@ class Sim:
         if mesh is None:
             self.data = self.init_data(*freqs, rng_key)
         else:
-            self.data = build_sharded(partial(self.init_data, *freqs), rng_key, mesh)
+            self.data = build_sharded_data(partial(self.init_data, *freqs), rng_key, mesh)
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
@@ -454,7 +454,7 @@ class Sim:
         if self.mesh is None:
             self.data = self.init_data(*freqs, rng_key)
         else:
-            self.data = build_sharded(partial(self.init_data, *freqs), rng_key, self.mesh)
+            self.data = build_sharded_data(partial(self.init_data, *freqs), rng_key, self.mesh)
         return self.data
 
     def shard(self, mesh: Mesh) -> SimData:
