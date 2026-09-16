@@ -35,7 +35,7 @@ from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.sim.sharding import placement
+from crazyflow.sim.sharding import build_sharded, placement
 from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
@@ -89,6 +89,7 @@ class Sim:
         xml_path: Path | None = None,
         rng_key: int = 0,
         fused_mjx_model: bool = False,
+        mesh: Mesh | None = None,
     ):
         """Build the scene and the step and reset pipelines, and allocate the batched sim data.
 
@@ -110,6 +111,7 @@ class Sim:
             fused_mjx_model: If True, use the ``drone_fused`` body whose visual geometry is fused
                 into a single mesh. This shrinks the MJX model and reduces its memory footprint at
                 the cost of visual detail.
+            mesh: Mesh to distribute the worlds over.
         """
         assert Dynamics(dynamics) in Dynamics, f"Dynamics mode {dynamics} not implemented"
         assert Control(control) in Control, f"Control mode {control} not implemented"
@@ -123,6 +125,7 @@ class Sim:
         self.drone = drone
         self.integrator = integrator
         self.device = jax.devices(device)[0]
+        self.mesh = mesh
         self.n_worlds = n_worlds
         self.n_drones = n_drones
         self.freq = freq
@@ -136,9 +139,11 @@ class Sim:
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self.viewer: MujocoRenderer | None = None
 
-        self.data = self.init_data(
-            state_freq, attitude_freq, body_rate_freq, force_torque_freq, rng_key
-        )
+        freqs = (state_freq, attitude_freq, body_rate_freq, force_torque_freq)
+        if mesh is None:
+            self.data = self.init_data(*freqs, rng_key)
+        else:
+            self.data = build_sharded(partial(self.init_data, *freqs), rng_key, mesh)
         self.default_data: SimData = self.build_default_data()
 
         # Build the simulation pipeline and overwrite the default _step implementation with it
@@ -444,9 +449,12 @@ class Sim:
         attitude_freq = 0 if (a := self.data.controls.attitude) is None else a.freq
         body_rate_freq = 0 if (br := self.data.controls.body_rate) is None else br.freq
         force_torque_freq = 0 if (ft := self.data.controls.force_torque) is None else ft.freq
-        self.data = self.init_data(
-            state_freq, attitude_freq, body_rate_freq, force_torque_freq, self.data.core.rng_key
-        )
+        freqs = (state_freq, attitude_freq, body_rate_freq, force_torque_freq)
+        rng_key = self.data.core.rng_key
+        if self.mesh is None:
+            self.data = self.init_data(*freqs, rng_key)
+        else:
+            self.data = build_sharded(partial(self.init_data, *freqs), rng_key, self.mesh)
         return self.data
 
     def shard(self, mesh: Mesh) -> SimData:
@@ -459,6 +467,7 @@ class Sim:
         Returns:
             The placed simulation data.
         """
+        self.mesh = mesh
         self.data = jax.device_put(self.data, placement(self.data, mesh))
         self.default_data = jax.device_put(self.default_data, placement(self.default_data, mesh))
         return self.data
@@ -493,14 +502,15 @@ class Sim:
         rng_key: Array,
     ) -> SimData:
         """Initialize the simulation data."""
+        device = self.device if self.mesh is None else None  # Sharded data is placed by the caller
         drone_name = "drone_fused" if self.fused_mjx_model else "drone"
         drone_mocap_ids = [
             self.mj_model.body(f"{drone_name}:{i}").mocapid.item() for i in range(self.n_drones)
         ]
         N, D = self.n_worlds, self.n_drones
         data = SimData(
-            states=SimState.create(N, D, self.device),
-            states_deriv=SimStateDeriv.create(N, D, self.device),
+            states=SimState.create(N, D, device),
+            states_deriv=SimStateDeriv.create(N, D, device),
             controls=SimControls.create(
                 N,
                 D,
@@ -510,10 +520,10 @@ class Sim:
                 attitude_freq,
                 body_rate_freq,
                 force_torque_freq,
-                self.device,
+                device,
             ),
-            params=SimParams.create(self.dynamics, self.drone, self.device),
-            core=SimCore.create(self.freq, N, D, drone_mocap_ids, rng_key, self.device),
+            params=SimParams.create(self.dynamics, self.drone, device),
+            core=SimCore.create(self.freq, N, D, drone_mocap_ids, rng_key, device),
         )
         if D > 1:  # If multiple drones, arrange them in a grid
             grid = grid_2d(D)
