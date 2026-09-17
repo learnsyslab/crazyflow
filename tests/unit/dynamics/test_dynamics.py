@@ -12,8 +12,8 @@ import jax.numpy as jp
 import numpy as np
 import pytest
 from array_api_compat import device as xp_device
+from conftest import drone_dynamics_fns
 
-from crazyflow.drones import available_drones
 from crazyflow.dynamics import available_dynamics, dynamics_features
 from crazyflow.dynamics.core import parametrize
 
@@ -177,15 +177,13 @@ def test_dynamics_features(dynamics_name: str, dynamics: Callable):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 def test_dynamics_shapes(dynamics_name: str, dynamics: Callable, drone: str):
     check_shapes(parametrize(dynamics, drone))
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 def test_dynamics_shapes_batched(dynamics_name: str, dynamics: Callable, drone: str):
     dynamics = parametrize(dynamics, drone, xp=xp)
     batch = (10, 5)
@@ -196,8 +194,7 @@ def test_dynamics_shapes_batched(dynamics_name: str, dynamics: Callable, drone: 
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 @pytest.mark.parametrize("ext_wrench", [False, True])
 @pytest.mark.parametrize("per_motor_params", [False, True])
 def test_symbolic_dynamics(
@@ -229,8 +226,7 @@ def test_symbolic_dynamics(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 def test_compare_batched_non_batched(dynamics_name: str, dynamics: Callable, drone: str):
     """Tests if batching works and if the results are identical to the non-batched version."""
     dynamics = parametrize(dynamics, drone)
@@ -246,8 +242,7 @@ def test_compare_batched_non_batched(dynamics_name: str, dynamics: Callable, dro
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 def test_batched_params(dynamics_name: str, dynamics: Callable, drone: str):
     """Tests if batched parameters give the same results as the shared parameters."""
     dynamics = parametrize(dynamics, drone, xp=xp)
@@ -274,8 +269,7 @@ def test_batched_params(dynamics_name: str, dynamics: Callable, drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("dynamics_name, dynamics", available_dynamics.items())
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("dynamics_name, dynamics, drone", drone_dynamics_fns())
 def test_numeric_jit(dynamics_name: str, dynamics: Callable, drone: str):
     """Tests if the dynamics are jitable and if the results are identical to the array API ones."""
     dynamics = parametrize(dynamics, drone)

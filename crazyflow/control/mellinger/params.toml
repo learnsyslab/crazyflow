@@ -7,7 +7,7 @@ pwm_max = 65535
 thrust_min = 0.012817578393224994  # in N per motor
 thrust_max = 0.12  # in N per motor
 torque_pwm_max = [32000.0, 32000.0, 32000.0]
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 rpm2thrust = [0.0, -5.382196214637237e-7, 2.4582929831265485e-10]
 rpm2torque = [0.0, 1.410454111996297e-9, 1.4592584373980652e-12] 
 thrust2torque = 0.007350862856566459
@@ -47,7 +47,7 @@ pwm_max = 65535
 thrust_min = 0.012817578393224994  # in N per motor
 thrust_max = 0.12  # in N per motor
 torque_pwm_max = [32000.0, 32000.0, 32000.0]
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 rpm2thrust = [0.0, -3.6200226530383495e-7, 1.6060924304100328e-10] # Index is order
 rpm2torque = [0.0, -2.2665265829562245e-9, 1.1149485566919186e-12] # Index is order
 thrust2torque = 0.0069928948992470565
@@ -87,7 +87,7 @@ pwm_max = 65535
 thrust_min = 0.01922636758983749  # in N per motor
 thrust_max = 0.18  # in N per motor
 torque_pwm_max = [32000.0, 32000.0, 32000.0]
-L = 0.03253
+L = 0.03253  # Distance from axis to rotor, i.e., arm / sqrt(2)
 rpm2thrust = [0.0, -7.167227176573658e-7, 2.9401303690194613e-10] # Index is order
 rpm2torque = [0.0, 5.815894847811497e-10, 1.331813874166509e-12] # Index is order
 thrust2torque = 0.005355990836477486
@@ -122,7 +122,7 @@ int_err_max = [1.0, 1.0, 1500.0]
 [cf21B_500.core]
 gravity_vec = [0.0, 0.0, -9.81]
 mass = 0.0393  # The controller is using the wrong mass by default
-L = 0.035355
+L = 0.035355  # Distance from axis to rotor, i.e., arm / sqrt(2)
 rpm2thrust = [0.0, -3.133427287299859e-7, 4.407354891648379e-10]
 rpm2torque = [0.0, 1.65886356219615e-9, 2.4693477924534137e-12]
 thrust2torque = 0.00593893393599368
@@ -156,4 +156,44 @@ kR = [70000.0, 70000.0, 60000.0]
 kw = [20000.0, 20000.0, 12000.0]
 ki_m = [0.0, 0.0, 500.0]
 kd_omega = [200.0, 200.0, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]
+
+[hb_x500] # made up numbers, not used anyway
+[hb_x500.core]
+gravity_vec = [0.0, 0.0, -9.81]
+mass = 2.28
+L = 0.17678  # Distance from axis to rotor, i.e., arm / sqrt(2)
+rpm2thrust = [0.0, 1e-6, 1e-9] # Unknown
+rpm2torque = [0.0, 1e-9, 1e-12] # Unknown
+thrust2torque = 0.01 # Unknown
+mixing_matrix = [
+    [-1.0, -1.0,  1.0,  1.0],
+    [-1.0,  1.0,  1.0, -1.0],
+    [-1.0,  1.0, -1.0,  1.0]
+]
+pwm_min = 0
+pwm_max = 1
+thrust_min = 1 # in N per motor
+thrust_max = 12.13 # in N per motor
+mass_thrust = 0.02061006
+torque_pwm_max = [0.4882887, 0.4882887, 0.4882887]
+
+[hb_x500.state2attitude]
+kp = [12.0, 12.0, 35.0]
+kd = [6.0, 6.0, 8.0]
+ki = [1.0, 1.0, 1.0]
+int_err_max = [4.0, 4.0, 2.0]
+
+[hb_x500.attitude2force_torque]
+kR = [1.068132, 1.068132, 0.9155413]
+kw = [0.3051804, 0.3051804, 0.1831083]
+ki_m = [0.0, 0.0, 0.007629511]
+kd_omega = [0.003051804, 0.003051804, 0.0]
+int_err_max = [1.0, 1.0, 1500.0]
+
+[hb_x500.body_rate2force_torque]
+kR = [1.068132, 1.068132, 0.9155413]
+kw = [0.3051804, 0.3051804, 0.1831083]
+ki_m = [0.0, 0.0, 0.007629511]
+kd_omega = [0.003051804, 0.003051804, 0.0]
 int_err_max = [1.0, 1.0, 1500.0]

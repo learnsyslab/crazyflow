@@ -61,6 +61,7 @@ The following configurations ship with pre-fitted parameters:
 | `"cf2x_P250"` | Crazyflie 2.x, plus propellers |
 | `"cf2x_T350"` | Crazyflie 2.x, thrust upgrade kit |
 | `"cf21B_500"` | Crazyflie 2.1 Brushless |
+| `"hb_x500"` | Holybro X500 V2 |
 
 Pass the drone name as a plain string:
 
