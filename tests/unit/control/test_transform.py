@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
-from crazyflow.drones import load_params
+from crazyflow.dynamics import Dynamics, load_params
 
 
 @pytest.fixture(scope="module")
 def core_params() -> dict[str, Any]:
-    return {k: np.asarray(v) for k, v in load_params("cf2x_L250").items()}
+    return load_params(Dynamics.first_principles, "cf2x_L250")
 
 
 @pytest.mark.unit

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
 
-from crazyflow.drones import load_params as load_physical_params
 from crazyflow.utils import filter_to_signature, to_xp
 from crazyflow.utils import parametrize as _parametrize
 
@@ -19,6 +18,16 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+class Dynamics(StrEnum):
+    """Dynamics mode for the simulation."""
+
+    first_principles = "first_principles"
+    so_rpy = "so_rpy"
+    so_rpy_rotor = "so_rpy_rotor"
+    so_rpy_rotor_drag = "so_rpy_rotor_drag"
+    default = first_principles
 
 
 def supports(rotor_dynamics: bool = True) -> Callable[[F], F]:
@@ -76,22 +85,26 @@ def parametrize(
 
 
 def load_params(
-    fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
+    dynamics: Callable | Dynamics | str,
+    drone: str,
+    xp: ModuleType | None = None,
+    device: str | None = None,
 ) -> dict:
-    """Load and merge physical and dynamics-specific parameters for a drone configuration.
+    """Load and merge core and dynamics-specific parameters for a drone configuration.
 
     Reads parameters from two TOML files:
 
-    * ``crazyflow/drones/params.toml`` — physical parameters shared across all dynamics (mass,
-      inertia, thrust curves, …).
-    * ``crazyflow/dynamics/<dynamics>/params.toml`` — dynamics-specific coefficients (e.g. fitted
-      RPY coefficients for ``so_rpy``).
+    * ``crazyflow/drones/params.toml`` — core physical parameters shared across all dynamics (mass,
+      inertia, gravity, thrust limits).
+    * ``crazyflow/dynamics/<dynamics>/params.toml`` — everything else the dynamics needs (e.g.
+      thrust curves for ``first_principles``, fitted RPY coefficients for ``so_rpy``).
 
     The two dicts are merged (dynamics-specific values take precedence), and ``J_inv`` is computed
     from ``J`` and added to the result.
 
     Args:
-        fn: The dynamics function for which to load parameters.
+        dynamics: A dynamics function, or a dynamics mode. For a function, the result only contains
+            the parameters in its signature. For a mode, all parameters of both files are returned.
         drone: Name of the drone configuration, e.g. ``"cf2x_L250"``. Must exist as a section in
             both TOML files.
         xp: Array API module used to convert parameter values. If ``None``, NumPy is used.
@@ -107,26 +120,22 @@ def load_params(
         KeyError: If ``drone`` is not found in either TOML file, or if ``dynamics`` does not
             correspond to a known sub-package.
     """
-    assert isinstance(fn, Callable), f"Expected a function, got {type(fn)}"
-    dynamics = fn.__module__.split(".")[-2]
-    if dynamics not in Dynamics:
-        raise KeyError(f"Dynamics `{dynamics}` not found. Available dynamics: {tuple(Dynamics)}")
-    with open(Path(__file__).parent / f"{dynamics}/params.toml", "rb") as f:
+    fn = dynamics if callable(dynamics) else None
+    name = fn.__module__.split(".")[-2] if fn is not None else str(dynamics)
+    if name not in tuple(Dynamics):
+        raise KeyError(f"Dynamics `{name}` not found. Available dynamics: {tuple(Dynamics)}")
+    with open(Path(__file__).parents[1] / "drones/params.toml", "rb") as f:
+        core_params = tomllib.load(f)
+    if drone not in core_params:
+        raise KeyError(f"Drone `{drone}` not found in drones/params.toml")
+    with open(Path(__file__).parent / f"{name}/params.toml", "rb") as f:
         dynamics_params = tomllib.load(f)
     if drone not in dynamics_params:
-        raise KeyError(f"Drone `{drone}` not found in {dynamics}/params.toml")
-    params = load_physical_params(drone) | dynamics_params[drone]
+        raise KeyError(f"Drone `{drone}` not found in {name}/params.toml")
+    params = core_params[drone] | dynamics_params[drone]
     # Make sure J_inv does not have a dtype fixed before conversion to xp arrays to avoid fixing it
     # to np.float64 when other frameworks might prefer a different dtype.
     params["J_inv"] = np.linalg.inv(params["J"]).tolist()
-    return to_xp(filter_to_signature(params, fn), xp=xp, device=device)
-
-
-class Dynamics(StrEnum):
-    """Dynamics mode for the simulation."""
-
-    first_principles = "first_principles"
-    so_rpy = "so_rpy"
-    so_rpy_rotor = "so_rpy_rotor"
-    so_rpy_rotor_drag = "so_rpy_rotor_drag"
-    default = first_principles
+    if fn is not None:
+        params = filter_to_signature(params, fn)
+    return to_xp(params, xp=xp, device=device)

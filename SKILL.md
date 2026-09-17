@@ -60,9 +60,9 @@ Pure, batched, array-API functions with no dependency on `Sim`.
 - Import crazyflow before scipy. `crazyflow/__init__.py` sets `SCIPY_ARRAY_API=1` and imports scipy
   immediately, and scipy cannot be reconfigured once loaded. Transitive imports through acados or
   sklearn trigger this too.
-- Three different `load_params` exist. The two in `.core` filter to the target signature and
-  silently drop the rest, so hardware constants like `thrust_max` need
-  `crazyflow.drones.load_params`.
+- Two `load_params` exist, in `dynamics.core` and `control.core`. Given a function, both filter to
+  its signature and silently drop the rest. The dynamics one also takes a `Dynamics` mode and then
+  returns every parameter of the drone, which is how to get hardware constants like `pwm_max`.
 - `parametrize` returns a `functools.partial` whose `keywords` dict is shared by every reference to
   it. Call `parametrize` again for an independent copy.
 - Leading batch dimensions, trailing feature axis. `quat` is scalar-last xyzw, `force` is `(..., 1)`
