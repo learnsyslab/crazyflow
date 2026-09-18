@@ -22,18 +22,22 @@ Both pipelines are constructed at `Sim` initialisation and compiled into a singl
 `sim.step_pipeline` contains multiple stages by default:
 
 1. **Control functions** — convert the staged command through the control hierarchy (state → attitude → force/torque → rotor velocities, depending on the selected mode)
-2. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler)
-3. **Rotor clip** (`clip_rotor_vel`) — clip the motor speeds (first principles) or the collective thrust (fitted models) to the physical limits of the motors
-4. **Step counter** (`increment_steps`) — increment `data.core.steps`
+2. **Rotor command clip** (`clip_rotor_vel_cmd`) — clip the commanded motor speeds (first principles) or collective thrust (so_rpy models) to the physical limits of the motors
+3. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler)
+4. **Rotor clip** (`clip_rotor_vel`) — clip the rotor state to the same limits
 5. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
+6. **Step counter** (`increment_steps`) — increment `data.core.steps`
 
 ```pycon
 >>> from crazyflow.sim import Sim
 >>> sim = Sim()
 >>> print(tuple(sim.step_pipeline.keys()))
-('attitude_controller', 'force_torque_controller', 'integration', 'clip_rotor_vel', 'increment_steps', 'clip_floor_pos')
+('attitude_controller', 'force_torque_controller', 'clip_rotor_vel_cmd', 'integration', 'clip_rotor_vel', 'clip_floor_pos', 'increment_steps')
 
 ```
+
+!!! note "Why two rotor clips?"
+    `clip_rotor_vel_cmd` models the motor saturation and is the only limit for models without a rotor state (`so_rpy`). `clip_rotor_vel` catches states set from outside the default pipeline, such as randomizations, and integrator overshoot. Since it runs after the integration, higher order integrators like RK4 can transiently exceed the limits within a step.
 
 ## The reset pipeline
 
@@ -130,9 +134,6 @@ sim = Sim()
 remove_fn(sim.step_pipeline, "clip_floor_pos")
 sim.build_step_fn()
 ```
-
-!!! note
-    The rotor limits are enforced by the `clip_rotor_vel` stage, which clips the rotor state after each integration step. Higher order integration methods like RK4 evaluate the dynamics at intermediate, unclipped states, so the `rotor_vel` seen by the model can transiently exceed the limits within a single step.
 
 ## Writing a custom stage
 

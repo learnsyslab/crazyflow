@@ -450,7 +450,7 @@ def test_floor_penetration(dynamics: Dynamics):
 @pytest.mark.unit
 @pytest.mark.parametrize("integrator", Integrator)
 def test_rotor_vel_clip(integrator: Integrator):
-    """Test that the first-principles rotor state saturates at its physical limits."""
+    """Test that the first principles rotor command and rotor state are clipped to the limits."""
     sim = Sim(
         dynamics=Dynamics.first_principles,
         control=Control.rotor_vel,
@@ -460,11 +460,22 @@ def test_rotor_vel_clip(integrator: Integrator):
     lower, upper = rotor_vel_limits(Dynamics.first_principles, sim.drone)
     assert 0.0 < lower < upper
 
-    # States outside the limits are clipped after the integration
     for value, target in ((2 * upper, upper), (-upper, lower)):
-        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        # Commands outside the limits are clipped before they enter the dynamics
+        sim.reset()
         sim.rotor_vel_control(np.full((1, 1, 4), target))
+        sim.step()
+        rotor_vel_ref = sim.data.states.rotor_vel
+        sim.reset()
+        sim.rotor_vel_control(np.full((1, 1, 4), value))
+        sim.step()
+        assert jnp.all(sim.data.controls.rotor_vel == target)
+        assert jnp.allclose(sim.data.states.rotor_vel, rotor_vel_ref)
+        # States outside the limits are clipped after the integration
+        sim.reset()
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
         sim.data = sim.data.replace(states=states)
+        sim.rotor_vel_control(np.full((1, 1, 4), target))
         sim.step()
         assert jnp.all(sim.data.states.rotor_vel >= lower)
         assert jnp.all(sim.data.states.rotor_vel <= upper)
@@ -477,15 +488,29 @@ def test_rotor_vel_clip(integrator: Integrator):
 )
 @pytest.mark.parametrize("integrator", Integrator)
 def test_thrust_clip(dynamics: Dynamics, integrator: Integrator):
-    """Test that the thrust state of every so_rpy model is clipped to its physical limits."""
+    """Test that the so_rpy thrust command and thrust state are clipped to the limits."""
     sim = Sim(dynamics=dynamics, control=Control.attitude, integrator=integrator, device="cpu")
     lower, upper = rotor_vel_limits(dynamics, sim.drone)
     assert 0.0 < lower < upper
 
     for value, target in ((2 * upper, upper), (-upper, lower)):
-        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
+        # Commands outside the limits are clipped before they enter the dynamics. so_rpy has no
+        # thrust state and applies the command directly, so we compare the velocity as well
+        sim.reset()
         sim.attitude_control(np.array([[[0.0, 0.0, 0.0, target]]]))
+        sim.step()
+        vel_ref, rotor_vel_ref = sim.data.states.vel, sim.data.states.rotor_vel
+        sim.reset()
+        sim.attitude_control(np.array([[[0.0, 0.0, 0.0, value]]]))
+        sim.step()
+        assert jnp.all(sim.data.controls.attitude.cmd[..., -1] == target)
+        assert jnp.allclose(sim.data.states.vel, vel_ref)
+        assert jnp.allclose(sim.data.states.rotor_vel, rotor_vel_ref)
+        # States outside the limits are clipped after the integration
+        sim.reset()
+        states = sim.data.states.replace(rotor_vel=jnp.full_like(sim.data.states.rotor_vel, value))
         sim.data = sim.data.replace(states=states)
+        sim.attitude_control(np.array([[[0.0, 0.0, 0.0, target]]]))
         sim.step()
         assert jnp.all(sim.data.states.rotor_vel >= lower)
         assert jnp.all(sim.data.states.rotor_vel <= upper)

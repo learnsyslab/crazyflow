@@ -47,6 +47,8 @@ def rollout(sim: Sim, cmds: NDArray) -> tuple[NDArray, NDArray]:
 def main(plot: bool = False):
     sim = Sim(control=Control.rotor_vel)
     lower, upper = rotor_vel_limits(sim.dynamics, sim.drone)
+    # Let the command reach the dynamics unclipped so that only the state clip affects the gradients
+    remove_fn(sim.step_pipeline, "clip_rotor_vel_cmd")
     # Start in the air so that the drone never reaches the floor, where the floor clipping would
     # zero the velocity and kill the gradients (see gradient.py)
     sim.data = sim.data.replace(
