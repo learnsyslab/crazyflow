@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import load_function_params, parametrize
+from crazyflow.control import load_fn_params, parametrize
 from crazyflow.control.mellinger import (
     attitude2force_torque,
     body_rate2force_torque,
@@ -123,7 +123,7 @@ def test_state2attitude_integral_error_accumulation(drone: str) -> None:
     # A constant position error must cause the integral error to accumulate
     # linearly until it would exceed int_err_max (clipped by the controller).
     controller = parametrize(state2attitude, drone)
-    params = load_function_params(state2attitude, drone)
+    params = load_fn_params(state2attitude, drone)
     pos = np.zeros(3)
     quat = np.array([0.0, 0.0, 0.0, 1.0])
     vel = np.zeros(3)
@@ -243,7 +243,7 @@ def test_body_rate2force_torque_matches_attitude(drone: str):
 def test_body_rate2force_torque_leveling(drone: str):
     # The firmware levels a tilted drone even at the rate setpoint. Zero attitude gains disable it.
     controller = parametrize(body_rate2force_torque, drone)
-    params = load_function_params(body_rate2force_torque, drone)
+    params = load_fn_params(body_rate2force_torque, drone)
     quat = R.from_euler("xyz", [0.2, 0.0, 0.0]).as_quat()  # Rolled by 0.2 rad
     ang_vel = np.zeros(3)
     cmd = np.array([0.0, 0.0, 0.0, 0.5])

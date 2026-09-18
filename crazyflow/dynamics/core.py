@@ -81,7 +81,7 @@ def parametrize(
     Returns:
         The parametrized dynamics function with all keyword argument only parameters filled in.
     """
-    return _parametrize(fn, drone, load_function_params, xp=xp, device=device)
+    return _parametrize(fn, drone, load_fn_params, xp=xp, device=device)
 
 
 def load_params(
@@ -120,7 +120,7 @@ def load_params(
     return to_xp(params, xp=xp, device=device)
 
 
-def load_function_params(
+def load_fn_params(
     fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> dict:
     """Load the parameters a dynamics function accepts.

@@ -10,7 +10,7 @@ from crazyflow.drones import available_drones
 from crazyflow.dynamics import (
     Dynamics,
     available_dynamics,
-    load_function_params,
+    load_fn_params,
     load_params,
     parametrize,
 )
@@ -22,7 +22,7 @@ from crazyflow.dynamics.so_rpy import dynamics as so_rpy
 @pytest.mark.parametrize("drone", available_drones)
 def test_dynamics_parameter_loading(dynamics_name: str, dynamics: Callable, drone: str) -> None:
     """Check that parameters can be loaded for all available dynamics and drones."""
-    load_function_params(dynamics, drone)
+    load_fn_params(dynamics, drone)
 
 
 @pytest.mark.unit
@@ -39,7 +39,7 @@ def test_unknown_drone() -> None:
     with pytest.raises(KeyError, match="nonexistent_drone"):
         load_params(Dynamics.so_rpy, "nonexistent_drone")
     with pytest.raises(KeyError, match="nonexistent_drone"):
-        load_function_params(so_rpy, "nonexistent_drone")
+        load_fn_params(so_rpy, "nonexistent_drone")
     with pytest.raises(KeyError, match="nonexistent_drone"):
         parametrize(so_rpy, "nonexistent_drone")
 

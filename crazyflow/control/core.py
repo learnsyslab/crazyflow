@@ -90,7 +90,7 @@ def parametrize(
     Returns:
         The parametrized controller function with all keyword argument only parameters filled in.
     """
-    return _parametrize(fn, drone, load_function_params, xp=xp, device=device)
+    return _parametrize(fn, drone, load_fn_params, xp=xp, device=device)
 
 
 def load_params(
@@ -120,7 +120,7 @@ def load_params(
     return to_xp(params[drone], xp=xp, device=device)
 
 
-def load_function_params(
+def load_fn_params(
     fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
 ) -> dict[str, Array]:
     """Load the parameters a controller function accepts.
