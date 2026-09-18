@@ -1,4 +1,4 @@
-# Parameters of the fitted so_rpy_rotor_drag dynamics. Every drone section needs all of them:
+# Parameters of the fitted so_rpy_rotor_drag dynamics.
 #
 # [my_drone]
 # mass = 0.0                              # kg

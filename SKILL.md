@@ -50,7 +50,7 @@ Define the function in `dynamics.py` and never in the package `__init__.py`, bec
 `load_fn_params` derives the model name from `fn.__module__.split(".")[-2]`. `parametrize`
 binds exactly the keyword-only parameters after the bare `*`, so anything before it is never bound.
 Every drone in `available_drones` needs a complete section in every model's
-`crazyflow/dynamics/*/params.toml`; the commented example at the top of each file lists the keys.
+`crazyflow/dynamics/*/params.toml`. The commented example at the top of each file lists the keys.
 Only `gravity_vec` is global, in `crazyflow/dynamics/params.toml`.
 
 Registration alone produces roughly 40 parametrized tests. These do not include derivatives tests.
@@ -64,7 +64,7 @@ Pure, batched, array-API functions with no dependency on `Sim`.
   sklearn trigger this too.
 - `dynamics` and `control` each have `load_params(name, drone)`, returning everything defined for
   the drone, and `load_fn_params(fn, drone)`, which filters to the signature of `fn` and
-  silently drops the rest. Platform data that nothing uses sits as a comment in the drone MJCF.
+  drops the rest. Additional platform data is stored as a comment in the drone MJCF.
 - `parametrize` returns a `functools.partial` whose `keywords` dict is shared by every reference to
   it. Call `parametrize` again for an independent copy.
 - Leading batch dimensions, trailing feature axis. `quat` is scalar-last xyzw, `force` is `(..., 1)`

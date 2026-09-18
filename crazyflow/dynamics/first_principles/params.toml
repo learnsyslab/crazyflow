@@ -1,4 +1,4 @@
-# Parameters of the first principles dynamics. Every drone section needs all of them:
+# Parameters of the first principles dynamics.
 #
 # [my_drone]
 # mass = 0.0                              # kg
@@ -26,7 +26,6 @@
 #     [0.0, 0.0, 0.0]
 # ]
 #
-# gravity_vec is global and lives in crazyflow/dynamics/params.toml.
 
 [cf2x_L250]
 mass = 0.0319
