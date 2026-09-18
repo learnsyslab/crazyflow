@@ -227,10 +227,9 @@ def main() -> None:
     sim.reset()
     start_pos = lissajous_reference(0.0)["pos"]
     drone_params = load_params(Dynamics.first_principles, DRONE)
-    rpm2thrust = drone_params["rpm2thrust"]
     hover_thrust_value = np.asarray(drone_params["mass"] * 9.81, dtype=np.float32)
     hover_rotor_vel = motor_force2rotor_vel(
-        np.full(4, hover_thrust_value / 4.0, dtype=np.float32), rpm2thrust
+        np.full(4, hover_thrust_value / 4.0, dtype=np.float32), drone_params["rpm2thrust"]
     )
     sim.data = sim.data.replace(
         states=sim.data.states.replace(
