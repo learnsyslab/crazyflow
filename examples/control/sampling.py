@@ -254,6 +254,7 @@ def main() -> None:
     rollout_simulator.reset()
 
     thrust_estimate = hover_thrust_value  # Initial thrust estimate
+    thrust_time_coef = float(rollout_simulator.data.params.thrust_time_coef[0])
     hover_cmd = jax.device_put(
         jnp.array([0.0, 0.0, 0.0, hover_thrust_value], dtype=jnp.float32), controller_device
     )
@@ -305,9 +306,7 @@ def main() -> None:
         action, key, mean_controls, best_positions, sampled_positions = control(
             t, obs, key, mean_controls, controller_fn, controller_device
         )
-        thrust_estimate += (
-            drone_params["thrust_dyn_coef"] * (action[3] - thrust_estimate) / CTRL_FREQ
-        )
+        thrust_estimate += (action[3] - thrust_estimate) / thrust_time_coef / CTRL_FREQ
         sim.attitude_control(action[None, None])
         sim.step(sim.freq // CTRL_FREQ)
         position_history.append(np.asarray(sim.data.states.pos[0, 0]))

@@ -16,7 +16,7 @@ Settings are in `pyproject.toml`, layout in the tree, API reference in `docs/`.
   `array_namespace(...)`, do all math through it, coerce bound parameters with `to_xp`, and never
   import `numpy` into a computation path.
 - `crazyflow/control/mellinger/params.toml` deliberately holds values that differ from the true
-  physical constants in `crazyflow/drones/params.toml`, reproducing the real firmware. Do not
+  physical constants in `crazyflow/dynamics/*/params.toml`, reproducing the real firmware. Do not
   unify them.
 
 ## Testing
@@ -46,8 +46,8 @@ Use pixi, not uv. `pixi run <cmd>` resolves task names only, so arbitrary comman
 Grepping the name of an existing model or drone finds every registration site, except when matching
 against all models in the simulation's `build_control_fns`.
 
-Define the function in `dynamics.py` and never in the package `__init__.py`, because `load_params`
-derives the model name from `fn.__module__.split(".")[-2]`. `parametrize` binds exactly the
+Define the function in `dynamics.py` and never in the package `__init__.py`, because
+`load_function_params` derives the model name from `fn.__module__.split(".")[-2]`. `parametrize` binds exactly the
 keyword-only parameters after the bare `*`, so anything before it is never bound. Every drone in
 `available_drones` needs a section in every `crazyflow/dynamics/*/params.toml`, even an empty one.
 
@@ -60,9 +60,10 @@ Pure, batched, array-API functions with no dependency on `Sim`.
 - Import crazyflow before scipy. `crazyflow/__init__.py` sets `SCIPY_ARRAY_API=1` and imports scipy
   immediately, and scipy cannot be reconfigured once loaded. Transitive imports through acados or
   sklearn trigger this too.
-- Two `load_params` exist, in `dynamics.core` and `control.core`. Given a function, both filter to
-  its signature and silently drop the rest. The dynamics one also takes a `Dynamics` mode and then
-  returns every parameter of the drone, which is how to get hardware constants like `pwm_max`.
+- `dynamics` and `control` each have `load_params(name, drone)`, returning everything the model or
+  controller defines for a drone, and `load_function_params(fn, drone)`, which filters to the
+  signature and silently drops the rest. Platform data such as `pwm_max` is not loaded by anything
+  and sits as a comment in the drone MJCF.
 - `parametrize` returns a `functools.partial` whose `keywords` dict is shared by every reference to
   it. Call `parametrize` again for an independent copy.
 - Leading batch dimensions, trailing feature axis. `quat` is scalar-last xyzw, `force` is `(..., 1)`

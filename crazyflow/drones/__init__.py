@@ -1,13 +1,10 @@
 """Hardware descriptions for the supported drone platforms.
 
-This package bundles the physical assets that define each drone configuration: the MuJoCo MJCF scene
-files, their referenced meshes (``assets/``), and the core physical parameters shared across all
-dynamics (``params.toml`` with mass, inertia, thrust limits, and the gravity vector). These describe
-the *hardware* and are independent of the dynamics formulation used to simulate it
-(see [crazyflow.dynamics][]).
+This package bundles the MuJoCo MJCF scene files that define each drone configuration and their
+referenced meshes (``assets/``). The drone parameters live with the dynamics model that uses them in
+``crazyflow/dynamics/<name>/params.toml``, see [crazyflow.dynamics.load_params][].
 
-Use ``available_drones`` to enumerate the supported configurations and
-[crazyflow.dynamics.load_params][] to read the parameters of a drone.
+Use ``available_drones`` to enumerate the supported configurations.
 """
 
 # Currently supported platforms:

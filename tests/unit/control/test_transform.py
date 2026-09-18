@@ -5,13 +5,13 @@ from typing import Any
 import numpy as np
 import pytest
 
+from crazyflow.control import load_params
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
-from crazyflow.dynamics import Dynamics, load_params
 
 
 @pytest.fixture(scope="module")
 def core_params() -> dict[str, Any]:
-    return load_params(Dynamics.first_principles, "cf2x_L250")
+    return load_params("mellinger", "cf2x_L250")["core"]
 
 
 @pytest.mark.unit
