@@ -6,7 +6,7 @@ from typing import Any, Callable
 import array_api_strict
 import pytest
 
-from crazyflow.control import load_function_params, parametrize
+from crazyflow.control import load_function_params, load_params, parametrize
 from crazyflow.control.mellinger import (
     attitude2force_torque,
     body_rate2force_torque,
@@ -34,15 +34,19 @@ def test_load_function_params_keys(fn: Callable[..., Any], drone: str) -> None:
 
 
 @pytest.mark.unit
-def test_load_function_params_unknown_drone() -> None:
+def test_unknown_drone() -> None:
+    with pytest.raises(KeyError, match="nonexistent_drone"):
+        load_params("mellinger", "nonexistent_drone")
     with pytest.raises(KeyError, match="nonexistent_drone"):
         load_function_params(state2attitude, "nonexistent_drone")
+    with pytest.raises(KeyError, match="nonexistent_drone"):
+        parametrize(state2attitude, "nonexistent_drone")
 
 
 @pytest.mark.unit
-def test_parametrize_unknown_drone() -> None:
-    with pytest.raises(KeyError):
-        parametrize(state2attitude, "nonexistent_drone")
+def test_unknown_controller() -> None:
+    with pytest.raises(KeyError, match="nonexistent_controller"):
+        load_params("nonexistent_controller", "cf2x_L250")
 
 
 @pytest.mark.unit
