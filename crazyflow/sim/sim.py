@@ -158,16 +158,16 @@ class Sim:
         # simulation pipeline.
         for name, fn in build_control_fns(self.control, self.dynamics):
             append_fn(self.step_pipeline, fn, name=name)
+        # Keep the rotor command (RPM or thrust, see ``rotor_vel_limits``) within the motor limits
+        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
+        clip_fn = partial(clip_rotor_vel_cmd, lower=lower, upper=upper, dynamics=self.dynamics)
+        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel_cmd")
         integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
-        # Keep the rotor state (RPM or thrust, see ``rotor_vel_limits``) within its physical limits
-        lower, upper = rotor_vel_limits(self.dynamics, self.drone)
-        clip_fn = partial(clip_rotor_vel, lower=lower, upper=upper)
-        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel")
-        append_fn(self.step_pipeline, increment_steps)
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
         append_fn(self.step_pipeline, clip_floor_pos)
+        append_fn(self.step_pipeline, increment_steps)
 
         self._reset = self.build_reset_fn()
         self._step = self.build_step_fn()
@@ -718,10 +718,16 @@ def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
     return 4 * thrust_min, 4 * thrust_max
 
 
-def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) -> SimData:
-    """Clip ``rotor_vel`` to ``[lower, upper]``."""
-    rotor_vel = jnp.clip(data.states.rotor_vel, lower, upper)
-    return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
+def clip_rotor_vel_cmd(
+    data: SimData, lower: Array | float, upper: Array | float, dynamics: Dynamics
+) -> SimData:
+    """Clip the rotor command (RPM for first principles, collective thrust otherwise)."""
+    if dynamics == Dynamics.first_principles:
+        rotor_vel = jnp.clip(data.controls.rotor_vel, lower, upper)
+        return data.replace(controls=data.controls.replace(rotor_vel=rotor_vel))
+    attitude = data.controls.attitude
+    cmd = attitude.cmd.at[..., -1].set(jnp.clip(attitude.cmd[..., -1], lower, upper))
+    return data.replace(controls=data.controls.replace(attitude=attitude.replace(cmd=cmd)))
 
 
 @partial(jax.jit, static_argnames="device")

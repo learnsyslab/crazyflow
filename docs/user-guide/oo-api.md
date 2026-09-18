@@ -44,6 +44,9 @@ Key constructor arguments:
 
 See [`Sim`][crazyflow.sim.Sim] in the API reference for the defaults and the full argument list.
 
+!!! warning "Low simulation frequencies"
+    Explicit integrators are only stable if the step is small compared to the fastest time constant of the dynamics. For the drone models this is the rotor dynamics with time constants down to 20 ms. Euler overshoots once the step exceeds the time constant and diverges beyond twice the time constant. Keep `freq` well above 100 Hz.
+
 ## Control methods
 
 All control methods take an array of shape `(n_worlds, n_drones, command_dim)` and stage it for the next `step` call.
