@@ -24,20 +24,19 @@ Both pipelines are constructed at `Sim` initialisation and compiled into a singl
 1. **Control functions** — convert the staged command through the control hierarchy (state → attitude → force/torque → rotor velocities, depending on the selected mode)
 2. **Rotor command clip** (`clip_rotor_vel_cmd`) — clip the commanded motor speeds (first principles) or collective thrust (so_rpy models) to the physical limits of the motors
 3. **Integrator** (`integration`) — advance the ODE one dynamics step (Euler, RK4, or symplectic Euler)
-4. **Rotor clip** (`clip_rotor_vel`) — clip the rotor state to the same limits
-5. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
-6. **Step counter** (`increment_steps`) — increment `data.core.steps`
+4. **Floor clip** (`clip_floor_pos`) — prevent drones from passing through the floor
+5. **Step counter** (`increment_steps`) — increment `data.core.steps`
 
 ```pycon
 >>> from crazyflow.sim import Sim
 >>> sim = Sim()
 >>> print(tuple(sim.step_pipeline.keys()))
-('attitude_controller', 'force_torque_controller', 'clip_rotor_vel_cmd', 'integration', 'clip_rotor_vel', 'clip_floor_pos', 'increment_steps')
+('attitude_controller', 'force_torque_controller', 'clip_rotor_vel_cmd', 'integration', 'clip_floor_pos', 'increment_steps')
 
 ```
 
-!!! note "Why two rotor clips?"
-    `clip_rotor_vel_cmd` models the motor saturation and is the only limit for models without a rotor state (`so_rpy`). `clip_rotor_vel` catches states set from outside the default pipeline, such as randomizations, and integrator overshoot. Since it runs after the integration, higher order integrators like RK4 can transiently exceed the limits within a step.
+!!! note
+    We only clip the command, not the rotor state. Real motors deviate from their nominal thrust curve, and randomized motor parameters model exactly that, so the state has to be free to exceed the nominal limits. The command is always saturated, as it is on the real drone.
 
 ## The reset pipeline
 

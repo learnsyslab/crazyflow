@@ -158,17 +158,12 @@ class Sim:
         # simulation pipeline.
         for name, fn in build_control_fns(self.control, self.dynamics):
             append_fn(self.step_pipeline, fn, name=name)
-        # Keep the rotor command and state (RPM or thrust, see ``rotor_vel_limits``) within the
-        # physical limits. We need both: the command clip models the motor saturation and is the
-        # only limit for models without a rotor state (so_rpy), the state clip catches states set
-        # from outside the pipeline and integrator overshoot.
+        # Keep the rotor command (RPM or thrust, see ``rotor_vel_limits``) within the motor limits
         lower, upper = rotor_vel_limits(self.dynamics, self.drone)
-        clip_cmd_fn = partial(clip_rotor_vel_cmd, lower=lower, upper=upper, dynamics=self.dynamics)
-        append_fn(self.step_pipeline, clip_cmd_fn, name="clip_rotor_vel_cmd")
+        clip_fn = partial(clip_rotor_vel_cmd, lower=lower, upper=upper, dynamics=self.dynamics)
+        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel_cmd")
         integrate_fn = select_integrate_fn(self.integrator, select_dynamics_fn(self.dynamics))
         append_fn(self.step_pipeline, integrate_fn, name="integration")
-        clip_fn = partial(clip_rotor_vel, lower=lower, upper=upper)
-        append_fn(self.step_pipeline, clip_fn, name="clip_rotor_vel")
         # We never drop below -0.001 (drones can't pass through the floor). We use -0.001 to
         # enable checks for negative z sign
         append_fn(self.step_pipeline, clip_floor_pos)
@@ -721,12 +716,6 @@ def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
         rpm = motor_force2rotor_vel(np.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
         return float(rpm[0]), float(rpm[1])
     return 4 * thrust_min, 4 * thrust_max
-
-
-def clip_rotor_vel(data: SimData, lower: Array | float, upper: Array | float) -> SimData:
-    """Clip ``rotor_vel`` to ``[lower, upper]``."""
-    rotor_vel = jnp.clip(data.states.rotor_vel, lower, upper)
-    return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
 
 
 def clip_rotor_vel_cmd(

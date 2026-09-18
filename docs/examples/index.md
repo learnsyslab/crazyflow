@@ -62,9 +62,9 @@ Because the simulator is built entirely from JAX operations, `jax.grad` can diff
 
 ---
 
-## Gradients and state clipping
+## Gradients and command clipping
 
-Hard state clips such as the `clip_rotor_vel` stage zero the gradients while the state is saturated. This example removes the `clip_rotor_vel_cmd` stage, ramps a motor command beyond the rotor limits, and compares the rotor state and the gradient of the vertical acceleration w.r.t. the command for three options: the default clip, a straight-through clip (clipped forward pass, unclipped gradients), and no clip. Replacing the default clip with the straight-through variant can help gradient-based methods such as trajectory optimization or policy learning, which would otherwise receive zero gradients whenever the motors saturate.
+Hard clips such as the `clip_rotor_vel_cmd` stage zero the gradients while the command is saturated. This example ramps a motor command beyond the rotor limits and compares the rotor state and the gradient of the vertical acceleration w.r.t. the command for three options: the default clip, a straight-through clip (clipped forward pass, unclipped gradients), and no clip. Replacing the default clip with the straight-through variant can help gradient-based methods such as trajectory optimization or policy learning, which would otherwise receive zero gradients whenever the motors saturate.
 
 <!-- notest: imported script, covered by tests/integration/test_examples.py -->
 ```{ .python notest }

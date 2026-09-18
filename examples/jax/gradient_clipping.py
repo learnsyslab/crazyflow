@@ -13,12 +13,12 @@ from crazyflow.sim.pipeline import remove_fn, replace_fn
 from crazyflow.sim.sim import rotor_vel_limits
 
 
-def clip_rotor_vel_nonblocking(data: SimData, lower: float, upper: float) -> SimData:
+def clip_rotor_vel_cmd_nonblocking(data: SimData, lower: float, upper: float) -> SimData:
     # Straight-through estimator: x + stop_gradient(clip(x) - x) evaluates to clip(x) in the
     # forward pass, while its derivative w.r.t. x is 1 in the backward pass
-    rotor_vel = data.states.rotor_vel
-    rotor_vel = rotor_vel + jax.lax.stop_gradient(jnp.clip(rotor_vel, lower, upper) - rotor_vel)
-    return data.replace(states=data.states.replace(rotor_vel=rotor_vel))
+    cmd = data.controls.rotor_vel
+    cmd = cmd + jax.lax.stop_gradient(jnp.clip(cmd, lower, upper) - cmd)
+    return data.replace(controls=data.controls.replace(rotor_vel=cmd))
 
 
 def rollout(sim: Sim, cmds: NDArray) -> tuple[NDArray, NDArray]:
@@ -47,8 +47,6 @@ def rollout(sim: Sim, cmds: NDArray) -> tuple[NDArray, NDArray]:
 def main(plot: bool = False):
     sim = Sim(control=Control.rotor_vel)
     lower, upper = rotor_vel_limits(sim.dynamics, sim.drone)
-    # Let the command reach the dynamics unclipped so that only the state clip affects the gradients
-    remove_fn(sim.step_pipeline, "clip_rotor_vel_cmd")
     # Start in the air so that the drone never reaches the floor, where the floor clipping would
     # zero the velocity and kill the gradients (see gradient.py)
     sim.data = sim.data.replace(
@@ -61,17 +59,17 @@ def main(plot: bool = False):
     cmds = np.concatenate([np.linspace(0, ramp, n), np.full(n, ramp), np.linspace(ramp, 0, n)])
 
     # Option 1: keep the clipping as is. The rotor state respects the limits, but the gradient is
-    # zero while the state is saturated
+    # zero while the command is saturated
     results = {"clip (default)": rollout(sim, cmds)}
 
-    # Option 2: clip the state in the forward pass, but keep the gradients flowing in the backward
-    # pass (straight-through estimator)
-    clip_fn = partial(clip_rotor_vel_nonblocking, lower=lower, upper=upper)
-    replace_fn(sim.step_pipeline, clip_fn, "clip_rotor_vel")
+    # Option 2: clip the command in the forward pass, but keep the gradients flowing in the
+    # backward pass (straight-through estimator)
+    clip_fn = partial(clip_rotor_vel_cmd_nonblocking, lower=lower, upper=upper)
+    replace_fn(sim.step_pipeline, clip_fn, "clip_rotor_vel_cmd")
     results["nonblocking clip"] = rollout(sim, cmds)
 
     # Option 3: remove the clipping. Gradients always flow, but the state can leave the limits
-    remove_fn(sim.step_pipeline, "clip_rotor_vel")
+    remove_fn(sim.step_pipeline, "clip_rotor_vel_cmd")
     results["no clip"] = rollout(sim, cmds)
 
     sim.close()
@@ -108,7 +106,7 @@ def plot_results(
         ax.set_xlabel("Time (s)")
         ax.legend()
         ax.grid(True)
-    fig.suptitle("Rotor state clipping and its effect on gradients")
+    fig.suptitle("Rotor command clipping and its effect on gradients")
     plt.tight_layout()
     plt.show()
 
