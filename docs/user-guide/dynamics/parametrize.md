@@ -21,7 +21,7 @@ The following configurations ship with pre-fitted parameters. They cover both th
 ```python
 from crazyflow.drones import available_drones
 
-available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
+available_drones  # ('cf21B_500', 'cf2x_L250', 'cf2x_P250', 'cf2x_T350')
 ```
 
 | `drone` | Platform |
@@ -31,7 +31,16 @@ available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
 | `"cf2x_T350"` | Crazyflie 2.x, thrust upgrade kit |
 | `"cf21B_500"` | Crazyflie 2.1 Brushless |
 
-If your drone is not listed, you can identify the parameters from flight data using the [system identification pipeline](system-identification.md) and inject them into any dynamics.
+If your drone is not listed, you can [add it](../adding-drones.md). The fitted models need coefficients identified from flight data with the [system identification pipeline](system-identification.md).
+
+Not every dynamics is available for every drone. [`supported_dynamics`][crazyflow.dynamics.supported_dynamics] and [`supported_drones`][crazyflow.dynamics.supported_drones] list the available pairs:
+
+```python
+from crazyflow.dynamics import supported_drones, supported_dynamics
+
+supported_dynamics("cf21B_500")  # (first_principles, so_rpy, so_rpy_rotor, so_rpy_rotor_drag)
+supported_drones("so_rpy_rotor_drag")  # ('cf21B_500', 'cf2x_L250', 'cf2x_P250', 'cf2x_T350')
+```
 
 ## Switching array backends
 
@@ -101,14 +110,14 @@ dynamics.keywords["mass"] = np.float64(0.040)  # heavier drone — applies to ev
 
 ## Selecting dynamics programmatically
 
-`available_dynamics` is a dict mapping dynamics names to their unparametrized functions. This is useful when selecting a dynamics by name.
+`available_dynamics` is a dict mapping each [`Dynamics`][crazyflow.dynamics.Dynamics] mode to its unparametrized function. `Dynamics` is a string enum, so plain names work as keys too.
 
 ```python
-from crazyflow.dynamics import available_dynamics, parametrize
+from crazyflow.dynamics import Dynamics, available_dynamics, parametrize
 
-list(available_dynamics)  # ['first_principles', 'so_rpy', 'so_rpy_rotor', 'so_rpy_rotor_drag']
+list(available_dynamics)  # [Dynamics.first_principles, Dynamics.so_rpy, ...]
 
-dynamics = available_dynamics["so_rpy_rotor_drag"]
+dynamics = available_dynamics[Dynamics.so_rpy_rotor_drag]
 parametrized_dynamics = parametrize(dynamics, drone="cf2x_T350")
 ```
 

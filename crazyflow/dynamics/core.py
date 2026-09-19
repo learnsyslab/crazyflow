@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import numpy as np
 
+from crazyflow.drones import available_drones
 from crazyflow.utils import filter_to_signature, to_xp
 from crazyflow.utils import parametrize as _parametrize
 
@@ -141,3 +142,22 @@ def load_fn_params(
     assert callable(fn), f"Expected a function, got {type(fn)}"
     dynamics = fn.__module__.split(".")[-2]
     return filter_to_signature(load_params(dynamics, drone, xp=xp, device=device), fn)
+
+
+def _param_sections(dynamics: Dynamics | str) -> set[str]:
+    """Return the drone sections declared in a dynamics model's ``params.toml``."""
+    with open(Path(__file__).parent / f"{Dynamics(dynamics)}/params.toml", "rb") as f:
+        return set(tomllib.load(f))
+
+
+def supported_drones(dynamics: Dynamics | str) -> tuple[str, ...]:
+    """Return the drones that ``dynamics`` can be parametrized for."""
+    sections = _param_sections(dynamics)
+    return tuple(drone for drone in available_drones if drone in sections)
+
+
+def supported_dynamics(drone: str) -> tuple[Dynamics, ...]:
+    """Return the dynamics models that ``drone`` can be simulated with."""
+    if drone not in available_drones:
+        raise KeyError(f"Drone `{drone}` not found. Available drones: {available_drones}")
+    return tuple(d for d in Dynamics if drone in _param_sections(d))
