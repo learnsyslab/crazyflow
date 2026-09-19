@@ -1,6 +1,6 @@
 # Adding a drone
 
-A drone is defined by data files only. The `Drone` enum lists the MJCF files in `crazyflow/drones`, and a dynamics model or controller supports a drone when its own `params.toml` has a section for it. Adding a platform therefore means adding files and sections, not registering anything in Python.
+A drone is a member of the `Drone` enum in `crazyflow/drones/__init__.py` with a matching MJCF file in `crazyflow/drones`. The package asserts on import that the two agree. A dynamics model or controller supports a drone when its own `params.toml` has a section for it, so adding a platform means adding one enum member, the MJCF file, and parameter sections.
 
 ```python
 from crazyflow import Drone
@@ -12,9 +12,9 @@ supported_dynamics(Drone.cf2x_L250)  # (first_principles, so_rpy, so_rpy_rotor, 
 
 Pick a short name such as `cf2x_L250` (platform, then variant) and use it everywhere below.
 
-## 1. MuJoCo model
+## 1. Enum member and MuJoCo model
 
-Add `crazyflow/drones/<name>.xml` with its meshes under `crazyflow/drones/assets/<name>/`. This file is what makes the drone appear in `Drone`. The simulator attaches the body named `drone` once per drone, so that body is required. If you also provide a `drone_fused` body whose visual geometry is a single mesh, users can select it with `Sim(fused_mjx_model=True)` for cheaper rendering. See [MuJoCo Integration](mujoco.md) for how the scene is assembled.
+Add `<name> = "<name>"` to the `Drone` enum and a `crazyflow/drones/<name>.xml` with its meshes under `crazyflow/drones/assets/<name>/`. Importing `crazyflow` fails if an enum member has no MJCF file or an MJCF file has no enum member. The simulator attaches the body named `drone` once per drone, so that body is required. If you also provide a `drone_fused` body whose visual geometry is a single mesh, users can select it with `Sim(fused_mjx_model=True)` for cheaper rendering. See [MuJoCo Integration](mujoco.md) for how the scene is assembled.
 
 ## 2. Dynamics parameters
 

@@ -11,6 +11,18 @@ from pathlib import Path
 
 __all__ = ["Drone"]
 
-_drones = [p.stem for p in sorted(Path(__file__).parent.glob("*.xml"))]
-Drone: StrEnum = StrEnum("Drone", [(name, name) for name in _drones])
-"""Drone configurations, i.e. the MJCF files in ``crazyflow/drones``."""
+
+class Drone(StrEnum):
+    """Drone configurations. Each member has an MJCF file ``crazyflow/drones/<name>.xml``."""
+
+    cf21B_500 = "cf21B_500"
+    cf2x_L250 = "cf2x_L250"
+    cf2x_P250 = "cf2x_P250"
+    cf2x_T350 = "cf2x_T350"
+
+
+# Sanity check at startup
+_mjcf_files = {p.stem for p in Path(__file__).parent.glob("*.xml")}
+assert {d.value for d in Drone} == _mjcf_files, (
+    f"Drone enum {sorted(d.value for d in Drone)} does not match MJCF files {sorted(_mjcf_files)}"
+)
