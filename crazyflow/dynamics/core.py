@@ -67,6 +67,7 @@ def parametrize(
     Example:
     ```python
     import numpy as np
+    from crazyflow.drones import Drone
     from crazyflow.dynamics.core import parametrize
     from crazyflow.dynamics.first_principles import dynamics
 

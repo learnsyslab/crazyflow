@@ -79,6 +79,7 @@ def parametrize(
     import numpy as np
     from crazyflow.control import parametrize
     from crazyflow.control.mellinger import state2attitude
+    from crazyflow.drones import Drone
     from scipy.spatial.transform import Rotation as R
 
     ctrl = parametrize(state2attitude, Drone.cf2x_L250)
