@@ -86,7 +86,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 ## Supported drones
 
 <!-- DRONE GRID: replace the placeholder image paths once renders are available.
-     The list of available drones comes from crazyflow.available_drones.
+     The list of available drones comes from crazyflow.Drone.
 
 <div class="drone-grid" markdown>
 
@@ -98,7 +98,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 </div>
 -->
 
-All drone configurations are bundled with `crazyflow.dynamics`. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any drone returned by `crazyflow.available_drones`.
+All drone configurations are bundled with `crazyflow.dynamics`. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any member of `crazyflow.Drone`.
 
 ---
 
