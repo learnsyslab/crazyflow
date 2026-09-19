@@ -19,9 +19,9 @@ list(dynamics.keywords.keys())
 The following configurations ship with pre-fitted parameters. They cover both the brushed Crazyflie 2.x series and the brushless Crazyflie 2.1:
 
 ```python
-from crazyflow.drones import available_drones
+from crazyflow.drones import Drone
 
-available_drones  # ('cf21B_500', 'cf2x_L250', 'cf2x_P250', 'cf2x_T350')
+list(Drone)  # [Drone.cf21B_500, Drone.cf2x_L250, Drone.cf2x_P250, Drone.cf2x_T350]
 ```
 
 | `drone` | Platform |

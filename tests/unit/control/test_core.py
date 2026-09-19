@@ -13,7 +13,7 @@ from crazyflow.control.mellinger import (
     force_torque2rotor_vel,
     state2attitude,
 )
-from crazyflow.drones import available_drones
+from crazyflow.drones import Drone
 
 _MELLINGER_FNS = [
     state2attitude,
@@ -25,7 +25,7 @@ _MELLINGER_FNS = [
 
 @pytest.mark.unit
 @pytest.mark.parametrize("fn", _MELLINGER_FNS, ids=lambda fn: fn.__name__)
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_load_fn_params_keys(fn: Callable[..., Any], drone: str) -> None:
     params = load_fn_params(fn, drone)
     fn_params = inspect.signature(fn).parameters
@@ -50,7 +50,7 @@ def test_unknown_controller() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_parametrize_xp_namespace(drone: str) -> None:
     controller = parametrize(state2attitude, drone, xp=array_api_strict)
     xp_array_type = type(array_api_strict.asarray(0.0))

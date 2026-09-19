@@ -49,7 +49,7 @@ against all models in the simulation's `build_control_fns`.
 Define the function in `dynamics.py` and never in the package `__init__.py`, because
 `load_fn_params` derives the model name from `fn.__module__.split(".")[-2]`. `parametrize`
 binds exactly the keyword-only parameters after the bare `*`, so anything before it is never bound.
-`available_drones` is the set of MJCF files in `crazyflow/drones`. A model supports a drone when its
+`Drone` is a `StrEnum` of the MJCF files in `crazyflow/drones`. A model supports a drone when its
 `crazyflow/dynamics/<model>/params.toml` has a complete section for it; the commented example at the
 top of each file lists the keys. `supported_drones` and `supported_dynamics` report the pairs, and the
 tests only run those. Only `gravity_vec` is global, in `crazyflow/dynamics/params.toml`.

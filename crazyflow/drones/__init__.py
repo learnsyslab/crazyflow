@@ -3,13 +3,14 @@
 This package bundles the MuJoCo MJCF scene files that define each drone configuration and their
 referenced meshes (``assets/``). For the physical params, see [crazyflow.dynamics.load_params][].
 
-Use ``available_drones`` to enumerate the supported configurations.
+Use ``Drone`` to enumerate the supported configurations.
 """
 
+from enum import StrEnum
 from pathlib import Path
 
-__all__ = ["available_drones"]
+__all__ = ["Drone"]
 
-_mjcf_files = sorted(Path(__file__).parent.glob("*.xml"))
-available_drones: tuple[str, ...] = tuple(p.stem for p in _mjcf_files)
-"""Names of all drone configurations, i.e. the MJCF files in ``crazyflow/drones``."""
+_drones = [p.stem for p in sorted(Path(__file__).parent.glob("*.xml"))]
+Drone: StrEnum = StrEnum("Drone", [(name, name) for name in _drones])
+"""Drone configurations, i.e. the MJCF files in ``crazyflow/drones``."""

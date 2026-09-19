@@ -59,11 +59,11 @@ def drone_dynamics_fns() -> list[ParameterSet]:
 
 def drone_dynamics() -> list[ParameterSet]:
     """Return all supported (dynamics, drone) combinations."""
-    from crazyflow.drones import available_drones
+    from crazyflow.drones import Drone
     from crazyflow.dynamics import supported_dynamics
 
     return [
         pytest.param(dynamics, drone, id=f"{drone}-{dynamics}")
-        for drone in available_drones
+        for drone in Drone
         for dynamics in supported_dynamics(drone)
     ]

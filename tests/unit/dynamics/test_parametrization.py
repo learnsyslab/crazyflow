@@ -7,7 +7,15 @@ from typing import Callable
 import pytest
 from conftest import drone_dynamics_fns
 
-from crazyflow.dynamics import Dynamics, load_fn_params, load_params, parametrize
+from crazyflow.drones import Drone
+from crazyflow.dynamics import (
+    Dynamics,
+    load_fn_params,
+    load_params,
+    parametrize,
+    supported_drones,
+    supported_dynamics,
+)
 from crazyflow.dynamics.so_rpy import dynamics as so_rpy
 
 
@@ -28,18 +36,32 @@ def test_model_parameter_loading(dynamics_name: str, dynamics: Callable, drone: 
 
 @pytest.mark.unit
 def test_unknown_drone() -> None:
-    with pytest.raises(KeyError, match="nonexistent_drone"):
+    with pytest.raises(ValueError, match="nonexistent_drone"):
         load_params(Dynamics.so_rpy, "nonexistent_drone")
-    with pytest.raises(KeyError, match="nonexistent_drone"):
+    with pytest.raises(ValueError, match="nonexistent_drone"):
         load_fn_params(so_rpy, "nonexistent_drone")
-    with pytest.raises(KeyError, match="nonexistent_drone"):
+    with pytest.raises(ValueError, match="nonexistent_drone"):
         parametrize(so_rpy, "nonexistent_drone")
+    with pytest.raises(ValueError, match="nonexistent_drone"):
+        supported_dynamics("nonexistent_drone")
 
 
 @pytest.mark.unit
 def test_unknown_dynamics() -> None:
     with pytest.raises(ValueError, match="nonexistent_dynamics"):
         load_params("nonexistent_dynamics", "cf2x_L250")
+    with pytest.raises(ValueError, match="nonexistent_dynamics"):
+        supported_drones("nonexistent_dynamics")
+
+
+@pytest.mark.unit
+def test_supported_pairs() -> None:
+    for dynamics in Dynamics:
+        for drone in supported_drones(dynamics):
+            assert dynamics in supported_dynamics(drone)
+    for drone in Drone:
+        for dynamics in supported_dynamics(drone):
+            assert drone in supported_drones(dynamics)
 
 
 @pytest.mark.unit
