@@ -30,7 +30,6 @@
 #
 # Not every parameter has to be identified, but all of them have to be set. A symmetric first order
 # rotor model, no drag and no propeller gyroscopic torque are reasonable defaults for a new drone.
-# gravity_vec is global and lives in crazyflow/dynamics/params.toml.
 
 [cf2x_L250]
 mass = 0.0319
