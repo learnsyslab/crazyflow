@@ -12,19 +12,19 @@ from jax import Array
 from numpy.typing import NDArray
 
 from crazyflow.control import Control
-from crazyflow.drones import load_params
-from crazyflow.dynamics import Dynamics
+from crazyflow.dynamics import Dynamics, load_params
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
 
-def action_space(control_type: Control, drone: str) -> spaces.Box:
+def action_space(control_type: Control, dynamics: Dynamics, drone: str) -> spaces.Box:
     """Select the appropriate action space for a given control type.
 
     Args:
         control_type: The desired control mode.
+        dynamics: Dynamics of the environment.
         drone: Drone of the environment.
 
     Returns:
@@ -32,7 +32,7 @@ def action_space(control_type: Control, drone: str) -> spaces.Box:
     """
     match control_type:
         case Control.attitude:
-            params = load_params(drone)
+            params = load_params(dynamics, drone)
             thrust_min, thrust_max = params["thrust_min"] * 4, params["thrust_max"] * 4
             return spaces.Box(
                 np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, thrust_min], dtype=np.float32),
@@ -106,7 +106,7 @@ class DroneEnv(VectorEnv):
         self._marked_for_reset = jnp.zeros((self.sim.n_worlds), dtype=jnp.bool_, device=self.device)
 
         # Define action and observation spaces
-        self.single_action_space = action_space(self.sim.control, self.sim.drone)
+        self.single_action_space = action_space(self.sim.control, self.sim.dynamics, self.sim.drone)
         self.action_space = batch_space(self.single_action_space, self.sim.n_worlds)
         self.single_observation_space = spaces.Dict(
             {

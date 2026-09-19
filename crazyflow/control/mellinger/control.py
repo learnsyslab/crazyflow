@@ -20,7 +20,7 @@ from array_api_compat import array_namespace
 from flax.struct import dataclass, field
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control.core import controllable, load_params
+from crazyflow.control.core import controllable, load_fn_params
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 from crazyflow.utils import CORE_NDIM_KEY, leaf_replace
 
@@ -513,7 +513,7 @@ class MellingerStateData:
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
         cmd = jnp.zeros((n_worlds, n_drones, 16), device=device).at[..., 12].set(1.0)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = load_params(state2attitude, drone, xp=jnp, device=device)
+        params = load_fn_params(state2attitude, drone, xp=jnp, device=device)
         return MellingerStateData(
             cmd=cmd,
             staged_cmd=cmd.copy(),
@@ -553,7 +553,7 @@ class MellingerAttitudeData:
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
         zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = load_params(attitude2force_torque, drone, xp=jnp, device=device)
+        params = load_fn_params(attitude2force_torque, drone, xp=jnp, device=device)
         return MellingerAttitudeData(
             cmd=zeros_4d.copy(),
             staged_cmd=zeros_4d.copy(),
@@ -595,7 +595,7 @@ class MellingerBodyRateData:
         zeros_3d = jnp.zeros((n_worlds, n_drones, 3), device=device)
         zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = load_params(body_rate2force_torque, drone, xp=jnp, device=device)
+        params = load_fn_params(body_rate2force_torque, drone, xp=jnp, device=device)
         return MellingerBodyRateData(
             cmd=zeros_4d.copy(),
             staged_cmd=zeros_4d.copy(),
@@ -629,7 +629,7 @@ class MellingerForceTorqueData:
     ) -> MellingerForceTorqueData:
         zeros_4d = jnp.zeros((n_worlds, n_drones, 4), device=device)
         steps = -jnp.ones((n_worlds, 1), dtype=jnp.int32, device=device)
-        params = load_params(force_torque2rotor_vel, drone, xp=jnp, device=device)
+        params = load_fn_params(force_torque2rotor_vel, drone, xp=jnp, device=device)
         return MellingerForceTorqueData(
             cmd=zeros_4d.copy(), staged_cmd=zeros_4d.copy(), steps=steps, freq=freq, params=params
         )

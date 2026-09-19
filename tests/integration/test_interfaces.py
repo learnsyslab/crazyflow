@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import Control, load_params, parametrize
+from crazyflow.control import Control, load_fn_params, parametrize
 from crazyflow.control.mellinger import force_torque2rotor_vel, state2attitude
 from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim
@@ -112,8 +112,8 @@ def test_body_rate_interface():
 @pytest.mark.integration
 def test_rotor_vel_interface():
     sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
-    thrust_max = load_params(state2attitude, sim.drone)["thrust_max"]
-    rpm2thrust = load_params(force_torque2rotor_vel, sim.drone)["rpm2thrust"]
+    thrust_max = load_fn_params(state2attitude, sim.drone)["thrust_max"]
+    rpm2thrust = load_fn_params(force_torque2rotor_vel, sim.drone)["rpm2thrust"]
     max_rpm = motor_force2rotor_vel(np.array([thrust_max]), rpm2thrust)[0]
 
     sim.data = sim.data.replace(

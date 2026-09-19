@@ -79,8 +79,8 @@ version = { attr = "crazyflow.__version__" }
 
 [tool.setuptools.package-data]
 crazyflow = ["scene.xml"]
-"crazyflow.drones" = ["*.xml", "params.toml", "assets/*/*.stl"]
-"crazyflow.dynamics" = ["*/params.toml"]
+"crazyflow.drones" = ["*.xml", "assets/*/*.stl"]
+"crazyflow.dynamics" = ["params.toml", "*/params.toml"]
 "crazyflow.control" = ["*/params.toml"]
 
 [tool.pytest.ini_options]

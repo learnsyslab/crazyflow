@@ -1,4 +1,13 @@
 <mujoco model="cf21B">
+  <!--
+  Platform data not used by the simulation, kept for estimators, firmware and tooling:
+  rotor_dyn_coef_simple = 15.416891997523813
+  thrust_dyn_coef = 15.09965949800411
+  vmotor2thrust = [-0.014058926705279723, 0.04265273261724981, 0.0018327760144017432, 0.0020576974784587178]  # Index is order
+  vmotor2torque = [-0.00016088354909542246, 0.0003960426420309137, -4.6274122414327404e-5, 1.8490661674309596e-5]  # TODO, Index is order
+  vmotor2rpm = [2938.3995608848436, 6001.834195381014]  # Index is order
+  prop_radius = 27.5e-3 # TODO check
+  -->
   <compiler inertiafromgeom="false" meshdir="assets" autolimits="true" />
 
   <asset>

@@ -121,10 +121,10 @@ torque.shape  # (3,)
 
 ```python
 import numpy as np
-from crazyflow.control import load_params
+from crazyflow.control import load_fn_params
 from crazyflow.control.mellinger import body_rate2force_torque
 
-params = load_params(body_rate2force_torque, "cf2x_L250")
+params = load_fn_params(body_rate2force_torque, "cf2x_L250")
 params["kR"], params["ki_m"] = np.zeros(3), np.zeros(3)  # pure body rate tracking
 
 quat = np.array([0.0, 0.0, 0.0, 1.0])

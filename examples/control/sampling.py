@@ -18,7 +18,7 @@ from jax.lax import scan
 
 from crazyflow.control import Control
 from crazyflow.control.transform import motor_force2rotor_vel
-from crazyflow.drones import load_params
+from crazyflow.dynamics import load_params
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import SimData
 from crazyflow.sim.visualize import draw_capsule, draw_line
@@ -226,7 +226,7 @@ def main() -> None:
     sim.max_visual_geom = 100_000  # To be able to show all rollouts
     sim.reset()
     start_pos = lissajous_reference(0.0)["pos"]
-    drone_params = load_params(DRONE)
+    drone_params = load_params(Dynamics.first_principles, DRONE)
     hover_thrust_value = np.asarray(drone_params["mass"] * 9.81, dtype=np.float32)
     hover_rotor_vel = motor_force2rotor_vel(
         np.full(4, hover_thrust_value / 4.0, dtype=np.float32), drone_params["rpm2thrust"]
@@ -253,6 +253,7 @@ def main() -> None:
     rollout_simulator.reset()
 
     thrust_estimate = hover_thrust_value  # Initial thrust estimate
+    thrust_time_coef = float(rollout_simulator.data.params.thrust_time_coef[0])
     hover_cmd = jax.device_put(
         jnp.array([0.0, 0.0, 0.0, hover_thrust_value], dtype=jnp.float32), controller_device
     )
@@ -304,9 +305,7 @@ def main() -> None:
         action, key, mean_controls, best_positions, sampled_positions = control(
             t, obs, key, mean_controls, controller_fn, controller_device
         )
-        thrust_estimate += (
-            drone_params["thrust_dyn_coef"] * (action[3] - thrust_estimate) / CTRL_FREQ
-        )
+        thrust_estimate += (action[3] - thrust_estimate) / thrust_time_coef / CTRL_FREQ
         sim.attitude_control(action[None, None])
         sim.step(sim.freq // CTRL_FREQ)
         position_history.append(np.asarray(sim.data.states.pos[0, 0]))

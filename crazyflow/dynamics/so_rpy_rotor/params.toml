@@ -1,4 +1,34 @@
+# Parameters of the fitted so_rpy_rotor dynamics.
+#
+# [my_drone]
+# mass = 0.0                              # kg
+# J = [                                   # kg m^2. Only used to apply external torques, so an
+#     [1.0e-5, 0.0, 0.0],                 # estimate works, but the drone then reacts wrongly to
+#     [0.0, 1.0e-5, 0.0],                 # disturbance torques. Must be invertible.
+#     [0.0, 0.0, 2.0e-5]
+# ]
+# thrust_min = 0.0                        # N per motor
+# thrust_max = 0.0                        # N per motor
+# acc_coef = 0.0
+# cmd_f_coef = 0.0
+# rpy_coef = [0.0, 0.0, 0.0]
+# rpy_rates_coef = [0.0, 0.0, 0.0]
+# cmd_rpy_coef = [0.0, 0.0, 0.0]
+# thrust_time_coef = 0.0                  # s
+#
+# Identify the coefficients from flight data with the system identification pipeline (see
+# docs/user-guide/dynamics/system-identification.md). gravity_vec is global and lives in
+# crazyflow/dynamics/params.toml.
+
 [cf2x_L250]
+mass = 0.0319
+J = [
+    [16.8e-6, 0.0, 0.0],
+    [0.0, 16.8e-6, 0.0],
+    [0.0, 0.0, 29.8e-6]
+]
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.97732585
 thrust_time_coef = 0.0858607
@@ -8,6 +38,14 @@ cmd_rpy_coef = [196.18, 196.18, 390.27]
 
 
 [cf2x_P250]
+mass = 0.0318
+J = [
+    [16.8e-6, 0.0, 0.0],
+    [0.0, 16.8e-6, 0.0],
+    [0.0, 0.0, 29.8e-6]
+]
+thrust_min = 0.012817578393224994  # in N per motor
+thrust_max = 0.12  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.98323006
 thrust_time_coef = 0.0578952
@@ -17,6 +55,14 @@ cmd_rpy_coef = [263.30, 263.30, 502.58]
 
 
 [cf2x_T350]
+mass = 0.0379
+J = [ 
+    [15.7e-6, 0.0, 0.0],
+    [0.0, 17.1e-6, 0.0],
+    [0.0, 0.0, 30.0e-6]
+]
+thrust_min = 0.01922636758983749  # in N per motor
+thrust_max = 0.18  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 1.022561164673754
 thrust_time_coef = 0.5712805549388994  # High value, maybe not correct?
@@ -26,6 +72,14 @@ cmd_rpy_coef = [347.94260321, 347.94260321, 241.06977014]
 
 
 [cf21B_500]
+mass = 0.04338
+J = [
+    [25e-6, 0.0,   0.0],
+    [0.0,   28e-6, 0.0],
+    [0.0,   0.0,   49e-6]
+]
+thrust_min = 0.02136263065537499  # in N per motor
+thrust_max = 0.2  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.96841816
 thrust_time_coef = 0.02055366

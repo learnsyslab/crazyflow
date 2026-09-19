@@ -28,7 +28,7 @@ from flax.struct import dataclass, field
 from scipy.spatial.transform import Rotation as R
 
 import crazyflow.dynamics.symbols as symbols
-from crazyflow.dynamics.core import load_params, supports
+from crazyflow.dynamics.core import load_fn_params, supports
 from crazyflow.dynamics.utils import rotation
 from crazyflow.utils import CORE_NDIM_KEY, to_xp
 
@@ -434,7 +434,7 @@ class Params:
     @staticmethod
     def create(drone: str, device: Device) -> Params:
         """Create the default parameters for the simulation."""
-        p = load_params(dynamics, drone)
+        p = load_fn_params(dynamics, drone)
         J = jnp.asarray(p["J"], device=device)
         return Params(
             mass=jnp.asarray([p["mass"]], device=device),

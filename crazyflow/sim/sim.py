@@ -25,8 +25,8 @@ from crazyflow.control.mellinger import (
     control_state2attitude,
 )
 from crazyflow.control.transform import motor_force2rotor_vel
-from crazyflow.drones import load_params as load_drone_params
 from crazyflow.dynamics import Dynamics
+from crazyflow.dynamics import load_params as load_dynamics_params
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
 from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
 from crazyflow.dynamics.so_rpy_rotor import sim_dynamics as so_rpy_rotor_dynamics
@@ -710,8 +710,8 @@ def clip_floor_pos(data: SimData) -> SimData:
 
 def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
     """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
-    params = load_drone_params(drone)
-    thrust_min, thrust_max = params["thrust_min"], params["thrust_max"]
+    params = load_dynamics_params(dynamics, drone)
+    thrust_min, thrust_max = float(params["thrust_min"]), float(params["thrust_max"])
     if dynamics == Dynamics.first_principles:
         rpm = motor_force2rotor_vel(np.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
         return float(rpm[0]), float(rpm[1])
