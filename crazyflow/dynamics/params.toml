@@ -1,4 +1,3 @@
-# Global parameters shared by every drone and dynamics model. Drone specific parameters live in
-# the params.toml of each model.
+# Global environment parameters.
 
 gravity_vec = [0.0, 0.0, -9.81]  # m/s^2
