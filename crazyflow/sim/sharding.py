@@ -7,9 +7,11 @@ devices. The data itself specifies which arrays carry the world axis. See
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 import jax
+import jax.numpy as jnp
 from jax.sharding import AxisType, NamedSharding, PartitionSpec
 
 from crazyflow.utils import world_mask
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
 
     from jax import Array, Device
     from jax.sharding import Mesh
+    from mujoco.mjx import Data
 
     from crazyflow.sim.data import SimData
 
@@ -92,3 +95,19 @@ def build_sharded_data(
     if isinstance(rng_key, int):  # Tracing turns a seed into an array that is not a key
         rng_key = jax.random.key(rng_key)
     return jax.jit(create, out_shardings=placement(jax.eval_shape(create, rng_key), mesh))(rng_key)
+
+
+def build_sharded_mjx_data(data: Data, n_worlds: int, mesh: Mesh) -> Data:
+    """Distribute the per-world MJX data over a mesh without materialising on a single device.
+
+    Args:
+        data: MJX data of a single world.
+        n_worlds: Number of worlds to copy the data into.
+        mesh: Mesh to distribute the worlds over.
+
+    Returns:
+        The placed MJX data.
+    """
+    data = jax.device_put(data, NamedSharding(mesh, PartitionSpec()))  # Trace on the mesh devices
+    broadcast = partial(jax.tree.map, lambda x: jnp.broadcast_to(x, (n_worlds, *x.shape)))
+    return jax.jit(broadcast, out_shardings=NamedSharding(mesh, PartitionSpec(WORLD_AXIS)))(data)

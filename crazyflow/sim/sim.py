@@ -14,6 +14,7 @@ import mujoco.mjx as mjx
 import numpy as np
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
+from jax.sharding import NamedSharding, PartitionSpec
 
 import crazyflow.sim.functional as F
 from crazyflow.control import Control
@@ -35,7 +36,7 @@ from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.sim.sharding import build_sharded_data, placement
+from crazyflow.sim.sharding import WORLD_AXIS, build_sharded_data, build_sharded_mjx_data, placement
 from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
@@ -348,7 +349,12 @@ class Sim:
         mj_data = mujoco.MjData(mj_model)
         mjx_model = mjx.put_model(mj_model, device=self.device)
         mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
-        mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
+        if self.mesh is None:
+            mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
+        else:
+            # mjx_model has no world axis, so we replicate it to keep it compatible with the mesh
+            mjx_model = jax.device_put(mjx_model, NamedSharding(self.mesh, PartitionSpec()))
+            mjx_data = build_sharded_mjx_data(mjx_data, self.n_worlds, self.mesh)
         return mj_model, mj_data, mjx_model, mjx_data
 
     def _unweld_drones(self, mj_model: mujoco.MjModel):
@@ -458,7 +464,7 @@ class Sim:
         return self.data
 
     def shard(self, mesh: Mesh) -> SimData:
-        """Distribute the data and default data over a mesh along the world axis.
+        """Distribute the data, default data and MJX data over a mesh along the world axis.
 
         Args:
             mesh: Mesh to distribute the worlds over, as built by
@@ -470,6 +476,11 @@ class Sim:
         self.mesh = mesh
         self.data = jax.device_put(self.data, placement(self.data, mesh))
         self.default_data = jax.device_put(self.default_data, placement(self.default_data, mesh))
+        # We also have to move the mjx_model and mjx_data to the mesh. mjx_model is replicated, data
+        # is sharded along its world axis
+        self.mjx_model = jax.device_put(self.mjx_model, NamedSharding(mesh, PartitionSpec()))
+        world = NamedSharding(mesh, PartitionSpec(WORLD_AXIS))
+        self.mjx_data = jax.device_put(self.mjx_data, world)
         return self.data
 
     def build_default_data(self) -> SimData:
