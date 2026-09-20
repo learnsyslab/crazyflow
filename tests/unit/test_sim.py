@@ -229,6 +229,21 @@ def test_sim_step(n_worlds: int, n_drones: int, dynamics: Dynamics, control: Con
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("integrator", Integrator)
+def test_sim_step_integrators(integrator: Integrator):
+    """Every integration scheme advances a default simulation without invalid state."""
+    sim = Sim(integrator=integrator, device="cpu")
+    sim.step(2)
+
+    assert jnp.all(sim.data.core.steps == 2)
+    assert jnp.all(jnp.isfinite(sim.data.states.pos))
+    assert jnp.all(jnp.isfinite(sim.data.states.quat))
+    assert jnp.all(jnp.isfinite(sim.data.states.vel))
+    assert jnp.all(jnp.isfinite(sim.data.states.ang_vel))
+    sim.close()
+
+
+@pytest.mark.unit
 def test_state_control_forwards_body_rates():
     """State control must forward the body rates of the command to the attitude controller."""
     sim = Sim(n_worlds=2, n_drones=3, control=Control.state)
