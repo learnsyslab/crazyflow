@@ -240,6 +240,9 @@ def test_sim_step_integrators(integrator: Integrator):
     assert jnp.all(jnp.isfinite(sim.data.states.quat))
     assert jnp.all(jnp.isfinite(sim.data.states.vel))
     assert jnp.all(jnp.isfinite(sim.data.states.ang_vel))
+    assert jnp.all(jnp.isfinite(sim.data.states.force))
+    assert jnp.all(jnp.isfinite(sim.data.states.torque))
+    assert jnp.all(jnp.isfinite(sim.data.states.rotor_vel))
     sim.close()
 
 
