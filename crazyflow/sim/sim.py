@@ -130,6 +130,7 @@ class Sim:
         self.n_worlds = n_worlds
         self.n_drones = n_drones
         self.freq = freq
+        self.max_geom_pairs = -1 if n_drones < 64 else 2 * n_drones
         self.max_visual_geom = 1000
 
         # Initialize MuJoCo world and data
@@ -287,6 +288,7 @@ class Sim:
         assert self._xml_path.exists(), f"Model file {self._xml_path} does not exist"
         spec = mujoco.MjSpec.from_file(str(self._xml_path))
         spec.option.timestep = 1 / self.freq
+        spec.add_numeric(name="max_geom_pairs", data=[self.max_geom_pairs])
         spec.copy_during_attach = True
         drone_spec = mujoco.MjSpec.from_file(str(self.drone_path))
         frame = spec.worldbody.add_frame(name="world")
@@ -502,6 +504,7 @@ class Sim:
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+        self.spec.numeric("max_geom_pairs").data = [self.max_geom_pairs]
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
 
     def init_data(
@@ -573,11 +576,22 @@ class Sim:
     def contacts(self, body: str | None = None) -> Array:
         """Get contact information from the simulation.
 
+        Note:
+            ``sim.max_geom_pairs`` limits the maximum detectable collision contacts per collision
+            group. This is relevant for swarms, where the full pairwise collision buffer grows
+            quadratically. By default, we allocate 2*n_drones contact pairs if the swarm size
+            exceeds 64. That gives us enough capacity to detect all drone-drone contacts. However,
+            if the swarm collapses e.g. into a single position, this will no longer be correct. If
+            you need to truly detect all contacts, set ``sim.max_geom_pairs`` to -1 and rebuild the
+            simulation.
+
         Args:
             body: Optional body name to filter contacts for. If None, returns flags for all bodies.
 
         Returns:
-            An boolean array of shape (n_worlds,) that is True if any contact is present.
+            A boolean array of shape (n_worlds, n_contacts), one flag per slot in the contact
+            buffer. Which geoms a slot holds is given by the matching entries of
+            ``sim.mjx_data._impl.contact.geom1`` and ``geom2``.
         """
         if body is None:
             return self.mjx_data._impl.contact.dist < 0
