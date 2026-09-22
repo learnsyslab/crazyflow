@@ -1,17 +1,4 @@
 <mujoco model="hb_x500">
-  <!-- Holybro X500 V2 (PX4 Development Kit). Meshes are converted from the official STEP file
-       (x500v2-frame.step, 2022-07-19, "3D CAD File" at
-       https://holybro.com/products/px4-development-kit-x500-v2). All STLs are binary, in millimetres.
-       The STEP is Y-up with the camera bracket on -X, so parts are rotated
-       (x, y, z) = (-x_step, z_step, y_step) into the MuJoCo convention. The CAD contains no
-       propellers. The props reconstruct Holybro 530084 from the product photographs at
-       https://www.premium-modellbau.de/holybro-s500-v2-1045-ersatzpropeller-2x-cw-2x-ccw
-       and https://holybro.com/products/spare-parts-s500-v2-kit (Propeller1045).
-       Diameter/pitch are nominal 10x4.5 inches; blade sections and hub dimensions are estimates.
-       The inner blade twist is relaxed to 8-14 degrees while retaining the blade outline.
-       PropL spins CCW seen from above, like the Crazyflie props. The body origin lies on the underside of the
-       bottom plate, in the plane of the arm clamps, which is roughly the CoM with a battery mounted
-       underneath. x points forward (camera bracket), y left, z up. -->
   <compiler inertiafromgeom="false" meshdir="assets" autolimits="true" />
 
   <asset>
@@ -22,36 +9,46 @@
     <material name="white" rgba="0.93 0.93 0.93 1"/>
     <material name="green" rgba="0.13 0.62 0.28 1"/>
     <material name="blue" rgba="0.13 0.33 0.64 1"/>
-
+    
+    <!-- Holybro X500 V2 (PX4 Development Kit). Meshes come from the official STEP
+         (x500v2-frame.step, 2022-07-19): https://holybro.com/products/px4-development-kit-x500-v2
+         STLs are binary and in millimetres. The STEP is Y-up with the camera bracket on -X, so
+         parts are rotated (x, y, z) = (-x_step, z_step, y_step). The body origin is on the
+         underside of the bottom plate, roughly the CoM with a battery fitted.
+         x points forward (camera bracket), y left, z up. -->
     <mesh name="frame" file="hb_x500/hb_x500_frame.stl" scale="1e-3 1e-3 1e-3"/>
     <mesh name="arm_plastics" file="hb_x500/hb_x500_arm_plastics.stl" scale="1e-3 1e-3 1e-3"/>
-    <mesh name="battery_holder" file="hb_x500/hb_x500_battery_holder.stl" scale="1e-3 1e-3 1e-3"/>
-    <mesh name="tubes" file="hb_x500/hb_x500_tubes.stl" scale="1e-3 1e-3 1e-3"/>
-    <!-- One shared mesh holding every screw and nut on the frame and the GPS mounts. -->
-    <mesh name="screws" file="hb_x500/hb_x500_screws.stl" scale="1e-3 1e-3 1e-3"/>
     <mesh name="motors" file="hb_x500/hb_x500_motors.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="tubes" file="hb_x500/hb_x500_tubes.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Every screw and nut on the frame and the GPS mounts -->
+    <mesh name="screws" file="hb_x500/hb_x500_screws.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
+    <mesh name="battery_holder" file="hb_x500/hb_x500_battery_holder.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
     <mesh name="leg" file="hb_x500/hb_x500_leg.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
     <mesh name="propguard_center" file="hb_x500/hb_x500_propguard_center.stl" scale="1e-3 1e-3 1e-3"/>
     <mesh name="propguard_left" file="hb_x500/hb_x500_propguard_left.stl" scale="1e-3 1e-3 1e-3"/>
     <mesh name="propguard_right" file="hb_x500/hb_x500_propguard_right.stl" scale="1e-3 1e-3 1e-3"/>
-    <mesh name="propguard_leg" file="hb_x500/hb_x500_propguard_leg.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="propguard_arm" file="hb_x500/hb_x500_propguard_arm.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Reconstructed from product images of the 1045 (Holybro 530084):
+         https://www.premium-modellbau.de/holybro-s500-v2-1045-ersatzpropeller-2x-cw-2x-ccw
+         https://holybro.com/products/spare-parts-s500-v2-kit -->
     <mesh name="propL" file="hb_x500/hb_x500_PropL.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
     <mesh name="propR" file="hb_x500/hb_x500_PropR.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
     <mesh name="propHub" file="hb_x500/hb_x500_PropHub.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
-    <!-- Holybro 30-degree H-RTK helical antenna mount:
+    <!-- Reconstructed from vendor drawing of the Holybro 30 degree H-RTK mount:
          https://www.unmannedtechshop.co.uk/products/holybro-30-gps-antenna-mount-h-rtk-helical
-         GPS arms follow the supplied 30-degree mount drawing (dimensions in mm):
-         https://cdn.shopify.com/s/files/1/0914/9972/5181/files/30_AntennaMount_Dimensions_1800x1800_47d5d653-a047-444d-a3a7-cb5a3b054260.webp
-         Antenna is an ArduSimple lightweight helical tripleband L-band IP67:
-         https://www.ardusimple.de/product/lightweight-helical-tripleband-l-band-antenna-ip67/
-         Housing: 40 diameter x 82.8 high, 34.3 bottom neck, simplified SMA adapter.
-         https://www.ardusimple.com/wp-content/uploads/2021/02/helical3b_dimensions.jpg -->
+         https://cdn.shopify.com/s/files/1/0914/9972/5181/files/30_AntennaMount_Dimensions_1800x1800_47d5d653-a047-444d-a3a7-cb5a3b054260.webp -->
     <mesh name="gps_mount" file="hb_x500/hb_x500_gps_mount.stl" scale="1e-3 1e-3 1e-3"/>
     <mesh name="gps_tube" file="hb_x500/hb_x500_gps_tube.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
-    <!-- SMA adapter collar between the mount and the antenna; GPS screws are in `screws`. -->
+    <!-- Reconstructed SMA adapter collar between mount and antenna -->
     <mesh name="gps_sma" file="hb_x500/hb_x500_gps_sma.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Reconstructed from the dimension drawing of the ArduSimple helical tripleband L-band IP67:
+         https://www.ardusimple.de/product/lightweight-helical-tripleband-l-band-antenna-ip67/
+         https://www.ardusimple.com/wp-content/uploads/2021/02/helical3b_dimensions.jpg -->
     <mesh name="gps_antenna" file="hb_x500/hb_x500_gps_antenna.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
-    <!-- The whole `drone` body fused into one mesh with transforms baked in (123408 faces). -->
+    <!-- The whole `drone` body fused into one mesh with transforms baked in (123408 faces) -->
     <mesh name="hb_x500_fused" file="hb_x500/hb_x500_fused.stl" scale="1e-3 1e-3 1e-3"/>
   </asset>
 
@@ -117,33 +114,33 @@
         <geom mesh="propguard_center" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_left" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_right" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
       </body>
       <body name="propguard1" pos="-0.17678 -0.17678 0.0245" euler="0 0 -225">
         <geom mesh="propguard_center" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_left" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_right" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
       </body>
       <body name="propguard2" pos="-0.17678 0.17678 0.0245" euler="0 0 45">
         <geom mesh="propguard_center" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_left" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_right" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
       </body>
       <body name="propguard3" pos="0.17678 0.17678 0.0245" euler="0 0 -45">
         <geom mesh="propguard_center" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_left" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
         <geom mesh="propguard_right" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
-        <geom mesh="propguard_leg" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
       </body>
       <body name="leg0" pos="0.17678 -0.17678 0.0245" euler="0 0 -135">
         <geom mesh="leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
