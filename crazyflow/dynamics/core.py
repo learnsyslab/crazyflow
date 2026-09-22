@@ -161,9 +161,6 @@ def supported_drones(dynamics: Dynamics) -> tuple[Drone, ...]:
 
     Returns:
         The supported drones in the order of [Drone][crazyflow.drones.Drone].
-
-    Raises:
-        ValueError: If ``dynamics`` is not a known model.
     """
     dynamics = Dynamics(dynamics)
     return tuple(drone for drone in Drone if drone in _param_sections(dynamics))
@@ -180,9 +177,6 @@ def supported_dynamics(drone: Drone) -> tuple[Dynamics, ...]:
 
     Returns:
         The supported models in the order of [Dynamics][crazyflow.dynamics.Dynamics].
-
-    Raises:
-        ValueError: If ``drone`` is not a known drone.
     """
     drone = Drone(drone)
     return tuple(d for d in Dynamics if drone in _param_sections(d))
