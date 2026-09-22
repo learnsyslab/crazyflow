@@ -22,8 +22,7 @@
 # ]
 #
 # Identify the coefficients from flight data with the system identification pipeline (see
-# docs/user-guide/dynamics/system-identification.md). gravity_vec is global and lives in
-# crazyflow/dynamics/params.toml.
+# docs/user-guide/dynamics/system-identification.md). 
 
 [cf2x_L250]
 mass = 0.0319

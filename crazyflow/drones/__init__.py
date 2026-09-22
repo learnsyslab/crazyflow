@@ -3,14 +3,26 @@
 This package bundles the MuJoCo MJCF scene files that define each drone configuration and their
 referenced meshes (``assets/``). For the physical params, see [crazyflow.dynamics.load_params][].
 
-Use ``available_drones`` to enumerate the supported configurations.
+Use ``Drone`` to enumerate the supported configurations.
 """
 
-# Currently supported platforms:
-# * **cf2x_L250** — Crazyflie 2.x
-# * **cf2x_P250** — Crazyflie 2.x with plus propellers
-# * **cf2x_T350** — Crazyflie 2.x with thrust upgrade kit
-# * **cf21B_500** — Crazyflie 2.1 Brushless with 500 mAh battery
-available_drones: tuple[str, ...] = ("cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500")
+from enum import StrEnum
+from pathlib import Path
 
-__all__ = ["available_drones"]
+__all__ = ["Drone"]
+
+
+class Drone(StrEnum):
+    """Drone configurations. Each member has an MJCF file ``crazyflow/drones/<name>.xml``."""
+
+    cf21B_500 = "cf21B_500"
+    cf2x_L250 = "cf2x_L250"
+    cf2x_P250 = "cf2x_P250"
+    cf2x_T350 = "cf2x_T350"
+
+
+# Sanity check at startup
+_mjcf_files = {p.stem for p in Path(__file__).parent.glob("*.xml")}
+assert {d.value for d in Drone} == _mjcf_files, (
+    f"Drone enum {sorted(d.value for d in Drone)} does not match MJCF files {sorted(_mjcf_files)}"
+)

@@ -26,6 +26,7 @@ from crazyflow.control.mellinger import (
     control_state2attitude,
 )
 from crazyflow.control.transform import motor_force2rotor_vel
+from crazyflow.drones import Drone
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics import load_params as load_dynamics_params
 from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
@@ -77,7 +78,7 @@ class Sim:
         self,
         n_worlds: int = 1,
         n_drones: int = 1,
-        drone: str = "cf21B_500",
+        drone: Drone = Drone.cf21B_500,
         dynamics: Dynamics = Dynamics.default,
         control: Control = Control.default,
         integrator: Integrator = Integrator.default,
@@ -733,7 +734,7 @@ def clip_floor_pos(data: SimData) -> SimData:
     return data.replace(states=data.states.replace(pos=clip_pos, vel=clip_vel))
 
 
-def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
+def rotor_vel_limits(dynamics: Dynamics, drone: Drone) -> tuple[float, float]:
     """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
     params = load_dynamics_params(dynamics, drone)
     thrust_min, thrust_max = float(params["thrust_min"]), float(params["thrust_max"])
