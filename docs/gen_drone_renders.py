@@ -13,6 +13,13 @@ from pathlib import Path
 
 if sys.platform == "linux":
     os.environ.setdefault("MUJOCO_GL", "egl")
+    # libglvnd only searches /usr/share/glvnd, which does not exist on a minimal CI runner. Append
+    # the Mesa driver of this environment so EGL still finds a (software) device there.
+    _vendors = Path(sys.prefix, "share/glvnd/egl_vendor.d")
+    if _vendors.is_dir():
+        os.environ.setdefault(
+            "__EGL_VENDOR_LIBRARY_DIRS", f"/usr/share/glvnd/egl_vendor.d:{_vendors}"
+        )
 elif sys.platform == "darwin":
     os.environ.setdefault("MUJOCO_GL", "cgl")
 
@@ -81,11 +88,21 @@ else:
         alpha = mask.astype(np.uint8) * 255
         return np.dstack([rgb, alpha])[y0:y1, x0:x1]
 
-    for name in Drone:
+    def gl_available() -> bool:
+        """Check for a usable OpenGL context, so an unusable one is reported only once."""
         try:
-            image = render(name)
+            mujoco.Renderer(mujoco.MjModel.from_xml_string("<mujoco/>"), 4, 4).close()
         except Exception as e:
-            log.warning(f"Could not render drone '{name}': {e!r}")
-            continue
-        with mkdocs_gen_files.open(f"img/drones/{name}.png", "wb") as fd:
-            fd.write(iio.imwrite("<bytes>", image, extension=".png"))
+            log.warning(f"Could not create an OpenGL context, skipping the drone renders: {e!r}")
+            return False
+        return True
+
+    if gl_available():
+        for drone in Drone:
+            try:
+                image = render(drone)
+            except Exception as e:
+                log.warning(f"Could not render drone '{drone}': {e!r}")
+                continue
+            with mkdocs_gen_files.open(f"img/drones/{drone}.png", "wb") as fd:
+                fd.write(iio.imwrite("<bytes>", image, extension=".png"))
