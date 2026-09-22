@@ -1,6 +1,6 @@
 # Adding a drone
 
-A drone is a member of the `Drone` enum in `crazyflow/drones/__init__.py` with a matching MJCF file in `crazyflow/drones`. The package asserts on import that the two agree. A dynamics model or controller supports a drone when its own `params.toml` has a section for it, so adding a platform means adding one enum member, the MJCF file, and parameter sections.
+A drone is a member of the `Drone` enum in `crazyflow/drones/__init__.py` with a matching MJCF file in `crazyflow/drones`. We check on import that the two agree. A dynamics model or controller supports a drone when its own `params.toml` has a section for it, so adding a platform means adding one enum member, the MJCF file, and parameter sections.
 
 ```python
 from crazyflow import Drone
@@ -24,7 +24,7 @@ Each dynamics model has its own `crazyflow/dynamics/<dynamics>/params.toml`. Add
 - `first_principles` additionally needs the hardware constants: arm length, thrust and torque curves and mixing matrix. The remaining keys have to be set but not identified: `rotor_dyn_coef = [1/tau, 0.0, 1/tau, 0.0]` is a symmetric first order rotor model with time constant `tau`, a zero `drag_matrix` disables drag, and a zero `prop_inertia` drops the gyroscopic torque of the propellers.
 - The fitted `so_rpy`, `so_rpy_rotor` and `so_rpy_rotor_drag` models need identified coefficients. Use the [system identification pipeline](dynamics/system-identification.md) to obtain them from flight data.
 
-Gravity is global and lives in `crazyflow/dynamics/params.toml`. A model without a section is simply not offered for that drone. [`supported_dynamics`][crazyflow.dynamics.supported_dynamics] and [`supported_drones`][crazyflow.dynamics.supported_drones] report the available pairs, and `Sim` raises `KeyError` for any other combination.
+Global environment constants like `gravity` are stored in `crazyflow/dynamics/params.toml`. A model without a section is simply not offered for that drone. [`supported_dynamics`][crazyflow.dynamics.supported_dynamics] and [`supported_drones`][crazyflow.dynamics.supported_drones] report the available pairs, and `Sim` raises `KeyError` for any other combination.
 
 ## 3. Controller parameters
 
@@ -36,7 +36,7 @@ Add the platform to the table in [Parametrization](dynamics/parametrize.md#avail
 
 ## 5. Run the tests
 
-The test suite parametrizes over `Drone` and over the supported drone-dynamics pairs, so the new drone is tested without any changes to the tests. In particular, `tests/integration/test_models.py` constructs a `Sim` for every supported pair, which loads the MJCF, the dynamics parameters and the controller parameters together.
+The test suite parametrizes over `Drone` and over the supported drone-dynamics pairs, so the new drone is tested without any changes to the tests.
 
 ```bash
 pixi run -e tests tests

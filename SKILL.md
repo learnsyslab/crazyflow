@@ -51,7 +51,7 @@ Define the function in `dynamics.py` and never in the package `__init__.py`, bec
 binds exactly the keyword-only parameters after the bare `*`, so anything before it is never bound.
 `Drone` in `crazyflow/drones/__init__.py` is a `StrEnum` with one member per MJCF file in
 `crazyflow/drones`, asserted on import. A model supports a drone when its
-`crazyflow/dynamics/<model>/params.toml` has a complete section for it; the commented example at the
+`crazyflow/dynamics/<model>/params.toml` has a section for it. The commented example at the
 top of each file lists the keys. `supported_drones` and `supported_dynamics` report the pairs, and the
 tests only run those. Only `gravity_vec` is global, in `crazyflow/dynamics/params.toml`.
 
