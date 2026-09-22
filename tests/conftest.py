@@ -9,6 +9,9 @@ import jax
 import pytest
 from _pytest.mark import ParameterSet
 
+from crazyflow.drones import Drone
+from crazyflow.dynamics import available_dynamics, supported_drones, supported_dynamics
+
 # The cache dir is per-user. A shared dir like /tmp/jax_cache breaks on multi-user machines, since
 # jax hard-fails on GPU autotune cache writes when another user owns the directory.
 jax.config.update("jax_compilation_cache_dir", f"/tmp/jax_cache-{os.getuid()}")
@@ -48,8 +51,6 @@ skip_if_headless = pytest.mark.skipif(
 
 def drone_dynamics_fns() -> list[ParameterSet]:
     """Return all supported (dynamics, dynamics function, drone) combinations."""
-    from crazyflow.dynamics import available_dynamics, supported_drones
-
     return [
         pytest.param(name, fn, drone, id=f"{drone}-{name}")
         for name, fn in available_dynamics.items()
@@ -59,9 +60,6 @@ def drone_dynamics_fns() -> list[ParameterSet]:
 
 def drone_dynamics() -> list[ParameterSet]:
     """Return all supported (dynamics, drone) combinations."""
-    from crazyflow.drones import Drone
-    from crazyflow.dynamics import supported_dynamics
-
     return [
         pytest.param(dynamics, drone, id=f"{drone}-{dynamics}")
         for drone in Drone

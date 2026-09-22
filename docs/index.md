@@ -98,7 +98,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 </div>
 -->
 
-All drone configurations are bundled with `crazyflow.dynamics`. Available configurations: `cf2x_L250`, `cf2x_P250`, `cf2x_T350`, `cf21B_500`, and any member of `crazyflow.Drone`.
+All available drones are members of `crazyflow.Drone`. See [Available drone configurations](user-guide/dynamics/parametrize.md#available-drone-configurations) for the full list and how to select one.
 
 ---
 
