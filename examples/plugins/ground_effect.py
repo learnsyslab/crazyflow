@@ -9,24 +9,24 @@ os.environ["SCIPY_ARRAY_API"] = "1"
 
 import jax.numpy as jnp
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+from jax.scipy.spatial.transform import Rotation as R
 
+from crazyflow.sim import Sim
 from crazyflow.sim.pipeline import insert_fn_before
 
 if TYPE_CHECKING:
-    from crazyflow.sim import Sim
     from crazyflow.sim.data import SimData
 
 
-# Parameters for cf21B_500. Tune MU for the actual airframe/propeller layout.
+# Parameters for cf21B_500
 PROPELLER_DIAMETER = 55e-3  # m
 MU = 2.0
 MIN_HEIGHT = 0.02  # m; Eq. (15) is not valid arbitrarily close to the floor
 MAX_GAIN = 2.0  # avoid the model's singularity near the floor
 
-# Descend points
+# Descent points
 HOVER_HEIGHTS = np.linspace(0.50, 0.02, 15)
-SETTLE_DURATION = 10.0 # s
+SETTLE_DURATION = 10.0  # s
 SAMPLE_DURATION = 0.2  # s
 
 
@@ -83,7 +83,6 @@ def measure_hover_points(
 
 
 def main(plot: bool = True, render: bool = False) -> None:
-    from crazyflow.sim import Sim
 
     sim = Sim(n_drones=1, drone="cf21B_500", control="state")
 
@@ -93,10 +92,10 @@ def main(plot: bool = True, render: bool = False) -> None:
     sim.data = sim.data.replace(
         states=sim.data.states.replace(pos=jnp.array([[[0.0, 0.0, HOVER_HEIGHTS[0]]]]))
     )
-    try:
-        hover_heights, hover_thrusts = measure_hover_points(sim, HOVER_HEIGHTS, render=render)
-    finally:
-        sim.close()
+
+    hover_heights, hover_thrusts = measure_hover_points(sim, HOVER_HEIGHTS, render=render)
+
+    sim.close()
 
     if plot:
         import matplotlib.pyplot as plt
