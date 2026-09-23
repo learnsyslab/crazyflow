@@ -25,8 +25,8 @@ MIN_HEIGHT = 0.02  # m; Eq. (15) is not valid arbitrarily close to the floor
 MAX_GAIN = 2.0  # avoid the model's singularity near the floor
 
 # Descend points
-HOVER_HEIGHTS = np.linspace(0.50, 0.02, 10)
-SETTLE_DURATION = 4.0 # s
+HOVER_HEIGHTS = np.linspace(0.50, 0.02, 15)
+SETTLE_DURATION = 10.0 # s
 SAMPLE_DURATION = 0.2  # s
 
 
