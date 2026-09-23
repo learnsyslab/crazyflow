@@ -18,9 +18,9 @@ import scipy  # noqa: F401, ensure scipy uses array API features
 
 import crazyflow.envs  # noqa: F401, ensure gymnasium envs are registered
 from crazyflow.control import Control
-from crazyflow.drones import available_drones
+from crazyflow.drones import Drone
 from crazyflow.dynamics import Dynamics
 from crazyflow.sim import Sim
 
-__all__ = ["Sim", "Dynamics", "Control", "available_drones"]
+__all__ = ["Sim", "Dynamics", "Control", "Drone"]
 __version__ = "0.3.2"

@@ -35,7 +35,7 @@ Key constructor arguments:
 |---|---|
 | `n_worlds` | Number of independent parallel environments |
 | `n_drones` | Drones per world |
-| `drone` | Drone configuration (see `crazyflow.available_drones`) |
+| `drone` | Drone configuration (see `crazyflow.Drone`) |
 | `dynamics` | Dynamics |
 | `control` | Control mode |
 | `integrator` | Numerical integrator |

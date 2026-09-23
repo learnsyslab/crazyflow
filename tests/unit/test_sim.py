@@ -767,3 +767,36 @@ def test_full_reset_restores_shared_arrays():
     assert jnp.array_equal(sim.data.params.gravity_vec, default_gravity)
     # The random key is the only thing that does not reset
     assert jnp.array_equal(jax.random.key_data(sim.data.core.rng_key), jax.random.key_data(rng_key))
+
+
+@pytest.mark.unit
+def test_max_geom_pairs_caps_contact_buffer():
+    """Small swarms check all geom pairs, large swarms cap the buffer to stay linear."""
+    sim = Sim(n_drones=32)
+    assert sim.mjx_data._impl.contact.dist.shape[-1] == 32 * 33 // 2
+    sim.close()
+    n_drones = 64
+    sim = Sim(n_drones=n_drones)
+    assert sim.mjx_data._impl.contact.dist.shape[-1] == n_drones + 2 * n_drones  # Drones + floor
+    sim.max_geom_pairs = -1  # applies on the next build
+    sim.build_mjx()
+    assert sim.mjx_data._impl.contact.dist.shape[-1] == n_drones * (n_drones + 1) // 2
+    sim.close()
+
+
+@pytest.mark.unit
+def test_capped_contacts_identify_colliding_drones():
+    """Test that capping the contact buffer still correctly identifies drone collisions by name."""
+    n_drones = 16
+    sim = Sim(n_drones=n_drones)
+    sim.max_geom_pairs = 4
+    sim.build_mjx()
+    sim.reset()
+    pos = np.stack([[i * 2.0, 0.0, 1.0] for i in range(n_drones)])[None]
+    pos[0, 4] = pos[0, 3]  # overlap drones 3 and 4, leave the rest far apart
+    sim.data = sim.data.replace(states=sim.data.states.replace(pos=jnp.array(pos)))
+    sim.step()
+    assert jnp.any(sim.contacts("drone:3")), "Overlapping drones should be in contact"
+    assert jnp.any(sim.contacts("drone:4")), "Overlapping drones should be in contact"
+    assert not jnp.any(sim.contacts("drone:5")), "Distant drones should not be in contact"
+    sim.close()
