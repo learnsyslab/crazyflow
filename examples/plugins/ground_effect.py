@@ -55,10 +55,12 @@ def measure_hover_points(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Hold at each setpoint and return the mean measured height and thrust command."""
     command = np.zeros((sim.n_worlds, sim.n_drones, 16))
-    command[..., 9:13] = [0.0, 0.0, 0.0, 1.0]
+    command[..., 9:13] = R.from_euler("z", 0.0).as_quat()
 
     settle_steps = int(SETTLE_DURATION * sim.control_freq)
     total_steps = settle_steps + int(SAMPLE_DURATION * sim.control_freq)
+    fps = 60
+
     hover_heights, hover_thrusts = [], []
 
     for height in heights:
@@ -74,7 +76,8 @@ def measure_hover_points(
                 # This is the collective force command passed to the motor mixer.
                 thrust_samples.append(float(sim.data.controls.force_torque.cmd[0, 0, 0]))
             if render:
-                sim.render()
+                if ((step * fps) % sim.control_freq) < fps:
+                    sim.render()
 
         hover_heights.append(np.mean(height_samples))
         hover_thrusts.append(np.mean(thrust_samples))
@@ -108,4 +111,4 @@ def main(plot: bool = True, render: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    main(render=False)
+    main(render=True)
