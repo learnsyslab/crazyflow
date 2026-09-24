@@ -28,7 +28,7 @@ N_PROPELLERS = 4
 GRAVITY = 9.81
 
 # This must be fitted for the propeller/downwash setup.
-THRUST_DECAY_COEFFICIENT = 0.05  # s/m
+THRUST_DECAY_COEFFICIENT = 0.07 # s/m
 
 # Far-field fit in Eq. (9) of the Bauersfeld paper.
 BD = 10.11
@@ -63,13 +63,13 @@ def downwash_fn(data: SimData) -> SimData:
     centerline_velocity = u_hover * BD / (s_normalized - S0)
     xi = (r / MOTOR_DISTANCE) / half_width
     u_downwash = centerline_velocity / (1.0 + (jnp.sqrt(2.0) - 1.0) * xi**2) ** 2
-    # u_downwash = jnp.where(s_normalized > 2.5, u_downwash, 0.0)
+
+    # This prevents "negative" downwash
+    u_downwash = jnp.where(s_normalized > 0.1, u_downwash, 0.0)
     u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
 
-    # Eq. (5) in Su et al.: each motor loses a fraction b_v * U_D of its
-    # current thrust.  Clamp this extrapolation so effective thrust is never
-    # negative outside the fitted range.
-    loss_fraction = jnp.clip(THRUST_DECAY_COEFFICIENT * u_downwash, 0.0, 1.0)
+    # Eq. (5) in Su et al.: each motor loses a fraction b_v * U_D of its current thrust
+    loss_fraction = THRUST_DECAY_COEFFICIENT * u_downwash
     rotor_vel = data.states.rotor_vel
     k0, k1, k2 = (
         data.params.rpm2thrust[..., 0],
@@ -109,48 +109,117 @@ def downwash_fn(data: SimData) -> SimData:
     )
     return data.replace(states=states)
 
+def plot_hover_velocity_field(source_positions: np.ndarray, mass: float) -> None:
+    """Plot the far-field downwash-speed magnitude in the y=0 plane."""
+    import matplotlib.pyplot as plt
+
+    x = np.linspace(-0.6, 0.6, 300)
+    z = np.linspace(0.0, 1.15, 300)
+    X, Z = np.meshgrid(x, z)
+
+    # Every grid point lies in the y=0 plane.
+    points = np.stack((X, np.zeros_like(X), Z), axis=-1)
+    u_downwash = np.zeros_like(X)
+
+    u_hover = np.sqrt(
+        mass * GRAVITY
+        / (2.0 * AIR_DENSITY * np.pi * PROPELLER_RADIUS**2 * N_PROPELLERS)
+    )
+
+    for source_pos in source_positions:
+        source_to_point = source_pos - points
+        s = source_to_point[..., 2]
+        r = np.linalg.vector_norm(source_to_point[..., :2], axis=-1)
+        s_normalized = s / MOTOR_DISTANCE
+
+        q = np.maximum(s_normalized - S0, 1e-6)
+        half_width = S * q
+        centerline_velocity = u_hover * BD / q
+        xi = (r / MOTOR_DISTANCE) / half_width
+
+        velocity = centerline_velocity / (1.0 + (np.sqrt(2.0) - 1.0) * xi**2) ** 2
+        u_downwash += velocity
+
+    fig, ax = plt.subplots()
+    image = ax.pcolormesh(X, Z, u_downwash, shading="auto", cmap="viridis")
+    ax.scatter(source_positions[:, 0], source_positions[:, 2], color="red", label="source drone")
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("z (m)")
+    ax.set_title("Hovering-drone downwash speed")
+    ax.legend()
+    fig.colorbar(image, ax=ax, label="downward airspeed $U_D$ (m/s)")
+    plt.show()
+
 
 def main(plot: bool = True) -> None:
-    """Hover drone 0 while drone 1 flies straight through its downwash."""
+    """Hover drone 0 while drone 1 makes two downwash passes at different heights."""
     sim = Sim(n_drones=2, drone="cf21B_500", control="state")
 
     insert_fn_before(sim.step_pipeline, "integration", downwash_fn)
     sim.build_step_fn()
 
-    upper_pos = np.array([0.0, 0.0, 1.0])
-    lower_start = np.array([-0.5, 0.0, 0.5])
+    upper_pos = np.array([0.0, 0.0, 1.2])
+    outbound_height = 0.5
+    return_height = 0.95
+    lower_start = np.array([-0.5, 0.0, outbound_height])
+
     sim.data = sim.data.replace(
         states=sim.data.states.replace(pos=jnp.array([[upper_pos, lower_start]]))
     )
     sim.build_default_data()
 
-    duration = 6.0
-    speed = 1.0 / duration
     command = np.zeros((1, 2, 16))
-    command[..., 9:13] = [0.0, 0.0, 0.0, 1.0]  # level quaternion (xyzw)
+    command[..., 9:13] = [0.0, 0.0, 0.0, 1.0] 
     command[0, 0, :3] = upper_pos
+
+    waypoints = np.concatenate(
+        (
+            np.linspace(
+                lower_start,
+                [0.5, 0.0, outbound_height],
+                3 * sim.control_freq,
+                endpoint=False,
+            ),
+            np.linspace(
+                [0.5, 0.0, outbound_height],
+                [0.5, 0.0, return_height],
+                sim.control_freq,
+                endpoint=False,
+            ),
+            np.linspace(
+                [0.5, 0.0, return_height],
+                [-0.5, 0.0, return_height],
+                3 * sim.control_freq,
+            ),
+        )
+    )
+
     z_positions = []
     downwash_force_z = []
     downwash_pitch_torque = []
 
-    for step in range(int(duration * sim.control_freq)):
-        t = step / sim.control_freq
-        command[0, 1, :3] = [-0.5 + speed * t, 0.0, 0.5]
-        command[0, 1, 3:6] = [speed, 0.0, 0.0]
+    for position in waypoints:
+        command[0, 1, :3] = position
+        command[0, 1, 3:6] = 0.0  # Position-only setpoints.
+
         sim.state_control(command)
         sim.step(sim.freq // sim.control_freq)
+
         z_positions.append(np.asarray(sim.data.states.pos[0, :, 2]))
         downwash_force_z.append(np.asarray(sim.data.states.force[0, 1, 2]))
         downwash_pitch_torque.append(np.asarray(sim.data.states.torque[0, 1, 1]))
         sim.render()
 
     sim.close()
+
     if plot:
         import matplotlib.pyplot as plt
 
-        t = np.arange(len(z_positions)) / sim.control_freq
+        t = np.arange(len(waypoints)) / sim.control_freq
         z_positions = np.asarray(z_positions)
+
         fig, axes = plt.subplots(3, 1, sharex=True)
+
         axes[0].plot(t, z_positions[:, 0], label="upper drone")
         axes[0].plot(t, z_positions[:, 1], label="lower drone")
         axes[0].set_ylabel("z position (m)")
@@ -161,9 +230,18 @@ def main(plot: bool = True) -> None:
         axes[1].legend()
 
         axes[2].plot(t, downwash_pitch_torque, label="lower drone")
-        axes[2].set_xlabel("Time (s)")
+        axes[2].set_xlabel("time (s)")
         axes[2].set_ylabel("downwash pitch torque y (Nm)")
         axes[2].legend()
+
+        for axis in axes:
+            axis.axvline(3.0, color="black", linestyle="--", alpha=0.5)
+            axis.axvline(4.0, color="black", linestyle="--", alpha=0.5)
+
+        plot_hover_velocity_field(
+            np.asarray([upper_pos]),
+            float(sim.data.params.mass[0]),
+        )
         plt.show()
 
 
