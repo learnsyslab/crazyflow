@@ -14,6 +14,7 @@ from jax import Array
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.control import Control
+from crazyflow.dynamics import supported_dynamics
 from crazyflow.exception import ConfigError
 from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
@@ -738,9 +739,10 @@ def test_build_data(control: Control):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
+@pytest.mark.parametrize("drone", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500", "hb_x500"])
 def test_fused_model(device: str, drone: str):
-    sim = Sim(drone=drone, fused_mjx_model=True, device=device)
+    dynamics = supported_dynamics(drone)[0]  # Test for all drones, but on one available dynamics
+    sim = Sim(drone=drone, dynamics=dynamics, fused_mjx_model=True, device=device)
     sim.reset()
     sim.step(1)
     sim.close()
