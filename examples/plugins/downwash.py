@@ -1,7 +1,7 @@
 """Minimal far-field downwash external-wrench plugin.
 
 This models the downwash of identical Crazyflies using the far-field jet from
-[1] and the thrust-decay model of [2]. 
+[1] and the thrust-decay model of [2].
 
 [1] Bauersfeld et al. https://arxiv.org/abs/2403.13321
 [2] Su et al. https://arxiv.org/abs/2207.09645
@@ -41,24 +41,22 @@ def downwash_fn(data: SimData) -> SimData:
     The source flow originates at each drone centre, while the field is sampled
     at every target rotor in the source's body frame.
     """
-    rotation = R.from_quat(data.states.quat)
+    R_body_to_world = R.from_quat(data.states.quat)
+
     mixing_matrix = data.params.mixing_matrix
 
     offsets = data.params.L * jnp.stack(
-        [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], 
-        axis=0
+        [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], axis=0
     )
-    rotor_offsets_body = offsets.T
-    rotor_offsets_world = jnp.swapaxes(rotation.as_matrix() @ rotor_offsets_body.T, -1, -2)
+    rotor_offsets_world = (R_body_to_world.as_matrix() @ offsets).mT
     rotor_positions = data.states.pos[..., None, :] + rotor_offsets_world
 
     # Axis 1 indexes the source drone, axis 2 the target, and axis 3 its rotor.
     source_to_target = data.states.pos[:, :, None, None, :] - rotor_positions[:, None, :, :, :]
-    # Rotate the source-minus-target displacement into each source's frame.
-    world_to_body = rotation.as_matrix().mT
+
     # Broadcast each source rotation across all target drones and rotors.
     source_to_target_body = (
-        world_to_body[:, :, None, None, :, :] @ source_to_target[..., None]
+        R_body_to_world.as_matrix().mT[:, :, None, None, :, :] @ source_to_target[..., None]
     )[..., 0]
     s = source_to_target_body[..., 2]
     r = jnp.linalg.vector_norm(source_to_target_body[..., :2], axis=-1)
@@ -106,12 +104,10 @@ def downwash_fn(data: SimData) -> SimData:
     force_body = jnp.stack((zeros, zeros, total_thrust_delta), axis=-1)
 
     lever = jnp.array([1.0, 1.0, 0.0])
-    torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[
-        ..., 0
-    ] * lever
+    torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[..., 0] * lever
 
     states = data.states.replace(
-        force=rotation.apply(force_body), torque=rotation.apply(torque_body)
+        force=R_body_to_world.apply(force_body), torque=R_body_to_world.apply(torque_body)
     )
     return data.replace(states=states)
 
