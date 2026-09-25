@@ -1,8 +1,10 @@
 """Minimal far-field downwash external-wrench plugin.
 
-This models the downwash of level, hovering, identical Crazyflies using the
-far-field jet from Bauersfeld et al. (arXiv:2403.13321) and the thrust-decay
-model of Su et al. (arXiv:2207.09645).
+This models the downwash of identical Crazyflies using the far-field jet from
+[1] and the thrust-decay model of [2]. 
+
+[1] Bauersfeld et al. https://arxiv.org/abs/2403.13321
+[2] Su et al. https://arxiv.org/abs/2207.09645
 """
 
 from __future__ import annotations
@@ -13,7 +15,6 @@ import jax.numpy as jnp
 import numpy as np
 from jax.scipy.spatial.transform import Rotation as R
 
-from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim import Sim
 from crazyflow.sim.pipeline import insert_fn_before
 
@@ -23,14 +24,12 @@ if TYPE_CHECKING:
 # Physical parameters for the cf21B_500
 AIR_DENSITY = 1.225  # kg/m^3
 PROPELLER_RADIUS = 27.5e-3  # m
-MOTOR_DISTANCE = 0.035355 * 2  # m, distance between opposite motors
-N_PROPELLERS = 4
-GRAVITY = 9.81
+MOTOR_DISTANCE = 0.1  # m, distance between opposite motors
 
 # This must be fitted for the propeller/downwash setup.
-THRUST_DECAY_COEFFICIENT = 0.07 # s/m
+THRUST_DECAY_COEFFICIENT = 0.07  # s/m
 
-# Far-field fit in Eq. (9) of the Bauersfeld paper.
+# Far-field fit in Eq. (9) of [1]
 BD = 10.11
 S = 0.07668
 S0 = -5.817
@@ -40,35 +39,57 @@ def downwash_fn(data: SimData) -> SimData:
     """Apply downwash-induced thrust loss as a world-frame external wrench.
 
     The source flow originates at each drone centre, while the field is sampled
-    at every target rotor.
+    at every target rotor in the source's body frame.
     """
     rotation = R.from_quat(data.states.quat)
-    rotor_offsets = data.params.L * jnp.array(
-        [[1.0, -1.0, 0.0], [-1.0, -1.0, 0.0], [-1.0, 1.0, 0.0], [1.0, 1.0, 0.0]]
+    mixing_matrix = data.params.mixing_matrix
+
+    offsets = data.params.L * jnp.stack(
+        [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], 
+        axis=0
     )
-    rotor_offsets_world = jnp.swapaxes(rotation.as_matrix() @ rotor_offsets.T, -1, -2)
+    rotor_offsets_body = offsets.T
+    rotor_offsets_world = jnp.swapaxes(rotation.as_matrix() @ rotor_offsets_body.T, -1, -2)
     rotor_positions = data.states.pos[..., None, :] + rotor_offsets_world
 
     # Axis 1 indexes the source drone, axis 2 the target, and axis 3 its rotor.
     source_to_target = data.states.pos[:, :, None, None, :] - rotor_positions[:, None, :, :, :]
-    s = source_to_target[..., 2]  # Positive only for targets below a source.
-    r = jnp.linalg.vector_norm(source_to_target[..., :2], axis=-1)
+    # Rotate the source-minus-target displacement into each source's frame.
+    world_to_body = rotation.as_matrix().mT
+    # Broadcast each source rotation across all target drones and rotors.
+    source_to_target_body = (
+        world_to_body[:, :, None, None, :, :] @ source_to_target[..., None]
+    )[..., 0]
+    s = source_to_target_body[..., 2]
+    r = jnp.linalg.vector_norm(source_to_target_body[..., :2], axis=-1)
+
+    # Normalization according to [1] Eq. (8)
     s_normalized = s / MOTOR_DISTANCE
+    r_normalized = r / MOTOR_DISTANCE
 
     mass = data.params.mass[0]
+    gravity = -data.params.gravity_vec[2]
+    n_propellers = mixing_matrix.shape[-1]
+
     u_hover = jnp.sqrt(
-        mass * GRAVITY / (2.0 * AIR_DENSITY * jnp.pi * PROPELLER_RADIUS**2 * N_PROPELLERS)
-    )
-    half_width = S * (s_normalized - S0)
-    centerline_velocity = u_hover * BD / (s_normalized - S0)
-    xi = (r / MOTOR_DISTANCE) / half_width
-    u_downwash = centerline_velocity / (1.0 + (jnp.sqrt(2.0) - 1.0) * xi**2) ** 2
+        mass * gravity / (2.0 * AIR_DENSITY * jnp.pi * PROPELLER_RADIUS**2 * n_propellers)
+    )  # [1] Eq. (1)
+
+    # Keep the fit finite upstream, where its contribution is masked below.
+    axial_distance = jnp.maximum(s_normalized - S0, 1e-6)
+    half_width = S * axial_distance  # [1] Eq. (6)
+
+    centerline_velocity = u_hover * BD / axial_distance  # [1] Eq. (2)
+
+    xi = (r_normalized) / half_width  # [1] Eq. (4)
+
+    u_downwash = centerline_velocity / (1.0 + (jnp.sqrt(2.0) - 1.0) * xi**2) ** 2  # [1] Eq. (3)
 
     # This prevents "negative" downwash
     u_downwash = jnp.where(s_normalized > 0.1, u_downwash, 0.0)
     u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
 
-    # Eq. (5) in Su et al.: each motor loses a fraction b_v * U_D of its current thrust
+    # [2] Eq. (5): each motor loses a fraction b_v * U_D of its current thrust
     loss_fraction = THRUST_DECAY_COEFFICIENT * u_downwash
     rotor_vel = data.states.rotor_vel
     k0, k1, k2 = (
@@ -79,37 +100,23 @@ def downwash_fn(data: SimData) -> SimData:
     motor_thrust = k0 + k1 * rotor_vel + k2 * rotor_vel**2
     thrust_delta = -loss_fraction * motor_thrust
 
-    # Map the per-motor force changes to a body-frame wrench, as in Eq. (7).
+    # Map the per-motor force changes to a body-frame wrench, as in [2] Eq. (7).
     total_thrust_delta = jnp.sum(thrust_delta, axis=-1)
     zeros = jnp.zeros_like(total_thrust_delta)
     force_body = jnp.stack((zeros, zeros, total_thrust_delta), axis=-1)
 
     lever = jnp.array([1.0, 1.0, 0.0])
-    torque_body = (data.params.mixing_matrix @ (thrust_delta * data.params.L)[..., None])[
+    torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[
         ..., 0
     ] * lever
-
-    # Account for the corresponding reaction-torque change about body z.
-    effective_motor_thrust = jnp.maximum(motor_thrust + thrust_delta, 0.0)
-    effective_rotor_vel = motor_force2rotor_vel(effective_motor_thrust, data.params.rpm2thrust)
-    c0, c1, c2 = (
-        data.params.rpm2torque[..., 0],
-        data.params.rpm2torque[..., 1],
-        data.params.rpm2torque[..., 2],
-    )
-    motor_torque = c0 + c1 * rotor_vel + c2 * rotor_vel**2
-    effective_motor_torque = c0 + c1 * effective_rotor_vel + c2 * effective_rotor_vel**2
-    reaction_torque_delta = effective_motor_torque - motor_torque
-    torque_body = torque_body + (data.params.mixing_matrix @ reaction_torque_delta[..., None])[
-        ..., 0
-    ] * jnp.array([0.0, 0.0, 1.0])
 
     states = data.states.replace(
         force=rotation.apply(force_body), torque=rotation.apply(torque_body)
     )
     return data.replace(states=states)
 
-def plot_hover_velocity_field(source_positions: np.ndarray, mass: float) -> None:
+
+def plot_hover_velocity_field(source_positions: np.ndarray, data: SimData) -> None:
     """Plot the far-field downwash-speed magnitude in the y=0 plane."""
     import matplotlib.pyplot as plt
 
@@ -121,9 +128,12 @@ def plot_hover_velocity_field(source_positions: np.ndarray, mass: float) -> None
     points = np.stack((X, np.zeros_like(X), Z), axis=-1)
     u_downwash = np.zeros_like(X)
 
+    gravity = -data.params.gravity_vec[2]
+    n_propellers = data.params.mixing_matrix.shape[-1]
+    mass = data.params.mass[0]
+
     u_hover = np.sqrt(
-        mass * GRAVITY
-        / (2.0 * AIR_DENSITY * np.pi * PROPELLER_RADIUS**2 * N_PROPELLERS)
+        mass * gravity / (2.0 * AIR_DENSITY * np.pi * PROPELLER_RADIUS**2 * n_propellers)
     )
 
     for source_pos in source_positions:
@@ -169,16 +179,13 @@ def main(plot: bool = True) -> None:
     sim.build_default_data()
 
     command = np.zeros((1, 2, 16))
-    command[..., 9:13] = [0.0, 0.0, 0.0, 1.0] 
+    command[..., 9:13] = R.from_euler("z", 0).as_quat()
     command[0, 0, :3] = upper_pos
 
     waypoints = np.concatenate(
         (
             np.linspace(
-                lower_start,
-                [0.5, 0.0, outbound_height],
-                3 * sim.control_freq,
-                endpoint=False,
+                lower_start, [0.5, 0.0, outbound_height], 3 * sim.control_freq, endpoint=False
             ),
             np.linspace(
                 [0.5, 0.0, outbound_height],
@@ -187,9 +194,7 @@ def main(plot: bool = True) -> None:
                 endpoint=False,
             ),
             np.linspace(
-                [0.5, 0.0, return_height],
-                [-0.5, 0.0, return_height],
-                3 * sim.control_freq,
+                [0.5, 0.0, return_height], [-0.5, 0.0, return_height], 3 * sim.control_freq
             ),
         )
     )
@@ -200,7 +205,6 @@ def main(plot: bool = True) -> None:
 
     for position in waypoints:
         command[0, 1, :3] = position
-        command[0, 1, 3:6] = 0.0  # Position-only setpoints.
 
         sim.state_control(command)
         sim.step(sim.freq // sim.control_freq)
@@ -238,10 +242,7 @@ def main(plot: bool = True) -> None:
             axis.axvline(3.0, color="black", linestyle="--", alpha=0.5)
             axis.axvline(4.0, color="black", linestyle="--", alpha=0.5)
 
-        plot_hover_velocity_field(
-            np.asarray([upper_pos]),
-            float(sim.data.params.mass[0]),
-        )
+        plot_hover_velocity_field(np.asarray([upper_pos]), sim.data)
         plt.show()
 
 
