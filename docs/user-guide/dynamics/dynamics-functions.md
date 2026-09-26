@@ -60,8 +60,8 @@ from crazyflow.dynamics.so_rpy_rotor_drag import dynamics
 dynamics = parametrize(dynamics, drone="cf2x_L250")
 
 # Reuses pos, quat, vel, ang_vel from above; the command interface is what differs
-cmd = np.array([0.0, 0.0, 0.0, 0.31])  # [roll_rad, pitch_rad, yaw_rad, thrust_N]
-rotor_vel = np.full(4, 0.31)  # shape (4,) — thrust state [N]; None to skip thrust dynamics
+cmd = np.array([0.0, 0.0, 0.0, 0.32])  # [roll_rad, pitch_rad, yaw_rad, thrust_N]
+rotor_vel = np.full(4, 0.32)  # shape (4,) — thrust state [N]; None to skip thrust dynamics
 
 pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot = dynamics(
     pos, quat, vel, ang_vel, cmd, rotor_vel
