@@ -88,7 +88,7 @@ rotor_vel = np.zeros(4)
 cmd = np.zeros(4)
 
 # Simulate with a 10 g payload for this call only — dynamics.keywords is not modified.
-pos_dot, *_ = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel, mass=0.0419)
+pos_dot, *_ = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel, mass=0.0428)
 ```
 
 This becomes particularly useful for domain randomization: instead of baking randomized parameters into the partial, you can pass a batch of them as call-time arguments and keep the step function JIT-compiled across parameter changes. See [Batching & domain randomization](batching.md) for the full pattern.
@@ -130,7 +130,7 @@ If you need the parameter values directly, for example, to pass them to [`symbol
 from crazyflow.dynamics import Dynamics, load_fn_params, load_params
 
 params = load_fn_params(dynamics, "cf2x_L250")
-params["mass"]  # 0.0319
+params["mass"]  # 0.0328
 params["J_inv"]  # array([...])
 
 params = load_params(Dynamics.first_principles, "cf2x_L250")
