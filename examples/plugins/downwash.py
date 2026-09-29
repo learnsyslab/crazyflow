@@ -41,23 +41,23 @@ def downwash_fn(data: SimData) -> SimData:
     The source flow originates at each drone centre, while the field is sampled
     at every target rotor in the source's body frame.
     """
-    R_body_to_world = R.from_quat(data.states.quat)
+    R_world_to_body = R.from_quat(data.states.quat)
 
     mixing_matrix = data.params.mixing_matrix
 
     offsets = data.params.L * jnp.stack(
-        [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], axis=0
+        [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], axis=-1
     )
-    rotor_offsets_world = (R_body_to_world.as_matrix() @ offsets).mT
+    rotor_offsets_world = R.from_quat(data.states.quat[..., None, :]).apply(offsets)
     rotor_positions = data.states.pos[..., None, :] + rotor_offsets_world
 
     # Axis 1 indexes the source drone, axis 2 the target, and axis 3 its rotor.
     source_to_target = data.states.pos[:, :, None, None, :] - rotor_positions[:, None, :, :, :]
 
     # Broadcast each source rotation across all target drones and rotors.
-    source_to_target_body = (
-        R_body_to_world.as_matrix().mT[:, :, None, None, :, :] @ source_to_target[..., None]
-    )[..., 0]
+    source_to_target_body = R.from_quat(data.states.quat[..., None, None, :]).apply(
+        source_to_target, inverse=True
+    )
     s = source_to_target_body[..., 2]
     r = jnp.linalg.vector_norm(source_to_target_body[..., :2], axis=-1)
 
@@ -107,7 +107,7 @@ def downwash_fn(data: SimData) -> SimData:
     torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[..., 0] * lever
 
     states = data.states.replace(
-        force=R_body_to_world.apply(force_body), torque=R_body_to_world.apply(torque_body)
+        force=R_world_to_body.apply(force_body), torque=R_world_to_body.apply(torque_body)
     )
     return data.replace(states=states)
 
