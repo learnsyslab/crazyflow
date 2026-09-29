@@ -258,10 +258,6 @@ def main(plot: bool = True) -> None:
         axes[2].set_ylabel("downwash pitch torque y (Nm)")
         axes[2].legend()
 
-        for axis in axes:
-            axis.axvline(3.0, color="black", linestyle="--", alpha=0.5)
-            axis.axvline(4.0, color="black", linestyle="--", alpha=0.5)
-
         plot_hover_velocity_field(np.asarray([upper_pos]), sim.data)
         plt.show()
 
