@@ -39,7 +39,7 @@ def downwash_fn(data: SimData) -> SimData:
     """Apply downwash-induced thrust loss as a world-frame external wrench.
 
     The source flow originates at each drone centre, while the field is sampled
-    at every target rotor in the source's body frame.
+    at every target rotor and CoM in the source's body frame.
     """
     R_world_to_body = R.from_quat(data.states.quat)
 
@@ -52,10 +52,12 @@ def downwash_fn(data: SimData) -> SimData:
     rotor_offsets_world = R.from_quat(data.states.quat[..., None, :]).apply(offsets)
     rotor_positions = data.states.pos[..., None, :] + rotor_offsets_world
 
-    # Axis 1 indexes the source drone, axis 2 the target, and axis 3 its rotor.
-    source_to_target = data.states.pos[:, :, None, None, :] - rotor_positions[:, None, :, :, :]
+    sample_positions = jnp.concatenate([rotor_positions, data.states.pos[..., None, :]], axis=2)
 
-    # Broadcast each source rotation across all target drones and rotors.
+    # Axis 1 indexes the source, axis 2 the target, and axis 3 its rotors then CoM.
+    source_to_target = data.states.pos[:, :, None, None, :] - sample_positions[:, None, :, :, :]
+
+    # Broadcast each source rotation across all target drones and sampling points.
     source_to_target_body = R.from_quat(data.states.quat[..., None, None, :]).apply(
         source_to_target, inverse=True
     )
@@ -87,17 +89,15 @@ def downwash_fn(data: SimData) -> SimData:
     # This prevents "negative" downwash
     u_downwash = jnp.where(s_normalized > 0.1, u_downwash, 0.0)
 
-    # Account for inclination between target drone and source field
     z_axes = R_world_to_body.as_matrix()[..., :, 2]
-    cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
 
-    # Wind at each target rotor summed over sources
-    rotor_wind_world = jnp.sum(-u_downwash[..., None] * z_axes[:, :, None, None, :], axis=1)
-
-    # Rotor-averaged wind representing the flow at the target CoM.
-    wind_com_world = jnp.mean(rotor_wind_world, axis=2)
+    # The final sample is the CoM; each source's wind follows its negative z-axis.
+    wind_com_world = jnp.sum(-u_downwash[..., -1, None] * z_axes[:, :, None, :], axis=1)
     wind_com_body = R_world_to_body.apply(wind_com_world, inverse=True)
 
+    # Project only the rotor samples onto the target axis for thrust loss.
+    u_downwash = u_downwash[..., :-1]
+    cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
     u_downwash = u_downwash * cos_theta[..., None]
     u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
 
@@ -114,10 +114,6 @@ def downwash_fn(data: SimData) -> SimData:
 
     # Map the per-motor force changes to a body-frame wrench, as in [2] Eq. (7).
     total_thrust_delta = jnp.sum(thrust_delta, axis=-1)
-
-    # Account for inclination between target drone and source field
-    z_axes = R_world_to_body.as_matrix()[..., :, 2]
-    cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
 
     zeros = jnp.zeros_like(total_thrust_delta)
     force_body = jnp.stack((zeros, zeros, total_thrust_delta), axis=-1)
