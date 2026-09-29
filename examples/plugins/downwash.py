@@ -44,6 +44,7 @@ def downwash_fn(data: SimData) -> SimData:
     R_world_to_body = R.from_quat(data.states.quat)
 
     mixing_matrix = data.params.mixing_matrix
+    drag_matrix = data.params.drag_matrix
 
     offsets = data.params.L * jnp.stack(
         [-mixing_matrix[1], mixing_matrix[0], jnp.zeros_like(mixing_matrix[0])], axis=-1
@@ -89,6 +90,14 @@ def downwash_fn(data: SimData) -> SimData:
     # Account for inclination between target drone and source field
     z_axes = R_world_to_body.as_matrix()[..., :, 2]
     cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
+
+    # Wind at each target rotor summed over sources
+    rotor_wind_world = jnp.sum(-u_downwash[..., None] * z_axes[:, :, None, None, :], axis=1)
+
+    # Rotor-averaged wind representing the flow at the target CoM.
+    wind_com_world = jnp.mean(rotor_wind_world, axis=2)
+    wind_com_body = R_world_to_body.apply(wind_com_world, inverse=True)
+
     u_downwash = u_downwash * cos_theta[..., None]
     u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
 
@@ -112,6 +121,10 @@ def downwash_fn(data: SimData) -> SimData:
 
     zeros = jnp.zeros_like(total_thrust_delta)
     force_body = jnp.stack((zeros, zeros, total_thrust_delta), axis=-1)
+
+    # Compute drag induced through downwash
+    drag_body = (-drag_matrix @ wind_com_body[..., None])[..., 0]
+    force_body += drag_body
 
     lever = jnp.array([1.0, 1.0, 0.0])
     torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[..., 0] * lever
