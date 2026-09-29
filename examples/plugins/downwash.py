@@ -85,6 +85,11 @@ def downwash_fn(data: SimData) -> SimData:
 
     # This prevents "negative" downwash
     u_downwash = jnp.where(s_normalized > 0.1, u_downwash, 0.0)
+
+    # Account for inclination between target drone and source field
+    z_axes = R_world_to_body.as_matrix()[..., :, 2]
+    cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
+    u_downwash = u_downwash * cos_theta[..., None]
     u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
 
     # [2] Eq. (5): each motor loses a fraction b_v * U_D of its current thrust
@@ -100,6 +105,11 @@ def downwash_fn(data: SimData) -> SimData:
 
     # Map the per-motor force changes to a body-frame wrench, as in [2] Eq. (7).
     total_thrust_delta = jnp.sum(thrust_delta, axis=-1)
+
+    # Account for inclination between target drone and source field
+    z_axes = R_world_to_body.as_matrix()[..., :, 2]
+    cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
+
     zeros = jnp.zeros_like(total_thrust_delta)
     force_body = jnp.stack((zeros, zeros, total_thrust_delta), axis=-1)
 
@@ -181,16 +191,17 @@ def main(plot: bool = True) -> None:
     waypoints = np.concatenate(
         (
             np.linspace(
-                lower_start, [0.5, 0.0, outbound_height], 3 * sim.control_freq, endpoint=False
+                lower_start, [0.3, 0.0, outbound_height], 3 * sim.control_freq, endpoint=False
             ),
+            np.tile([0.3, 0.0, outbound_height], (2 * sim.control_freq, 1)),
+            np.linspace([0.3, 0.0, outbound_height], lower_start, int(0.5 * sim.control_freq)),
+            np.tile(lower_start, (2 * sim.control_freq, 1)),
+            np.linspace(lower_start, [-0.5, 0.0, return_height], sim.control_freq, endpoint=False),
             np.linspace(
-                [0.5, 0.0, outbound_height],
+                [-0.5, 0.0, return_height],
                 [0.5, 0.0, return_height],
-                sim.control_freq,
+                3 * sim.control_freq,
                 endpoint=False,
-            ),
-            np.linspace(
-                [0.5, 0.0, return_height], [-0.5, 0.0, return_height], 3 * sim.control_freq
             ),
         )
     )
