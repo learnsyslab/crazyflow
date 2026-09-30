@@ -237,6 +237,8 @@ sim.step()
 
 See the [disturbance injection example](../examples/index.md#disturbance-injection) for a full run comparing disturbed and undisturbed trajectories.
 
+The [downwash example](../examples/index.md#downwash) uses the same insertion point to model interactions between drones. It samples a far-field flow model at each drone's rotors and center of mass, then applies thrust loss and drag through the external force and torque fields.
+
 
 ## Next steps
 

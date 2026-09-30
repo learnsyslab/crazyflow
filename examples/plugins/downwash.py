@@ -166,14 +166,17 @@ def plot_hover_velocity_field(source_positions: np.ndarray, data: SimData) -> No
         velocity = centerline_velocity / (1.0 + (np.sqrt(2.0) - 1.0) * xi**2) ** 2
         u_downwash += velocity
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 4.5), layout="constrained")
     image = ax.pcolormesh(X, Z, u_downwash, shading="auto", cmap="viridis")
     ax.scatter(source_positions[:, 0], source_positions[:, 2], color="red", label="source drone")
-    ax.set_xlabel("x (m)")
-    ax.set_ylabel("z (m)")
-    ax.set_title("Hovering-drone downwash speed")
+    ax.set_xlabel("x (m)", fontsize=14)
+    ax.set_ylabel("z (m)", fontsize=14)
+    ax.tick_params(axis="both", labelsize=12)
+    ax.set_title("Hovering-drone downwash speed", fontsize=14)
     ax.legend()
-    fig.colorbar(image, ax=ax, label="downward airspeed $U_D$ (m/s)")
+    colorbar = fig.colorbar(image, ax=ax, pad=0.02)
+    colorbar.set_label("downward airspeed $U_D$ (m/s)", fontsize=14)
+    colorbar.ax.tick_params(labelsize=12)
     plt.show()
 
 
