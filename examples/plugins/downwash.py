@@ -19,6 +19,8 @@ from crazyflow.sim import Sim
 from crazyflow.sim.pipeline import insert_fn_before
 
 if TYPE_CHECKING:
+    from jax import Array
+
     from crazyflow.sim.data import SimData
 
 # Physical parameters for the cf21B_500
@@ -35,13 +37,34 @@ S = 0.07668
 S0 = -5.817
 
 
+def downwash_speed(s: Array, r: Array, u_hover: Array) -> Array:
+    """Return downwash speed at axial and radial distances in metres.
+
+    Positive s points downstream along the source drone's negative body z-axis.
+    Inputs broadcast to the sampling grid; the returned speeds are in m/s.
+    """
+    # Normalization according to [1] Eq. (8).
+    s_normalized = s / MOTOR_DISTANCE
+    r_normalized = r / MOTOR_DISTANCE
+
+    # Keep the fit finite upstream, where its contribution is masked below.
+    axial_distance = jnp.maximum(s_normalized - S0, 1e-6)
+    half_width = S * axial_distance  # [1] Eq. (6)
+    centerline_speed = u_hover * BD / axial_distance  # [1] Eq. (2)
+    radial_ratio = r_normalized / half_width  # [1] Eq. (4)
+
+    # [1] Eq. (3).
+    speed = centerline_speed / (1.0 + (jnp.sqrt(2.0) - 1.0) * radial_ratio**2) ** 2
+    return jnp.where(s_normalized > 0.1, speed, 0.0)
+
+
 def downwash_fn(data: SimData) -> SimData:
     """Apply downwash-induced thrust loss and drag as a world-frame external wrench.
 
     The source flow originates at each drone centre, while the field is sampled
     at every target rotor and CoM in the source's body frame.
     """
-    R_world_to_body = R.from_quat(data.states.quat)
+    body_to_world = R.from_quat(data.states.quat)
 
     mixing_matrix = data.params.mixing_matrix
     drag_matrix = data.params.drag_matrix
@@ -64,10 +87,6 @@ def downwash_fn(data: SimData) -> SimData:
     s = source_to_target_body[..., 2]
     r = jnp.linalg.vector_norm(source_to_target_body[..., :2], axis=-1)
 
-    # Normalization according to [1] Eq. (8)
-    s_normalized = s / MOTOR_DISTANCE
-    r_normalized = r / MOTOR_DISTANCE
-
     mass = data.params.mass[0]
     gravity = -data.params.gravity_vec[2]
     n_propellers = mixing_matrix.shape[-1]
@@ -76,33 +95,22 @@ def downwash_fn(data: SimData) -> SimData:
         mass * gravity / (2.0 * AIR_DENSITY * jnp.pi * PROPELLER_RADIUS**2 * n_propellers)
     )  # [1] Eq. (1)
 
-    # Keep the fit finite upstream, where its contribution is masked below.
-    axial_distance = jnp.maximum(s_normalized - S0, 1e-6)
-    half_width = S * axial_distance  # [1] Eq. (6)
+    # Shape: (world, source, target, sample), with rotors followed by the CoM.
+    sample_speed = downwash_speed(s, r, u_hover)
 
-    centerline_velocity = u_hover * BD / axial_distance  # [1] Eq. (2)
-
-    xi = (r_normalized) / half_width  # [1] Eq. (4)
-
-    u_downwash = centerline_velocity / (1.0 + (jnp.sqrt(2.0) - 1.0) * xi**2) ** 2  # [1] Eq. (3)
-
-    # This prevents "negative" downwash
-    u_downwash = jnp.where(s_normalized > 0.1, u_downwash, 0.0)
-
-    z_axes = R_world_to_body.as_matrix()[..., 2]
+    z_axes = body_to_world.as_matrix()[..., 2]
 
     # The final sample is the CoM; each source's wind follows its negative z-axis.
-    wind_com_world = jnp.sum(-u_downwash[..., -1, None] * z_axes[:, :, None, :], axis=1)
-    wind_com_body = R_world_to_body.apply(wind_com_world, inverse=True)
+    wind_com_world = jnp.sum(-sample_speed[..., -1, None] * z_axes[:, :, None, :], axis=1)
+    wind_com_body = body_to_world.apply(wind_com_world, inverse=True)
 
     # Project only the rotor samples onto the target axis for thrust loss.
-    u_downwash = u_downwash[..., :-1]
     cos_theta = jnp.sum(z_axes[:, :, None, :] * z_axes[:, None, :, :], axis=-1)
-    u_downwash = u_downwash * cos_theta[..., None]
-    u_downwash = jnp.sum(u_downwash, axis=1)  # Sum all sources at each target rotor.
+    # Sum all sources at each target rotor: (world, target, rotor).
+    rotor_inflow = jnp.sum(sample_speed[..., :-1] * cos_theta[..., None], axis=1)
 
     # [2] Eq. (5): each motor loses a fraction b_v * U_D of its current thrust
-    loss_fraction = THRUST_DECAY_COEFFICIENT * u_downwash
+    loss_fraction = THRUST_DECAY_COEFFICIENT * rotor_inflow
     rotor_vel = data.states.rotor_vel
     k0, k1, k2 = (
         data.params.rpm2thrust[..., 0],
@@ -127,7 +135,7 @@ def downwash_fn(data: SimData) -> SimData:
     torque_body = (mixing_matrix @ (thrust_delta * data.params.L)[..., None])[..., 0] * lever
 
     states = data.states.replace(
-        force=R_world_to_body.apply(force_body), torque=R_world_to_body.apply(torque_body)
+        force=body_to_world.apply(force_body), torque=body_to_world.apply(torque_body)
     )
     return data.replace(states=states)
 
@@ -156,15 +164,7 @@ def plot_hover_velocity_field(source_positions: np.ndarray, data: SimData) -> No
         source_to_point = source_pos - points
         s = source_to_point[..., 2]
         r = np.linalg.vector_norm(source_to_point[..., :2], axis=-1)
-        s_normalized = s / MOTOR_DISTANCE
-
-        q = np.maximum(s_normalized - S0, 1e-6)
-        half_width = S * q
-        centerline_velocity = u_hover * BD / q
-        xi = (r / MOTOR_DISTANCE) / half_width
-
-        velocity = centerline_velocity / (1.0 + (np.sqrt(2.0) - 1.0) * xi**2) ** 2
-        u_downwash += velocity
+        u_downwash += np.asarray(downwash_speed(jnp.asarray(s), jnp.asarray(r), u_hover))
 
     fig, ax = plt.subplots(figsize=(6, 4.5), layout="constrained")
     image = ax.pcolormesh(X, Z, u_downwash, shading="auto", cmap="viridis")
