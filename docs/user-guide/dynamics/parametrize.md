@@ -19,9 +19,9 @@ list(dynamics.keywords.keys())
 The following configurations ship with pre-fitted parameters. They cover both the brushed Crazyflie 2.x series and the brushless Crazyflie 2.1:
 
 ```python
-from crazyflow.drones import available_drones
+from crazyflow.drones import Drone
 
-available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
+list(Drone)  # [Drone.cf21B_500, Drone.cf2x_L250, Drone.cf2x_P250, Drone.cf2x_T350, Drone.hb_x500]
 ```
 
 | `drone` | Platform |
@@ -30,8 +30,18 @@ available_drones  # ('cf2x_L250', 'cf2x_P250', 'cf2x_T350', 'cf21B_500')
 | `"cf2x_P250"` | Crazyflie 2.x, plus propellers |
 | `"cf2x_T350"` | Crazyflie 2.x, thrust upgrade kit |
 | `"cf21B_500"` | Crazyflie 2.1 Brushless |
+| `"hb_x500"` | Holybro X500 V2 |
 
-If your drone is not listed, you can identify the parameters from flight data using the [system identification pipeline](system-identification.md) and inject them into any dynamics.
+If your drone is not listed, you can [add it](../adding-drones.md). The fitted models need coefficients identified from flight data with the [system identification pipeline](system-identification.md).
+
+Not every dynamics is available for every drone. [`supported_dynamics`][crazyflow.dynamics.supported_dynamics] and [`supported_drones`][crazyflow.dynamics.supported_drones] list the available pairs:
+
+```python
+from crazyflow.dynamics import supported_drones, supported_dynamics
+
+supported_dynamics("cf21B_500")  # (first_principles, so_rpy, so_rpy_rotor, so_rpy_rotor_drag)
+supported_drones("so_rpy_rotor_drag")  # ('cf21B_500', 'cf2x_L250', 'cf2x_P250', 'cf2x_T350')
+```
 
 ## Switching array backends
 
@@ -78,7 +88,7 @@ rotor_vel = np.zeros(4)
 cmd = np.zeros(4)
 
 # Simulate with a 10 g payload for this call only — dynamics.keywords is not modified.
-pos_dot, *_ = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel, mass=0.0419)
+pos_dot, *_ = dynamics(pos, quat, vel, ang_vel, cmd, rotor_vel, mass=0.0428)
 ```
 
 This becomes particularly useful for domain randomization: instead of baking randomized parameters into the partial, you can pass a batch of them as call-time arguments and keep the step function JIT-compiled across parameter changes. See [Batching & domain randomization](batching.md) for the full pattern.
@@ -101,14 +111,14 @@ dynamics.keywords["mass"] = np.float64(0.040)  # heavier drone — applies to ev
 
 ## Selecting dynamics programmatically
 
-`available_dynamics` is a dict mapping dynamics names to their unparametrized functions. This is useful when selecting a dynamics by name.
+`available_dynamics` is a dict mapping each [`Dynamics`][crazyflow.dynamics.Dynamics] mode to its unparametrized function. `Dynamics` is a string enum, so plain names work as keys too.
 
 ```python
-from crazyflow.dynamics import available_dynamics, parametrize
+from crazyflow.dynamics import Dynamics, available_dynamics, parametrize
 
-list(available_dynamics)  # ['first_principles', 'so_rpy', 'so_rpy_rotor', 'so_rpy_rotor_drag']
+list(available_dynamics)  # [Dynamics.first_principles, Dynamics.so_rpy, ...]
 
-dynamics = available_dynamics["so_rpy_rotor_drag"]
+dynamics = available_dynamics[Dynamics.so_rpy_rotor_drag]
 parametrized_dynamics = parametrize(dynamics, drone="cf2x_T350")
 ```
 
@@ -120,7 +130,7 @@ If you need the parameter values directly, for example, to pass them to [`symbol
 from crazyflow.dynamics import Dynamics, load_fn_params, load_params
 
 params = load_fn_params(dynamics, "cf2x_L250")
-params["mass"]  # 0.0319
+params["mass"]  # 0.0328
 params["J_inv"]  # array([...])
 
 params = load_params(Dynamics.first_principles, "cf2x_L250")

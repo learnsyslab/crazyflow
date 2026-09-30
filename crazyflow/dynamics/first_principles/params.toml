@@ -10,25 +10,29 @@
 # thrust_min = 0.0                        # N per motor
 # thrust_max = 0.0                        # N per motor
 # L = 0.0                                 # m, CoM to motor distance
-# prop_inertia = 0.0                      # kg m^2
+# prop_inertia = 0.0                      # kg m^2, zero drops the gyroscopic and reaction torque of the propellers
 # rpm2thrust = [0.0, 0.0, 0.0]            # N, polynomial in RPM by index
 # rpm2torque = [0.0, 0.0, 0.0]            # Nm, polynomial in RPM by index
-# rotor_dyn_coef = [0.0, 0.0, 0.0, 0.0]   # The coefficients are [a,b,c,d], where a & b are the 
-                                          # linear & quadratic rise constants. c & d equally for fall.
+# rotor_dyn_coef = [0.0, 0.0, 0.0, 0.0]   # The coefficients are [a,b,c,d], where a & b are the
+#                                         # linear & quadratic rise constants. c & d equally for fall.
+#                                         # [1/tau, 0.0, 1/tau, 0.0] is a symmetric first order
+#                                         # model with time constant tau.
 # mixing_matrix = [                       # motor locations relative to the CoM and turn directions 
 #     [-1.0, -1.0,  1.0,  1.0],
 #     [-1.0,  1.0,  1.0, -1.0],
 #     [-1.0,  1.0, -1.0,  1.0]
 # ]
-# drag_matrix = [                         # 1/s
+# drag_matrix = [                         # 1/s, zero disables drag
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0]
 # ]
 #
+# Not every parameter has to be identified, but all of them have to be set. A symmetric first order
+# rotor model, no drag and no propeller gyroscopic torque are reasonable defaults for a new drone.
 
 [cf2x_L250]
-mass = 0.0319
+mass = 0.0328
 J = [  # TODO
     [16.8e-6, 0.0, 0.0],
     [0.0, 16.8e-6, 0.0],
@@ -47,9 +51,9 @@ mixing_matrix = [
     [-1.0,  1.0, -1.0,  1.0]
 ]
 drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
-    [-0.01471782, 0.0,         0.0         ],
-    [0.0,         -0.01471782, 0.0         ],
-    [0.0,         0.0,         -0.01277641 ]
+    [-0.014953790232821078, 0.0, 0.0],
+    [0.0, -0.014953790232821078, 0.0],
+    [0.0, 0.0, -0.013900090000325344]
 ]
 
 
@@ -99,14 +103,14 @@ mixing_matrix = [
     [-1.0,  1.0, -1.0,  1.0]
 ]
 drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
-    [-0.01556697, 0.0,         0.0         ],
-    [0.0,         -0.01556697, 0.0         ],
-    [0.0,         0.0,         -0.02191672 ]
+    [-0.015203241038199845, 0.0, 0.0],
+    [0.0, -0.015203241038199845, 0.0],
+    [0.0, 0.0, -0.02204579179094129]
 ]
 
 
 [cf21B_500]
-mass = 0.04338
+mass = 0.0434
 J = [
     [25e-6, 0.0,   0.0],
     [0.0,   28e-6, 0.0],
@@ -125,7 +129,7 @@ mixing_matrix = [
     [-1.0,  1.0, -1.0,  1.0]
 ]
 drag_matrix = [  # This term is from the so_rpy_rotor_drag dynamics
-    [-0.02149163, 0.0,          0.0         ],
-    [0.0,         -0.02149163,  0.0         ],
-    [0.0,         0.0,          -0.02359736 ]
+    [-0.021643637770852733, 0.0, 0.0],
+    [0.0, -0.021643637770852733, 0.0],
+    [0.0, 0.0, -0.02477138502714662]
 ]

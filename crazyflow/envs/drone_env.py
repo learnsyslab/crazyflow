@@ -12,6 +12,7 @@ from jax import Array
 from numpy.typing import NDArray
 
 from crazyflow.control import Control
+from crazyflow.drones import Drone
 from crazyflow.dynamics import Dynamics, load_params
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimData
@@ -19,7 +20,7 @@ from crazyflow.sim.pipeline import append_fn
 from crazyflow.utils import leaf_replace
 
 
-def action_space(control_type: Control, dynamics: Dynamics, drone: str) -> spaces.Box:
+def action_space(control_type: Control, dynamics: Dynamics, drone: Drone) -> spaces.Box:
     """Select the appropriate action space for a given control type.
 
     Args:
@@ -64,7 +65,7 @@ class DroneEnv(VectorEnv):
         num_envs: int = 1,
         max_episode_time: float = 10.0,
         dynamics: Dynamics = Dynamics.so_rpy,
-        drone: str = "cf2x_L250",
+        drone: Drone = Drone.cf2x_L250,
         freq: int = 500,
         device: str = "cpu",
         reset_randomization: Callable[[SimData, Array], SimData] | None = None,

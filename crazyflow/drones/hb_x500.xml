@@ -1,0 +1,186 @@
+<mujoco model="hb_x500">
+  <compiler inertiafromgeom="false" meshdir="assets" autolimits="true" />
+
+  <asset>
+    <material name="black" rgba="0.102 0.102 0.102 1"/>
+    <material name="carbon" rgba="0.16 0.16 0.17 1"/>
+    <material name="gray" rgba="0.3 0.3 0.3 1"/>
+    <material name="dark-gray" rgba="0.2 0.2 0.22 1"/>
+    <material name="white" rgba="0.93 0.93 0.93 1"/>
+    <material name="green" rgba="0.13 0.62 0.28 1"/>
+    <material name="blue" rgba="0.13 0.33 0.64 1"/>
+    
+    <!-- Holybro X500 V2 (PX4 Development Kit). Meshes come from the official STEP
+         (x500v2-frame.step, 2022-07-19): https://holybro.com/products/px4-development-kit-x500-v2
+         STLs are binary and in millimetres. The STEP is Y-up with the camera bracket on -X, so
+         parts are rotated (x, y, z) = (-x_step, z_step, y_step). The body origin is on the
+         underside of the bottom plate, roughly the CoM with a battery fitted.
+         x points forward (camera bracket), y left, z up. -->
+    <mesh name="frame" file="hb_x500/hb_x500_frame.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="arm_plastics" file="hb_x500/hb_x500_arm_plastics.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="motors" file="hb_x500/hb_x500_motors.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="tubes" file="hb_x500/hb_x500_tubes.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Every screw and nut on the frame and the GPS mounts -->
+    <mesh name="screws" file="hb_x500/hb_x500_screws.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
+    <mesh name="battery_holder" file="hb_x500/hb_x500_battery_holder.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
+    <mesh name="leg" file="hb_x500/hb_x500_leg.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Own design -->
+    <mesh name="propguard_center" file="hb_x500/hb_x500_propguard_center.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="propguard_left" file="hb_x500/hb_x500_propguard_left.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="propguard_right" file="hb_x500/hb_x500_propguard_right.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="propguard_arm" file="hb_x500/hb_x500_propguard_arm.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Reconstructed from product images of the 1045 (Holybro 530084):
+         https://www.premium-modellbau.de/holybro-s500-v2-1045-ersatzpropeller-2x-cw-2x-ccw
+         https://holybro.com/products/spare-parts-s500-v2-kit -->
+    <mesh name="propL" file="hb_x500/hb_x500_PropL.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
+    <mesh name="propR" file="hb_x500/hb_x500_PropR.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
+    <mesh name="propHub" file="hb_x500/hb_x500_PropHub.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
+    <!-- Reconstructed from vendor drawing of the Holybro 30 degree H-RTK mount:
+         https://www.unmannedtechshop.co.uk/products/holybro-30-gps-antenna-mount-h-rtk-helical
+         https://cdn.shopify.com/s/files/1/0914/9972/5181/files/30_AntennaMount_Dimensions_1800x1800_47d5d653-a047-444d-a3a7-cb5a3b054260.webp -->
+    <mesh name="gps_mount" file="hb_x500/hb_x500_gps_mount.stl" scale="1e-3 1e-3 1e-3"/>
+    <mesh name="gps_tube" file="hb_x500/hb_x500_gps_tube.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
+    <!-- Reconstructed SMA adapter collar between mount and antenna -->
+    <mesh name="gps_sma" file="hb_x500/hb_x500_gps_sma.stl" scale="1e-3 1e-3 1e-3"/>
+    <!-- Reconstructed from the dimension drawing of the ArduSimple helical tripleband L-band IP67:
+         https://www.ardusimple.de/product/lightweight-helical-tripleband-l-band-antenna-ip67/
+         https://www.ardusimple.com/wp-content/uploads/2021/02/helical3b_dimensions.jpg -->
+    <mesh name="gps_antenna" file="hb_x500/hb_x500_gps_antenna.stl" scale="1e-3 1e-3 1e-3" smoothnormal="true"/>
+    <!-- The whole `drone` body fused into one mesh with transforms baked in (123408 faces) -->
+    <mesh name="hb_x500_fused" file="hb_x500/hb_x500_fused.stl" scale="1e-3 1e-3 1e-3"/>
+  </asset>
+
+  <default>
+    <default class="hb_x500">
+      <default class="visual">
+        <geom group="2" type="mesh" contype="0" conaffinity="0" />
+      </default>
+      <default class="collision">
+        <geom group="3" condim="1" />
+      </default>
+      <site group="5" />
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="drone" pos="0 0 0.25" childclass="hb_x500">
+      <site name="CoM" />
+      <inertial pos="0.0 0.0 0.0" mass="2.28" diaginertia="0.024 0.024 0.044" />
+
+      <!-- Meshes -->
+      <geom mesh="frame" material="black" class="visual" />
+      <geom mesh="arm_plastics" material="blue" class="visual" />
+      <geom mesh="battery_holder" material="black" class="visual" pos="0.029 0 -0.013" quat="0 0.70710678 0.70710678 0"/>
+      <geom mesh="battery_holder" material="black" class="visual" pos="-0.041 0 -0.013" quat="0 0.70710678 0.70710678 0"/>
+      <!-- LemonRC 4300 mAh 14.8 V 35C, 136 x 43 x 33 mm, 422 g:
+           https://www.reichelt.de/de/de/shop/produkt/lipo_akku_lemonrc_4300_-_14_8v_35c_-385695 -->
+      <geom name="battery" type="box" size="0.068 0.0215 0.0165" pos="0 0 -0.0435" material="white" class="visual" />
+      <geom mesh="tubes" material="carbon" class="visual" />
+      <geom mesh="screws" material="gray" class="visual" />
+      <geom mesh="motors" material="black" class="visual" pos="0 0 0.0065" />
+
+      <!-- Collision geometry is estimated based on the visual mesh. We use a sphere for maximum
+       computational efficiency with larger swarms. Used by default-->
+      <geom  name="col_sphere" type="sphere" size="0.41" pos="0 0 0.071" class="collision" contype="1" conaffinity="1" />
+      <!-- For higher accuracy with lower performance, you can use a box. By default off. -->
+      <geom  name="col_box" type="box" size="0.327 0.327 0.1675" pos="0 0 0.0875" class="collision" rgba="0.5 0.5 0.5 0" contype="0" conaffinity="0" />
+
+      <!-- Motors and Propellers. Motor centres: 176.78 mm on both axes (500 mm wheelbase).
+           Hub underside is 4.5 mm below its origin and seats on the shaft shoulder at 64.5 mm. -->
+      <site name="motor0" pos="0.17678 -0.17678 0.069" />
+      <site name="motor1" pos="-0.17678 -0.17678 0.069" />
+      <site name="motor2" pos="-0.17678 0.17678 0.069" />
+      <site name="motor3" pos="0.17678 0.17678 0.069" />
+      <body name="prop0" pos="0.17678 -0.17678 0.069" euler="0 0 45">
+        <geom mesh="propL" material="black" class="visual"/>
+        <geom mesh="propHub" material="gray" class="visual"/>
+      </body>
+      <body name="prop1" pos="-0.17678 -0.17678 0.069" euler="0 0 135">
+        <geom mesh="propR" material="black" class="visual"/>
+        <geom mesh="propHub" material="gray" class="visual"/>
+      </body>
+      <body name="prop2" pos="-0.17678 0.17678 0.069" euler="0 0 225">
+        <geom mesh="propL" material="black" class="visual"/>
+        <geom mesh="propHub" material="gray" class="visual"/>
+      </body>
+      <body name="prop3" pos="0.17678 0.17678 0.069" euler="0 0 315">
+        <geom mesh="propR" material="black" class="visual"/>
+        <geom mesh="propHub" material="gray" class="visual"/>
+      </body>
+
+      <body name="propguard0" pos="0.17678 -0.17678 0.0245" euler="0 0 -135">
+        <geom mesh="propguard_center" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_left" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_right" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+      </body>
+      <body name="propguard1" pos="-0.17678 -0.17678 0.0245" euler="0 0 -225">
+        <geom mesh="propguard_center" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_left" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_right" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+      </body>
+      <body name="propguard2" pos="-0.17678 0.17678 0.0245" euler="0 0 45">
+        <geom mesh="propguard_center" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_left" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_right" material="green" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+      </body>
+      <body name="propguard3" pos="0.17678 0.17678 0.0245" euler="0 0 -45">
+        <geom mesh="propguard_center" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_left" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_right" material="white" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 -0.65328148 -0.65328148"/>
+        <geom mesh="propguard_arm" material="black" class="visual" quat="0.27059805 0.27059805 0.65328148 0.65328148"/>
+      </body>
+      <body name="leg0" pos="0.17678 -0.17678 0.0245" euler="0 0 -135">
+        <geom mesh="leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+      </body>
+      <body name="leg1" pos="-0.17678 -0.17678 0.0245" euler="0 0 -225">
+        <geom mesh="leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+      </body>
+      <body name="leg2" pos="-0.17678 0.17678 0.0245" euler="0 0 45">
+        <geom mesh="leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+      </body>
+      <body name="leg3" pos="0.17678 0.17678 0.0245" euler="0 0 -45">
+        <geom mesh="leg" material="black" class="visual" quat="0 0 0.70710678 0.70710678"/>
+      </body>
+
+      <!-- Left/right GPS arms on the top plate: 164 mm between clamp pins,
+           12 mm tube diameter, 135.6 mm platform height, 436.2 mm antenna baseline. -->
+      <body name="gps_left" pos="0 0.05 0.032" euler="0 0 90">
+        <geom mesh="gps_mount" material="black" class="visual"/>
+        <geom mesh="gps_tube" material="carbon" class="visual"/>
+        <geom mesh="gps_sma" material="gray" class="visual"/>
+        <geom mesh="gps_antenna" material="black" class="visual" pos="0.1681 0 0.1396"/>
+      </body>
+      <body name="gps_right" pos="0 -0.05 0.032" euler="0 0 -90">
+        <geom mesh="gps_mount" material="black" class="visual"/>
+        <geom mesh="gps_tube" material="carbon" class="visual"/>
+        <geom mesh="gps_sma" material="gray" class="visual"/>
+        <geom mesh="gps_antenna" material="black" class="visual" pos="0.1681 0 0.1396"/>
+      </body>
+
+      <!-- Cameras -->
+      <camera name="track_cam" pos="-2.5 0 1.25" xyaxes="0 -1 0 1 0 2" mode="trackcom" />
+      <camera name="fpv_cam" pos="0.115 0 -0.03" euler="0 -90 -90" fovy="70" resolution="640 480" />
+    </body>
+
+    <body name="drone_fused" pos="0 0 0.25" childclass="hb_x500">
+      <inertial pos="0.0 0.0 0.0" mass="2.28" diaginertia="0.024 0.024 0.044" />
+      <geom mesh="hb_x500_fused" material="dark-gray" class="visual" />
+      <geom name="col_sphere_fused" type="sphere" size="0.41" pos="0 0 0.071" class="collision" contype="1" conaffinity="1" />
+      <geom name="col_box_fused" type="box" size="0.327 0.327 0.1675" pos="0 0 0.0875" class="collision" rgba="0.5 0.5 0.5 0" contype="0" conaffinity="0" />
+    </body>
+  </worldbody>
+
+</mujoco>

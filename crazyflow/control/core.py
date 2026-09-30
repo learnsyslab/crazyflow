@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from crazyflow._typing import Array  # To be changed to array_api_typing later
+    from crazyflow.drones import Drone
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -63,7 +64,7 @@ class Control(StrEnum):
 
 
 def parametrize(
-    fn: Callable[P, R], drone: str, xp: ModuleType | None = None, device: str | None = None
+    fn: Callable[P, R], drone: Drone, xp: ModuleType | None = None, device: str | None = None
 ) -> Callable[P, R]:
     """Parametrize a controller function with the default controller parameters for a drone.
 
@@ -78,9 +79,10 @@ def parametrize(
     import numpy as np
     from crazyflow.control import parametrize
     from crazyflow.control.mellinger import state2attitude
+    from crazyflow.drones import Drone
     from scipy.spatial.transform import Rotation as R
 
-    ctrl = parametrize(state2attitude, "cf2x_L250")
+    ctrl = parametrize(state2attitude, Drone.cf2x_L250)
     pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
     vel, cmd = np.zeros(3), np.zeros(16)
     cmd[9:13] = R.from_euler("z", 0.0).as_quat()
@@ -94,7 +96,7 @@ def parametrize(
 
 
 def load_params(
-    controller: str, drone: str, xp: ModuleType | None = None, device: str | None = None
+    controller: str, drone: Drone, xp: ModuleType | None = None, device: str | None = None
 ) -> dict[str, dict[str, Array]]:
     """Load all parameters of a drone for a controller.
 
@@ -103,7 +105,7 @@ def load_params(
 
     Args:
         controller: Name of the controller package, e.g. ``"mellinger"``.
-        drone: Name of the drone configuration, e.g. ``"cf2x_L250"``.
+        drone: The drone configuration, e.g. ``Drone.cf2x_L250``.
         xp: The array API module to use. If not provided, numpy is used.
         device: The device to use. If None, the device is inferred from the xp module.
 
@@ -121,7 +123,7 @@ def load_params(
 
 
 def load_fn_params(
-    fn: Callable, drone: str, xp: ModuleType | None = None, device: str | None = None
+    fn: Callable, drone: Drone, xp: ModuleType | None = None, device: str | None = None
 ) -> dict[str, Array]:
     """Load the parameters a controller function accepts.
 
@@ -131,7 +133,7 @@ def load_fn_params(
 
     Args:
         fn: The controller function for which to load parameters.
-        drone: Name of the drone configuration, e.g. ``"cf2x_L250"``.
+        drone: The drone configuration, e.g. ``Drone.cf2x_L250``.
         xp: The array API module to use. If not provided, numpy is used.
         device: The device to use. If None, the device is inferred from the xp module.
 

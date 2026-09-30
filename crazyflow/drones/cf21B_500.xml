@@ -49,7 +49,7 @@
   <worldbody>
     <body name="drone" pos="0 0 0.05" childclass="cf21B">
       <site name="CoM" />
-      <inertial pos="0.0 0.0 0.0" mass="0.04338" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5" />
+      <inertial pos="0.0 0.0 0.0" mass="0.0434" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5" />
       
       <!-- Meshes -->
       <geom mesh="pcb" material="gray" class="visual" />
@@ -92,7 +92,7 @@
     </body>
 
     <body name="drone_fused" pos="0 0 0.05" childclass="cf21B">
-      <inertial pos="0.0 0.0 0.0" mass="0.04338" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5" />
+      <inertial pos="0.0 0.0 0.0" mass="0.0434" diaginertia="2.3951e-5 2.3951e-5 3.2347e-5" />
       <geom mesh="cf21B_fused" material="" class="visual" />
       <geom name="col_sphere_fused" type="sphere" size="0.086" pos="0 0 0.02" class="collision" contype="1" conaffinity="1" />
       <geom name="col_box_fused" type="box" size="0.07 0.07 0.02" class="collision" rgba="0.5 0.5 0.5 0" contype="0" conaffinity="0" />
