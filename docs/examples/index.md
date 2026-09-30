@@ -131,6 +131,21 @@ python examples/plugins/downwash.py
 
 ---
 
+## Ground effect
+
+Modeling the increase in thrust near the floor for a `cf21B_500` drone. The plugin computes nominal thrust from the rotor speeds, applies a height-dependent gain, and adds the extra thrust along the drone's body z-axis as a world-frame external force.
+
+<!-- notest: imported script -->
+```{ .python notest }
+--8<-- "examples/plugins/ground_effect.py"
+```
+
+```bash
+python examples/plugins/ground_effect.py
+```
+
+---
+
 ## Cameras and RGBD
 
 Offscreen rendering returns RGB-D images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.
