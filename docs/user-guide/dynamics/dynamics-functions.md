@@ -16,8 +16,8 @@ What differs between dynamics is the command interface, which parameters are nee
 | Module | `cmd` input | Rotor dynamics | Key added params |
 |---|---|---|---|
 | `first_principles` | Motor RPMs `(4,)` | Yes | `rpm2thrust`, `rpm2torque`, `mixing_matrix`, `L`, `prop_inertia` |
-| `so_rpy_rotor_drag` | rpyt `(4,)` | Yes | `thrust_time_coef`, `drag_matrix` |
-| `so_rpy_rotor` | rpyt `(4,)` | Yes | `thrust_time_coef` |
+| `so_rpy_rotor_drag` | rpyt `(4,)` | Yes | `thrust_dyn_coef`, `drag_matrix` |
+| `so_rpy_rotor` | rpyt `(4,)` | Yes | `thrust_dyn_coef` |
 | `so_rpy` | rpyt `(4,)` | No | — |
 
 ## first_principles

@@ -8,7 +8,7 @@ of which only the first enters the dynamics.
 
 \[
 \begin{aligned}
-    \dot{f}_\Sigma &= \frac{1}{c_\tau} (f_{\Sigma,\mathrm{cmd}} - f_\Sigma), \\
+    \dot{f}_\Sigma &= c_\tau (f_{\Sigma,\mathrm{cmd}} - f_\Sigma), \\
     \dot{\mathbf{p}} &= \mathbf{v}, \\
     m\dot{\mathbf{v}} &= m\mathbf{g}
         + (c_\mathrm{acc} + c_\mathrm{f} f_\Sigma)\,\mathbf{R}\,\mathbf{e}_\mathrm{z}
@@ -26,11 +26,12 @@ unit vector in z direction, \(\mathbf{R} =
 {}^{\mathcal{I}}\mathbf{R}_{\mathcal{B}}(\boldsymbol{\Psi})\) is the rotation from body to world
 frame, \(\boldsymbol{\Psi} = [\phi,\theta,\psi]^{\top}\) holds the roll, pitch, and yaw angles with
 rates \(\dot{\boldsymbol{\Psi}}\), and \(f_{\Sigma,\mathrm{cmd}}\) and
-\(\boldsymbol{\Psi}_\mathrm{cmd}\) are the commanded collective thrust and attitude. The thrust time
-coefficient \(c_\tau\), the diagonal body-frame drag matrix \(\mathbf{C}_\mathrm{a}\), the thrust
-offset \(c_\mathrm{acc}\), the thrust scaling coefficient \(c_\mathrm{f}\), and the rotational
-coefficients \(\boldsymbol{c}_{\boldsymbol{\Psi},1}\), \(\boldsymbol{c}_{\boldsymbol{\Psi},2}\), and
-\(\boldsymbol{c}_{\boldsymbol{\Psi},3}\) are identified from flight data.
+\(\boldsymbol{\Psi}_\mathrm{cmd}\) are the commanded collective thrust and attitude. The thrust
+dynamics coefficient \(c_\tau\), the diagonal body-frame drag matrix \(\mathbf{C}_\mathrm{a}\), the
+thrust offset \(c_\mathrm{acc}\), the thrust scaling coefficient \(c_\mathrm{f}\), and the
+rotational coefficients \(\boldsymbol{c}_{\boldsymbol{\Psi},1}\),
+\(\boldsymbol{c}_{\boldsymbol{\Psi},2}\), and \(\boldsymbol{c}_{\boldsymbol{\Psi},3}\) are
+identified from flight data.
 
 This is the native Euler-angle form. For how the simulation integrates this state in quaternion +
 angular velocity coordinates, see [so_rpy][crazyflow.dynamics.so_rpy].

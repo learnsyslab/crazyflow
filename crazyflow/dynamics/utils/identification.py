@@ -36,7 +36,7 @@ dynamics_rotation = partial(
     dynamics_euler,
     mass=0.1,
     gravity_vec=jnp.array([0, 0, -9.81]),
-    thrust_time_coef=0.1,
+    thrust_dyn_coef=10.0,
     acc_coef=0.0,
     drag_matrix=jnp.zeros((3, 3)),
     cmd_f_coef=1.0,
@@ -62,7 +62,7 @@ def _simulate_system_translation(
         vel: Velocity of the drone (N, 3)
         cmd_f: Commanded thrust (N,)
         t: Time samples (N,)
-        params: Dynamics parameters [cmd_f_coef, thrust_time_coef, drag_xy_coef, drag_z_coef]
+        params: Dynamics parameters [cmd_f_coef, thrust_dyn_coef, drag_xy_coef, drag_z_coef]
         constants: Additional constants (mass, gravity_vec, etc.)
 
     returns: predicted acceleration (N, 3)
@@ -87,7 +87,7 @@ def _simulate_system_translation(
             rotor_vel=carry,
             mass=constants["mass"],
             gravity_vec=constants["gravity_vec"],
-            thrust_time_coef=params[1],
+            thrust_dyn_coef=params[1],
             acc_coef=0.0,
             drag_matrix=jnp.diag(jnp.array([params[2], params[2], params[3]])),
             cmd_f_coef=params[0],
@@ -110,7 +110,7 @@ def _simulate_system_translation(
         rotor_vel=thrusts[..., None],
         mass=constants["mass"],
         gravity_vec=constants["gravity_vec"],
-        thrust_time_coef=params[1],
+        thrust_dyn_coef=params[1],
         acc_coef=0.0,
         drag_matrix=jnp.diag(jnp.array([params[2], params[2], params[3]])),
         cmd_f_coef=params[0],
@@ -241,7 +241,7 @@ def sys_id_translation(
     theta = res.x
     params = {"cmd_f_coef": theta[0]}
     if "rotor" in dynamics:
-        params["thrust_time_coef"] = theta[1]
+        params["thrust_dyn_coef"] = theta[1]
     else:
         theta[1] = 0.0
     if "drag" in dynamics:

@@ -48,7 +48,7 @@ trans_params = sys_id_translation(
     verbose=0,  # 0 = silent, 1 = progress, 2 = full optimizer output
     plot=True,  # show fit vs. measured plots
 )
-# Returns: {'cmd_f_coef': ..., 'thrust_time_coef': ...,
+# Returns: {'cmd_f_coef': ..., 'thrust_dyn_coef': ...,
 #           'drag_xy_coef': ..., 'drag_z_coef': ...}
 
 # Step 5 — fit rotational parameters
@@ -85,7 +85,7 @@ Once you have the identified coefficients, add them to the relevant `params.toml
 ```toml
 [my_drone]
 cmd_f_coef       = 1.032        # from trans_params["cmd_f_coef"]
-thrust_time_coef = 0.149        # from trans_params["thrust_time_coef"]
+thrust_dyn_coef  = 6.72         # from trans_params["thrust_dyn_coef"]
 drag_matrix      = [[-0.0150, 0.0, 0.0],
                     [0.0, -0.0150, 0.0],
                     [0.0, 0.0, -0.0139]]  # diag([drag_xy, drag_xy, drag_z])
@@ -114,7 +114,7 @@ Support for new drones can be added to the shared parameter files via a pull req
 Choose based on which physical effects you need to capture:
 
 - **`so_rpy`** — identifies only `cmd_f_coef`; no motor dynamics, no drag. Fastest to calibrate, good for slow flight.
-- **`so_rpy_rotor`** — adds `thrust_time_coef` to model motor spin-up delay. Better for agile maneuvers.
+- **`so_rpy_rotor`** — adds `thrust_dyn_coef` to model motor spin-up delay. Better for agile maneuvers.
 - **`so_rpy_rotor_drag`** — adds `drag_xy_coef` and `drag_z_coef`. Best accuracy at higher speeds where aerodynamic drag is significant.
 
 ---

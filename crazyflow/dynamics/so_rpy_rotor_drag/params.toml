@@ -14,7 +14,7 @@
 # rpy_coef = [0.0, 0.0, 0.0]
 # rpy_rates_coef = [0.0, 0.0, 0.0]
 # cmd_rpy_coef = [0.0, 0.0, 0.0]
-# thrust_time_coef = 0.0                  # s
+# thrust_dyn_coef = 0.0                   # 1/s
 # drag_matrix = [                         # 1/s
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0],
@@ -35,7 +35,7 @@ thrust_min = 0.012817578393224994  # in N per motor
 thrust_max = 0.12  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 1.0322435843278281
-thrust_time_coef = 0.14876008226610188
+thrust_dyn_coef = 6.722233443049602
 drag_matrix = [
     [-0.014953790232821078, 0.0, 0.0],
     [0.0, -0.014953790232821078, 0.0],
@@ -57,7 +57,7 @@ thrust_min = 0.012817578393224994  # in N per motor
 thrust_max = 0.12  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.99085062
-thrust_time_coef = 0.11554009
+thrust_dyn_coef = 8.6550045096901
 drag_matrix = [
     [-0.01351483, 0.0,         0.0         ],
     [0.0,         -0.01351483, 0.0         ],
@@ -79,7 +79,7 @@ thrust_min = 0.01922636758983749  # in N per motor
 thrust_max = 0.18  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 1.0229179982077607
-thrust_time_coef = 0.17585713583659168
+thrust_dyn_coef = 5.686434020676935
 drag_matrix = [
     [-0.015203241038199845, 0.0, 0.0],
     [0.0, -0.015203241038199845, 0.0],
@@ -101,7 +101,7 @@ thrust_min = 0.02136263065537499  # in N per motor
 thrust_max = 0.2  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.959471532998666
-thrust_time_coef = 0.08824147411162254
+thrust_dyn_coef = 11.332539603033299
 drag_matrix = [
     [-0.021643637770852733, 0.0, 0.0],
     [0.0, -0.021643637770852733, 0.0],
@@ -122,7 +122,7 @@ thrust_min = 1.0  # in N per motor
 thrust_max = 12.13  # in N per motor
 acc_coef = 0.0
 cmd_f_coef = 0.9234799918739313
-thrust_time_coef = 0.07111262651857447
+thrust_dyn_coef = 14.062200328640682
 drag_matrix = [
     [-0.8031707417931839, 0.0,                 0.0                ],
     [0.0,                 -0.8031707417931839, 0.0                ],

@@ -63,7 +63,7 @@ def dynamics(
     gravity_vec: Array,
     J: Array,
     J_inv: Array,
-    thrust_time_coef: Array,
+    thrust_dyn_coef: Array,
     acc_coef: Array,
     cmd_f_coef: Array,
     rpy_coef: Array,
@@ -93,7 +93,7 @@ def dynamics(
             [0, 0, -9.81].
         J: Inertia matrix (kg m^2).
         J_inv: Inverse inertia matrix (1/kg m^2).
-        thrust_time_coef: Coefficient for the rotor dynamics (1/s).
+        thrust_dyn_coef: Coefficient for the rotor dynamics (1/s).
         acc_coef: Coefficient for the acceleration (1/s^2).
         cmd_f_coef: Coefficient for the collective thrust (N/rad^2).
         rpy_coef: Coefficient for the roll pitch yaw dynamics (1/s).
@@ -122,7 +122,7 @@ def dynamics(
         rotor_vel,
         mass=mass,
         gravity_vec=gravity_vec,
-        thrust_time_coef=thrust_time_coef,
+        thrust_dyn_coef=thrust_dyn_coef,
         acc_coef=acc_coef,
         cmd_f_coef=cmd_f_coef,
         rpy_coef=rpy_coef,
@@ -160,7 +160,7 @@ def dynamics_euler(
     *,
     mass: float,
     gravity_vec: Array,
-    thrust_time_coef: Array,
+    thrust_dyn_coef: Array,
     acc_coef: Array,
     cmd_f_coef: Array,
     rpy_coef: Array,
@@ -172,7 +172,7 @@ def dynamics_euler(
     xp = array_namespace(pos)
     device = xp_device(pos)
     mass, gravity_vec = to_xp(mass, gravity_vec, xp=xp, device=device)
-    thrust_time_coef, acc_coef = to_xp(thrust_time_coef, acc_coef, xp=xp, device=device)
+    thrust_dyn_coef, acc_coef = to_xp(thrust_dyn_coef, acc_coef, xp=xp, device=device)
     cmd_f_coef, rpy_coef = to_xp(cmd_f_coef, rpy_coef, xp=xp, device=device)
     rpy_rates_coef, cmd_rpy_coef = to_xp(rpy_rates_coef, cmd_rpy_coef, xp=xp, device=device)
     drag_matrix = to_xp(drag_matrix, xp=xp, device=device)
@@ -183,7 +183,7 @@ def dynamics_euler(
         warnings.warn("Rotor velocity not provided, using commanded rotor velocity.")
         rotor_vel, rotor_vel_dot = cmd_f[..., None], None
     else:
-        rotor_vel_dot = (cmd_f[..., None] - rotor_vel) / thrust_time_coef
+        rotor_vel_dot = thrust_dyn_coef * (cmd_f[..., None] - rotor_vel)
     forces_motor = rotor_vel[..., 0:1]  # (..., 1)
     thrust = acc_coef + cmd_f_coef * forces_motor
     rot_mat = R.from_euler("xyz", rpy).inv().as_matrix()  # rotation from world to body
@@ -207,7 +207,7 @@ def symbolic_dynamics(
     gravity_vec: Array,
     J: Array,
     J_inv: Array,
-    thrust_time_coef: Array,
+    thrust_dyn_coef: Array,
     acc_coef: Array,
     cmd_f_coef: Array,
     rpy_coef: Array,
@@ -231,7 +231,7 @@ def symbolic_dynamics(
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_time_coef: First-order thrust lag time constant coefficient (1/s).
+        thrust_dyn_coef: First-order thrust lag coefficient (1/s).
         acc_coef: Scalar acceleration offset coefficient.
         cmd_f_coef: Collective-thrust-to-acceleration coefficient.
         rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
@@ -266,7 +266,7 @@ def symbolic_dynamics(
         gravity_vec=gravity_vec,
         J=J,
         J_inv=J_inv,
-        thrust_time_coef=thrust_time_coef,
+        thrust_dyn_coef=thrust_dyn_coef,
         acc_coef=acc_coef,
         cmd_f_coef=cmd_f_coef,
         rpy_coef=rpy_coef,
@@ -327,7 +327,7 @@ def symbolic_dynamics_euler(
     gravity_vec: Array,
     J: Array,
     J_inv: Array,
-    thrust_time_coef: Array,
+    thrust_dyn_coef: Array,
     acc_coef: Array,
     cmd_f_coef: Array,
     rpy_coef: Array,
@@ -348,7 +348,7 @@ def symbolic_dynamics_euler(
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_time_coef: First-order thrust lag time constant coefficient (1/s).
+        thrust_dyn_coef: First-order thrust lag coefficient (1/s).
         acc_coef: Scalar acceleration offset coefficient.
         cmd_f_coef: Collective-thrust-to-acceleration coefficient.
         rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
@@ -379,7 +379,7 @@ def symbolic_dynamics_euler(
     # Defining the dynamics function
     # Note that we are abusing the rotor_vel state as the thrust
     if model_rotor_vel:
-        rotor_vel_dot = 1 / thrust_time_coef * (cmd_thrust - symbols.rotor_vel)
+        rotor_vel_dot = thrust_dyn_coef * (cmd_thrust - symbols.rotor_vel)
         forces_motor = symbols.rotor_vel[0]  # We are only using the first element
     else:
         forces_motor = cmd_thrust
@@ -416,7 +416,7 @@ class Params:
     """Inertia matrix of the drone."""
     J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Inverse of the inertia matrix of the drone."""
-    thrust_time_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
+    thrust_dyn_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Rotor coefficient of the drone."""
     acc_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Acceleration coefficient of the drone."""
@@ -441,7 +441,7 @@ class Params:
             gravity_vec=jnp.asarray(p["gravity_vec"], device=device),
             J=J,
             J_inv=jnp.linalg.inv(J),
-            thrust_time_coef=jnp.asarray([p["thrust_time_coef"]], device=device),
+            thrust_dyn_coef=jnp.asarray([p["thrust_dyn_coef"]], device=device),
             acc_coef=jnp.asarray([p["acc_coef"]], device=device),
             cmd_f_coef=jnp.asarray([p["cmd_f_coef"]], device=device),
             rpy_coef=jnp.asarray(p["rpy_coef"], device=device),
