@@ -86,7 +86,7 @@ def integrate(data: SimData, deriv: SimData, dt: float) -> SimData:
     states = states.replace(
         pos=next_pos, quat=next_quat, vel=next_vel, ang_vel=next_ang_vel, rotor_vel=next_rotor_vel
     )
-    return data.replace(states=states)
+    return data.replace(states=states, states_deriv=states_deriv)
 
 
 def integrate_symplectic(data: SimData, deriv: SimData, dt: float) -> SimData:
@@ -95,7 +95,7 @@ def integrate_symplectic(data: SimData, deriv: SimData, dt: float) -> SimData:
 
     pos, quat, vel, ang_vel = states.pos, states.quat, states.vel, states.ang_vel
     rotor_vel = states.rotor_vel
-    dvel, dang_vel, drotor_vel = states_deriv.vel, states_deriv.ang_vel, states_deriv.rotor_acc
+    dvel, dang_vel, drotor_vel = states_deriv.acc, states_deriv.ang_acc, states_deriv.rotor_acc
 
     next_pos, next_quat, next_vel, next_ang_vel, next_rotor_vel = _integrate_symplectic(
         pos, quat, vel, ang_vel, rotor_vel, dvel, dang_vel, drotor_vel, dt
@@ -103,7 +103,7 @@ def integrate_symplectic(data: SimData, deriv: SimData, dt: float) -> SimData:
     states = states.replace(
         pos=next_pos, quat=next_quat, vel=next_vel, ang_vel=next_ang_vel, rotor_vel=next_rotor_vel
     )
-    return data.replace(states=states)
+    return data.replace(states=states, states_deriv=states_deriv)
 
 
 @partial(
