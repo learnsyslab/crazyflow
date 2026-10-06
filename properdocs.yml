@@ -56,6 +56,7 @@ nav:
     - Functional API: user-guide/functional-api.md
     - Dynamics:
       - user-guide/dynamics/index.md
+      - Equations: user-guide/dynamics/equations.md
       - Dynamics functions: user-guide/dynamics/dynamics-functions.md
       - Parametrization: user-guide/dynamics/parametrize.md
       - Batching & domain randomization: user-guide/dynamics/batching.md
