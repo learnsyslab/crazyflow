@@ -9,7 +9,7 @@
 # ]
 # thrust_min = 0.0                        # N per motor
 # thrust_max = 0.0                        # N per motor
-# L = 0.0                                 # m, CoM to motor distance
+# L = 0.0                                 # m, distance of the motors to the body axes
 # prop_inertia = 0.0                      # kg m^2, zero drops the gyroscopic and reaction torque of the propellers
 # rpm2thrust = [0.0, 0.0, 0.0]            # N, polynomial in RPM by index
 # rpm2torque = [0.0, 0.0, 0.0]            # Nm, polynomial in RPM by index

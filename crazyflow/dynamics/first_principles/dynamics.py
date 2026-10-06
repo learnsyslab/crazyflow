@@ -1,9 +1,8 @@
 """First-principles dynamics-based quadrotor dynamics.
 
 This module implements full rigid-body dynamics for a quadrotor based on Newton-Euler equations. The
-dynamics are parameterised with physical constants (mass, inertia, thrust and torque curves, motor
-arm length, drag coefficients) and require no data fitting. Propeller gyroscopic effects are
-included.
+dynamics are parameterised with physical quantities (mass, inertia, thrust and torque curves, motor
+arm length, drag coefficients). Propeller gyroscopic effects are included.
 
 The command interface is four motor angular velocities in RPM.
 
@@ -79,7 +78,7 @@ def dynamics(
         dist_t: Disturbance torque (Nm) in the world frame acting on the CoM.
 
         mass: Mass of the drone (kg).
-        L: Distance from the CoM to the motors (m). Shared (1,) or one value per motor (4,).
+        L: Distance of the motors to the body axes (m). Shared (1,) or one value per motor (4,).
         prop_inertia: Inertia of the propellers in z direction (kg m^2). Shared (1,) or one value
             per motor (4,).
         gravity_vec: Gravity vector (m/s^2). We assume the gravity vector points downwards, e.g.
@@ -205,7 +204,7 @@ def symbolic_dynamics(
         model_dist_f: If ``True``, a 3-D force disturbance is appended to ``X``.
         model_dist_t: If ``True``, a 3-D torque disturbance is appended to ``X``.
         mass: Drone mass in kg.
-        L: Distance from centre of mass to the motors in meters, shared ``(1,)`` or one value per
+        L: Distance of the motors to the body axes in meters, shared ``(1,)`` or one value per
             motor ``(4,)``.
         prop_inertia: Moment of inertia of the propellers about their spin axis in kg m², shared
             ``(1,)`` or one value per motor ``(4,)``.
