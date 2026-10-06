@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 def ang_vel2quat_dot(quat: Array, ang_vel: Array) -> Array:
-    """Calculates the quaternion derivative based on an angular velocity."""
+    """Calculates the scalar-last quaternion derivative based on a body angular velocity."""
     xp = array_namespace(quat)
     # Split angular velocity
     x = ang_vel[..., 0:1]
@@ -31,14 +31,14 @@ def ang_vel2quat_dot(quat: Array, ang_vel: Array) -> Array:
         ],
         axis=-2,
     )
-    # First row of Xi
-    xi1 = xp.concat((xp.zeros_like(x), -ang_vel), axis=-1)
-    # Second to fourth rows of Xi
+    # First to third rows of Xi
     ang_vel_col = xp.expand_dims(ang_vel, axis=-1)  # (..., 3, 1)
-    xi2 = xp.concat((ang_vel_col, -ang_vel_skew), axis=-1)  # (..., 3, 4)
+    xi1 = xp.concat((-ang_vel_skew, ang_vel_col), axis=-1)  # (..., 3, 4)
+    # Fourth row of Xi
+    xi2 = xp.concat((-ang_vel, xp.zeros_like(x)), axis=-1)
     # Combine into Xi
-    xi1_exp = xp.expand_dims(xi1, axis=-2)  # (..., 1, 4)
-    xi = xp.concat((xi1_exp, xi2), axis=-2)  # (..., 4, 4)
+    xi2_exp = xp.expand_dims(xi2, axis=-2)  # (..., 1, 4)
+    xi = xp.concat((xi1, xi2_exp), axis=-2)  # (..., 4, 4)
     # Quaternion derivative
     quat_exp = xp.expand_dims(quat, axis=-1)  # (..., 4, 1)
     result = 0.5 * xp.matmul(xi, quat_exp)  # (..., 4, 1)
