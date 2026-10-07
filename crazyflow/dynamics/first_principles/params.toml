@@ -22,7 +22,7 @@
 #     [-1.0,  1.0,  1.0, -1.0],
 #     [-1.0,  1.0, -1.0,  1.0]
 # ]
-# drag_matrix = [                         # 1/s, zero disables drag
+# drag_matrix = [                         # N/(m/s), zero disables drag
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0]

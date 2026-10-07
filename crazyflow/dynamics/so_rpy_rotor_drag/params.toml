@@ -15,7 +15,7 @@
 # rpy_rates_coef = [0.0, 0.0, 0.0]
 # cmd_rpy_coef = [0.0, 0.0, 0.0]
 # thrust_dyn_coef = 0.0                   # 1/s
-# drag_matrix = [                         # 1/s
+# drag_matrix = [                         # N/(m/s)
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0],
 #     [0.0, 0.0, 0.0]

@@ -93,13 +93,14 @@ def dynamics(
             [0, 0, -9.81].
         J: Inertia matrix (kg m^2).
         J_inv: Inverse inertia matrix (1/kg m^2).
-        thrust_dyn_coef: Coefficient for the rotor dynamics (1/s).
-        acc_coef: Coefficient for the acceleration (1/s^2).
-        cmd_f_coef: Coefficient for the collective thrust (N/rad^2).
-        rpy_coef: Coefficient for the roll pitch yaw dynamics (1/s).
-        rpy_rates_coef: Coefficient for the roll pitch yaw rates dynamics (1/s^2).
-        cmd_rpy_coef: Coefficient for the roll pitch yaw command dynamics (1/s).
-        drag_matrix: Coefficient matrix for the linear drag (1/s).
+        thrust_dyn_coef: Thrust dynamics coefficient (1/s).
+        acc_coef: Thrust offset (N).
+        cmd_f_coef: Thrust scaling coefficient.
+        rpy_coef: Rotational dynamics coefficients of the roll, pitch, and yaw angles (1/s^2).
+        rpy_rates_coef: Rotational dynamics coefficients of the roll, pitch, and yaw rates (1/s).
+        cmd_rpy_coef: Rotational dynamics coefficients of the commanded roll, pitch, and yaw
+            (1/s^2).
+        drag_matrix: Drag coefficients in matrix form (N/(m/s)).
 
     Returns:
         The derivatives (pos_dot, quat_dot, vel_dot, ang_vel_dot, rotor_vel_dot).
@@ -231,14 +232,16 @@ def symbolic_dynamics(
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_dyn_coef: First-order thrust lag coefficient (1/s).
-        acc_coef: Scalar acceleration offset coefficient.
-        cmd_f_coef: Collective-thrust-to-acceleration coefficient.
-        rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
-        rpy_rates_coef: RPY-rate feedback coefficient, shape ``(3,)``.
-        cmd_rpy_coef: RPY command feedforward coefficient, shape ``(3,)``.
-        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients applied in the body
-            frame.
+        thrust_dyn_coef: Thrust dynamics coefficient in 1/s.
+        acc_coef: Thrust offset in N.
+        cmd_f_coef: Thrust scaling coefficient.
+        rpy_coef: Rotational dynamics coefficients of the roll, pitch, and yaw angles in 1/s², shape
+            ``(3,)``.
+        rpy_rates_coef: Rotational dynamics coefficients of the roll, pitch, and yaw rates in 1/s,
+            shape ``(3,)``.
+        cmd_rpy_coef: Rotational dynamics coefficients of the commanded roll, pitch, and yaw in
+            1/s², shape ``(3,)``.
+        drag_matrix: Drag coefficients in matrix form in N/(m/s), diagonal ``(3, 3)``.
 
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
@@ -348,14 +351,16 @@ def symbolic_dynamics_euler(
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        thrust_dyn_coef: First-order thrust lag coefficient (1/s).
-        acc_coef: Scalar acceleration offset coefficient.
-        cmd_f_coef: Collective-thrust-to-acceleration coefficient.
-        rpy_coef: RPY state feedback coefficient, shape ``(3,)``.
-        rpy_rates_coef: RPY-rate feedback coefficient, shape ``(3,)``.
-        cmd_rpy_coef: RPY command feedforward coefficient, shape ``(3,)``.
-        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients applied in the body
-            frame.
+        thrust_dyn_coef: Thrust dynamics coefficient in 1/s.
+        acc_coef: Thrust offset in N.
+        cmd_f_coef: Thrust scaling coefficient.
+        rpy_coef: Rotational dynamics coefficients of the roll, pitch, and yaw angles in 1/s², shape
+            ``(3,)``.
+        rpy_rates_coef: Rotational dynamics coefficients of the roll, pitch, and yaw rates in 1/s,
+            shape ``(3,)``.
+        cmd_rpy_coef: Rotational dynamics coefficients of the commanded roll, pitch, and yaw in
+            1/s², shape ``(3,)``.
+        drag_matrix: Drag coefficients in matrix form in N/(m/s), diagonal ``(3, 3)``.
 
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
@@ -417,19 +422,19 @@ class Params:
     J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Inverse of the inertia matrix of the drone."""
     thrust_dyn_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
-    """Rotor coefficient of the drone."""
+    """Thrust dynamics coefficient."""
     acc_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
-    """Acceleration coefficient of the drone."""
+    """Thrust offset."""
     cmd_f_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
-    """Collective thrust coefficient of the drone."""
+    """Thrust scaling coefficient."""
     rpy_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
-    """Roll pitch yaw coefficient of the drone."""
+    """Rotational dynamics coefficients of the roll, pitch, and yaw angles."""
     rpy_rates_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
-    """Roll pitch yaw rates coefficient of the drone."""
+    """Rotational dynamics coefficients of the roll, pitch, and yaw rates."""
     cmd_rpy_coef: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
-    """Roll pitch yaw command coefficient of the drone."""
+    """Rotational dynamics coefficients of the commanded roll, pitch, and yaw."""
     drag_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
-    """Linear drag coefficient matrix of the drone."""
+    """Drag coefficients in matrix form."""
 
     @staticmethod
     def create(drone: str, device: Device) -> Params:

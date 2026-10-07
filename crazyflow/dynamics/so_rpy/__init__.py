@@ -7,9 +7,9 @@ motor spin-up lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thr
 \[
 \begin{aligned}
     \dot{\mathbf{p}} &= \mathbf{v}, \\
-    m\dot{\mathbf{v}} &= m\mathbf{g}
-        + (c_\mathrm{acc} + c_\mathrm{f} f_{\Sigma,\mathrm{cmd}})
-          \,\mathbf{R}\,\mathbf{e}_\mathrm{z}, \\
+    m\dot{\mathbf{v}} &= \mathbf{f}_\mathrm{g}
+        + \mathbf{R}\,\mathbf{e}_\mathrm{z}
+          (c_\mathrm{acc} + c_\mathrm{f} f_{\Sigma,\mathrm{cmd}}), \\
     \ddot{\boldsymbol{\Psi}} &=
         \boldsymbol{c}_{\boldsymbol{\Psi},1}\,\boldsymbol{\Psi}
         + \boldsymbol{c}_{\boldsymbol{\Psi},2}\,\dot{\boldsymbol{\Psi}}
@@ -17,15 +17,7 @@ motor spin-up lag. The command interface is ``[roll_rad, pitch_rad, yaw_rad, thr
 \end{aligned}
 \]
 
-where \(\mathbf{p}\) and \(\mathbf{v}\) are the position and velocity, \(m\) is the mass,
-\(\mathbf{g}\) is the gravity vector, \(\mathbf{e}_\mathrm{z}\) is the unit vector in z direction,
-\(\mathbf{R} = {}^{\mathcal{I}}\mathbf{R}_{\mathcal{B}}(\boldsymbol{\Psi})\) is the rotation from
-body to world frame, \(\boldsymbol{\Psi} = [\phi,\theta,\psi]^{\top}\) holds the roll, pitch, and
-yaw angles with rates \(\dot{\boldsymbol{\Psi}}\), and \(f_{\Sigma,\mathrm{cmd}}\) and
-\(\boldsymbol{\Psi}_\mathrm{cmd}\) are the commanded collective thrust and attitude. The thrust
-offset \(c_\mathrm{acc}\), the thrust scaling coefficient \(c_\mathrm{f}\), and the rotational
-coefficients \(\boldsymbol{c}_{\boldsymbol{\Psi},1}\), \(\boldsymbol{c}_{\boldsymbol{\Psi},2}\), and
-\(\boldsymbol{c}_{\boldsymbol{\Psi},3}\) are identified from flight data.
+where \(\mathbf{f}_\mathrm{g} = m\mathbf{g}\).
 
 !!! note
     This is the native Euler-angle form, matching
@@ -37,6 +29,29 @@ coefficients \(\boldsymbol{c}_{\boldsymbol{\Psi},1}\), \(\boldsymbol{c}_{\boldsy
     Integrating from \({}^{\mathcal{B}}\boldsymbol{\omega}\) rather than \(\dot{\boldsymbol{\Psi}}\)
     makes the discrete trajectory differ slightly from integrating the Euler state directly. The
     difference, however, is negligible at our default frequency of 500 Hz.
+
+| Variable | Name | Description |
+| --- | --- | --- |
+| \(\mathbf{p}\) | `pos` | Position in m |
+| \(\mathbf{v}\) | `vel` | Velocity in m/s |
+| \(\boldsymbol{\Psi} = [\phi,\theta,\psi]^{\top}\) | | Roll, pitch, and yaw in rad, from `quat` |
+| \(\dot{\boldsymbol{\Psi}}\) | | Roll, pitch, and yaw rates in rad/s, from `ang_vel` |
+| \(\boldsymbol{\Psi}_\mathrm{cmd}\) | `cmd[:3]` | Commanded roll, pitch, and yaw in rad |
+| \(f_{\Sigma,\mathrm{cmd}}\) | `cmd[3]` | Commanded collective thrust in N |
+| \(\mathbf{f}_\mathrm{g}\) | | Gravitational force |
+| \(\mathbf{R}\) | | Rotation from body to world frame |
+| \(\mathbf{e}_\mathrm{z}\) | | Unit vector in z direction |
+| \({}^{\mathcal{B}}(\cdot)\) | | Quantity in the body frame, world frame if unmarked |
+
+| Parameter | Name | Description |
+| --- | --- | --- |
+| \(m\) | `mass` | Mass in kg |
+| \(\mathbf{g}\) | `gravity_vec` | Gravity vector in m/s² |
+| \(c_\mathrm{acc}\) | `acc_coef` | Thrust offset |
+| \(c_\mathrm{f}\) | `cmd_f_coef` | Thrust scaling coefficient |
+| \(\boldsymbol{c}_{\boldsymbol{\Psi},1}\) | `rpy_coef` | Rotational dynamics coefficients |
+| \(\boldsymbol{c}_{\boldsymbol{\Psi},2}\) | `rpy_rates_coef` | Rotational dynamics coefficients |
+| \(\boldsymbol{c}_{\boldsymbol{\Psi},3}\) | `cmd_rpy_coef` | Rotational dynamics coefficients |
 """
 
 from crazyflow.dynamics.so_rpy.dynamics import (

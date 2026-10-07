@@ -79,19 +79,20 @@ def dynamics(
 
         mass: Mass of the drone (kg).
         L: Distance of the motors to the body axes (m). Shared (1,) or one value per motor (4,).
-        prop_inertia: Inertia of the propellers in z direction (kg m^2). Shared (1,) or one value
-            per motor (4,).
+        prop_inertia: Combined inertia of one propeller and its motor (kg m^2). Shared (1,) or one
+            value per motor (4,).
         gravity_vec: Gravity vector (m/s^2). We assume the gravity vector points downwards, e.g.
             [0, 0, -9.81].
         J: Inertia matrix (kg m^2).
         J_inv: Inverse inertia matrix (1/kg m^2).
-        rpm2thrust: Propeller force constants (N min^2). Shared (1, 3) or one curve per motor
-            (4, 3).
-        rpm2torque: Propeller torque constants (Nm min^2). Shared (1, 3) or one curve per motor
-            (4, 3).
-        mixing_matrix: Mixing matrix denoting the turn direction of the motors (4x3).
-        drag_matrix: Drag matrix containing the linear drag coefficients (3x3).
-        rotor_dyn_coef: Rotor dynamics coefficients. Shared (1, 4) or one set per motor (4, 4).
+        rpm2thrust: Thrust curve coefficients [k_f0, k_f1, k_f2] for rotor speeds in RPM. Shared
+            (1, 3) or one curve per motor (4, 3).
+        rpm2torque: Torque curve coefficients [k_t0, k_t1, k_t2] for rotor speeds in RPM. Shared
+            (1, 3) or one curve per motor (4, 3).
+        mixing_matrix: Mixing matrix of motor placement and spin direction (3x4).
+        drag_matrix: Drag coefficients in matrix form (N/(m/s), 3x3).
+        rotor_dyn_coef: Rotor dynamics coefficients, viscous damping and drag on spin-up followed by
+            viscous damping and drag on spin-down. Shared (1, 4) or one set per motor (4, 4).
 
     Note:
         All array parameters accept leading batch axes (N, M) to vary per world and per drone.
@@ -206,20 +207,22 @@ def symbolic_dynamics(
         mass: Drone mass in kg.
         L: Distance of the motors to the body axes in meters, shared ``(1,)`` or one value per
             motor ``(4,)``.
-        prop_inertia: Moment of inertia of the propellers about their spin axis in kg m², shared
-            ``(1,)`` or one value per motor ``(4,)``.
+        prop_inertia: Combined inertia of one propeller and its motor in kg m², shared ``(1,)`` or
+            one value per motor ``(4,)``.
         gravity_vec: Gravity vector, shape ``(3,)``.
         J: Inertia matrix, shape ``(3, 3)``.
         J_inv: Inverse inertia matrix, shape ``(3, 3)``.
-        rpm2thrust: Polynomial coefficients ``[a, b, c]`` for the thrust curve
-            ``f = a + b * rpm + c * rpm²``, shared ``(1, 3)`` or one curve per motor ``(4, 3)``.
-        rpm2torque: Polynomial coefficients ``[a, b, c]`` for the drag-torque curve
-            ``τ = a + b * rpm + c * rpm²``, shared ``(1, 3)`` or one curve per motor ``(4, 3)``.
-        mixing_matrix: Matrix of shape ``(3, 4)`` mapping per-motor forces to body torques.
-        rotor_dyn_coef: Four rotor dynamics coefficients ``[k_acc1, k_acc2, k_dec1, k_dec2]`` used
-            in the piecewise-linear spin-up/down model, shared ``(1, 4)`` or one set per motor
+        rpm2thrust: Thrust curve coefficients ``[k_f0, k_f1, k_f2]`` with
+            ``f = k_f0 + k_f1 * rpm + k_f2 * rpm²``, shared ``(1, 3)`` or one curve per motor
+            ``(4, 3)``.
+        rpm2torque: Torque curve coefficients ``[k_t0, k_t1, k_t2]`` with
+            ``t = k_t0 + k_t1 * rpm + k_t2 * rpm²``, shared ``(1, 3)`` or one curve per motor
+            ``(4, 3)``.
+        mixing_matrix: Mixing matrix of motor placement and spin direction, shape ``(3, 4)``.
+        rotor_dyn_coef: Rotor dynamics coefficients, viscous damping and drag on spin-up followed by
+            viscous damping and drag on spin-down, shared ``(1, 4)`` or one set per motor
             ``(4, 4)``.
-        drag_matrix: Diagonal ``(3, 3)`` matrix of linear drag coefficients.
+        drag_matrix: Drag coefficients in matrix form in N/(m/s), shape ``(3, 3)``.
 
     Returns:
         Tuple ``(X_dot, X, U, Y)`` of CasADi ``MX`` expressions:
@@ -318,9 +321,9 @@ class Params:
     mass: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
     """Mass of the drone."""
     L: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
-    """Arm length of the drone. One shared value, or one value per motor with shape (4,)."""
+    """Distance of the motors to the body axes. One shared value, or one per motor (4,)."""
     prop_inertia: Array = field(metadata={CORE_NDIM_KEY: 1})  # (1,)
-    """Inertia of the propellers. One shared value, or one value per motor with shape (4,)."""
+    """Inertia of one propeller and its motor. One shared value, or one per motor (4,)."""
     gravity_vec: Array = field(metadata={CORE_NDIM_KEY: 1})  # (3,)
     """Gravity vector of the drone."""
     J: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
@@ -328,15 +331,15 @@ class Params:
     J_inv: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
     """Inverse of the inertia matrix of the drone."""
     rpm2thrust: Array = field(metadata={CORE_NDIM_KEY: 2})  # (1, 3)
-    """Force constants of the drone. One shared curve, or one curve per motor with shape (4, 3)."""
+    """Thrust curve coefficients. One shared curve, or one curve per motor with shape (4, 3)."""
     rpm2torque: Array = field(metadata={CORE_NDIM_KEY: 2})  # (1, 3)
-    """Torque constants of the drone. One shared curve, or one curve per motor with shape (4, 3)."""
+    """Torque curve coefficients. One shared curve, or one curve per motor with shape (4, 3)."""
     mixing_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 4)
-    """Mixing matrix of the drone."""
+    """Mixing matrix of motor placement and spin direction."""
     drag_matrix: Array = field(metadata={CORE_NDIM_KEY: 2})  # (3, 3)
-    """Drag matrix of the drone."""
+    """Drag coefficients in matrix form."""
     rotor_dyn_coef: Array = field(metadata={CORE_NDIM_KEY: 2})  # (1, 4)
-    """Rotor speed dynamics coefficients of the drone. One shared set, or one per motor (4, 4)."""
+    """Rotor dynamics coefficients. One shared set, or one per motor (4, 4)."""
 
     @staticmethod
     def create(drone: str, device: Device) -> Params:
