@@ -17,9 +17,9 @@ import jax.numpy as jnp
 import numpy as np
 from jax.scipy.spatial.transform import Rotation as R
 
-from crazyflow.dynamics.first_principles import sim_dynamics
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimStateDeriv
+from crazyflow.sim.dynamics import first_principles_dynamics
 from crazyflow.sim.pipeline import append_fn
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ DURATION = 10.0  # s, one loop of the figure-eight
 
 def dynamics_deriv(data: SimData) -> SimData:
     """Evaluate the dynamics at the current state."""
-    return data.replace(plugins=data.plugins | {"states_deriv": sim_dynamics(data)})
+    return data.replace(plugins=data.plugins | {"states_deriv": first_principles_dynamics(data)})
 
 
 def finite_diff_deriv(data: SimData) -> SimData:
