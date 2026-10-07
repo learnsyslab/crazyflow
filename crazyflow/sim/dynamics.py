@@ -1,4 +1,4 @@
-"""Wrappers that wire `SimData` into the drone dynamics and return `SimStateDeriv`."""
+"""Wrappers around the drone dynamics for `SimData` compatibility."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def first_principles_dynamics(data: SimData) -> SimStateDeriv:
-    """Wire `SimData` into the first principles dynamics and return `SimStateDeriv`."""
+    """Wrap the first principles dynamics."""
     params: first_principles.Params = data.params
     vel, _, acc, ang_acc, rotor_acc = first_principles.dynamics(
         pos=data.states.pos,
@@ -33,7 +33,7 @@ def first_principles_dynamics(data: SimData) -> SimStateDeriv:
 
 
 def so_rpy_dynamics(data: SimData) -> SimStateDeriv:
-    """Wire `SimData` into the so_rpy dynamics and return `SimStateDeriv`."""
+    """Wrap the so_rpy dynamics."""
     params: so_rpy.Params = data.params
     vel, _, acc, ang_acc = so_rpy.dynamics(
         pos=data.states.pos,
@@ -52,7 +52,7 @@ def so_rpy_dynamics(data: SimData) -> SimStateDeriv:
 
 
 def so_rpy_rotor_dynamics(data: SimData) -> SimStateDeriv:
-    """Wire `SimData` into the so_rpy_rotor dynamics and return `SimStateDeriv`."""
+    """Wrap the so_rpy_rotor dynamics."""
     params: so_rpy_rotor.Params = data.params
     vel, _, acc, ang_acc, rotor_acc = so_rpy_rotor.dynamics(
         pos=data.states.pos,
@@ -71,7 +71,7 @@ def so_rpy_rotor_dynamics(data: SimData) -> SimStateDeriv:
 
 
 def so_rpy_rotor_drag_dynamics(data: SimData) -> SimStateDeriv:
-    """Wire `SimData` into the so_rpy_rotor_drag dynamics and return `SimStateDeriv`."""
+    """Wrap the so_rpy_rotor_drag dynamics."""
     params: so_rpy_rotor_drag.Params = data.params
     vel, _, acc, ang_acc, rotor_acc = so_rpy_rotor_drag.dynamics(
         pos=data.states.pos,
