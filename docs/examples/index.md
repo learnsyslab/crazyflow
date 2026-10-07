@@ -146,6 +146,21 @@ python examples/plugins/ground_effect.py
 
 ---
 
+## State derivatives
+
+Adding the state derivatives to the step pipeline with plugins. The simulation does not store them by default because it costs a little performance and they are rarely needed. One plugin calls the dynamics at the end of each step, which gives the exact derivative at the current state. The other uses finite differences of the states, which give the exact average derivative from the last to the current step. Both store a `SimStateDeriv` in the plugins dict. The plot compares them while the drone flies a figure-eight.
+
+<!-- notest: imported script, covered by tests/integration/test_examples.py -->
+```{ .python notest }
+--8<-- "examples/plugins/derivatives.py"
+```
+
+```bash
+python examples/plugins/derivatives.py
+```
+
+---
+
 ## Cameras and RGBD
 
 Offscreen rendering returns RGB-D images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.

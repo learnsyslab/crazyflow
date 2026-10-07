@@ -67,7 +67,6 @@ def test_world_mask():
     # Check that the mask correctly handles cases that previously failed under shape-based detection
     mask = world_mask(Sim(n_worlds=3, control=Control.attitude).data)
     assert mask.states.pos
-    assert mask.states_deriv.acc
     assert mask.core.steps
     assert not mask.params.mass
     assert mask.controls.attitude.cmd

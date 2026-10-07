@@ -525,7 +525,6 @@ class Sim:
         N, D = self.n_worlds, self.n_drones
         data = SimData(
             states=SimState.create(N, D, device),
-            states_deriv=SimStateDeriv.create(N, D, device),
             controls=SimControls.create(
                 N,
                 D,
@@ -648,7 +647,7 @@ def build_control_fns(
     return stages
 
 
-def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
+def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimStateDeriv]:
     """Select the dynamics function for the given dynamics mode."""
     match dynamics:
         case Dynamics.first_principles:
@@ -664,7 +663,7 @@ def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
 
 
 def select_integrate_fn(
-    integrator: Integrator, dynamics_fn: Callable[[SimData], SimData]
+    integrator: Integrator, dynamics_fn: Callable[[SimData], SimStateDeriv]
 ) -> Callable[[SimData], SimData]:
     """Select the integration function for the given dynamics and integrator mode."""
     match integrator:

@@ -277,8 +277,6 @@ class SimCore:
 class SimData:
     states: SimState
     """State of the simulation."""
-    states_deriv: SimStateDeriv
-    """Derivative of the state of the simulation."""
     controls: SimControls
     """Drone controller data."""
     params: SimParams
