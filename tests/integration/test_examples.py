@@ -42,6 +42,7 @@ def test_example_main(example_script: str):
     # Dynamically import the module
     spec = importlib.util.spec_from_file_location("example_module", example_script)
     example_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = example_module  # Dataclasses look up their module in sys.modules
     spec.loader.exec_module(example_module)
 
     # Ensure the script has a main function
@@ -51,5 +52,6 @@ def test_example_main(example_script: str):
     with patch("crazyflow.sim.sim.Sim.render", return_value=None):
         example_module.main()
 
-    # Clean up sys.path
+    # Clean up sys.path and sys.modules
     sys.path.remove(str(EXAMPLES_DIR))
+    del sys.modules[spec.name]
