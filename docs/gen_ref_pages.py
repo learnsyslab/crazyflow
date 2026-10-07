@@ -47,6 +47,7 @@ else:
 * [drones](crazyflow/drones/index.md)
 * [sim](crazyflow/sim/index.md)
     * [sim.data](crazyflow/sim/data.md)
+    * [sim.dynamics](crazyflow/sim/dynamics.md)
     * [sim.functional](crazyflow/sim/functional.md)
     * [sim.integration](crazyflow/sim/integration.md)
     * [sim.pipeline](crazyflow/sim/pipeline.md)
