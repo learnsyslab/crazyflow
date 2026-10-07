@@ -1,8 +1,10 @@
 """Example of adding the state derivatives to the step pipeline with plugins.
 
-Evaluating the dynamics gives the exact derivative at the current state. Finite differences give the
-exact average derivative from the last to the current step. The simulation does not store either by
-default because it costs performance and they are rarely needed.
+We compare two methods for the state derivatives: evaluating the dynamics and finite differences.
+The dynamics need the current state and input, so we evaluate them before integration. At the end of
+the step, they are the derivative at the previous state. Finite differences are taken after
+integration and give the derivative from the previous to the current state. For Euler integration,
+both methods are identical up to numerical noise. Other integrators differ, as shown here for RK4.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from jax.scipy.spatial.transform import Rotation as R
 from crazyflow.sim import Sim
 from crazyflow.sim.data import SimStateDeriv
 from crazyflow.sim.dynamics import first_principles_dynamics
-from crazyflow.sim.pipeline import append_fn
+from crazyflow.sim.pipeline import append_fn, insert_fn_before
 
 if TYPE_CHECKING:
     from crazyflow.sim.data import SimData
@@ -29,7 +31,7 @@ DURATION = 10.0  # s, one loop of the figure-eight
 
 
 def dynamics_deriv(data: SimData) -> SimData:
-    """Evaluate the dynamics at the current state."""
+    """Evaluate the dynamics."""
     return data.replace(plugins=data.plugins | {"states_deriv": first_principles_dynamics(data)})
 
 
@@ -57,34 +59,37 @@ def trajectory(t: float) -> np.ndarray:
 
 
 def main(plot: bool = True):
-    sim = Sim(dynamics="first_principles", control="state", integrator="rk4")
-    pos = jnp.asarray(trajectory(0.0)[..., :3], device=sim.device)
-    sim.data = sim.data.replace(states=sim.data.states.replace(pos=pos))
-    plugins = {
-        "states_deriv": SimStateDeriv.create(sim.n_worlds, sim.n_drones, sim.device),
-        "fd_states_deriv": SimStateDeriv.create(sim.n_worlds, sim.n_drones, sim.device),
-        "prev_states": sim.data.states,
-    }
-    sim.data = sim.data.replace(plugins=sim.data.plugins | plugins)
+    results = {}
+    for integrator in ("euler", "rk4"):
+        sim = Sim(dynamics="first_principles", control="state", integrator=integrator)
+        pos = jnp.asarray(trajectory(0.0)[..., :3], device=sim.device)
+        sim.data = sim.data.replace(states=sim.data.states.replace(pos=pos))
+        plugins = {
+            "states_deriv": SimStateDeriv.create(sim.n_worlds, sim.n_drones, sim.device),
+            "fd_states_deriv": SimStateDeriv.create(sim.n_worlds, sim.n_drones, sim.device),
+            "prev_states": sim.data.states,
+        }
+        sim.data = sim.data.replace(plugins=sim.data.plugins | plugins)
 
-    # Append after integration step
-    append_fn(sim.step_pipeline, dynamics_deriv)
-    append_fn(sim.step_pipeline, finite_diff_deriv)
-    sim.build_default_data()
-    sim.build_step_fn()
+        insert_fn_before(sim.step_pipeline, "integration", dynamics_deriv)
+        append_fn(sim.step_pipeline, finite_diff_deriv)
+        sim.build_default_data()
+        sim.build_step_fn()
 
-    log = {"states_deriv": [], "fd_states_deriv": []}
-    for i in range(int(2 * DURATION * sim.control_freq)):
-        sim.state_control(trajectory(i / sim.control_freq))
-        sim.step(sim.freq // sim.control_freq)
-        for key in log:
-            log[key].append(jax.tree.map(lambda x: np.asarray(x[0, 0]), sim.data.plugins[key]))
-    sim.close()
+        log = {"states_deriv": [], "fd_states_deriv": []}
+        for i in range(int(2 * DURATION * sim.control_freq)):
+            sim.state_control(trajectory(i / sim.control_freq))
+            sim.step(sim.freq // sim.control_freq)
+            for key in log:
+                log[key].append(jax.tree.map(lambda x: np.asarray(x[0, 0]), sim.data.plugins[key]))
+        sim.close()
 
-    dynamics, fd = (jax.tree.map(lambda *x: np.stack(x), *log[key]) for key in log)
-    for name in ("vel", "ang_vel", "acc", "ang_acc", "rotor_acc"):
-        x, x_fd = getattr(dynamics, name), getattr(fd, name)
-        print(f"{name}: max relative difference {np.abs(x - x_fd).max() / np.abs(x).max():.1e}")
+        dynamics, fd = (jax.tree.map(lambda *x: np.stack(x), *log[key]) for key in log)
+        results[integrator] = dynamics, fd
+        for name in ("vel", "ang_vel", "acc", "ang_acc", "rotor_acc"):
+            x, x_fd = getattr(dynamics, name), getattr(fd, name)
+            diff = np.abs(x - x_fd).max() / np.abs(x).max()
+            print(f"{integrator} {name}: max relative difference {diff:.1e}")
 
     if plot:
         import matplotlib.pyplot as plt
@@ -94,22 +99,22 @@ def main(plot: bool = True):
             ("acc", "Linear acceleration", "m/s$^2$"),
             ("ang_acc", "Angular acceleration", "rad/s$^2$"),
         )
-        for col, (name, title, unit) in enumerate(quantities):
-            x, x_fd = getattr(dynamics, name), getattr(fd, name)
-            x, x_fd = x[len(x) // 2 :], x_fd[len(x_fd) // 2 :]
-            t = np.arange(len(x)) / sim.control_freq
-            for i, axis in enumerate("xyz"):
-                label = f"{axis} finite differences"
-                axes[0, col].plot(t, x_fd[:, i], f"C{i}", lw=2.5, alpha=0.6, label=label)
-                axes[1, col].plot(t, x_fd[:, i] - x[:, i], f"C{i}", lw=0.8)
-            axes[0, col].plot(t, x, "k--", lw=0.8)
-            axes[0, col].set(title=title, ylabel=f"{title} [{unit}]")
-            axes[1, col].set(xlabel="Time [s]", ylabel=f"Finite differences - dynamics [{unit}]")
-        axes[0, 0].plot([], [], "k--", lw=0.8, label="dynamics")
+        for row, (integrator, (dynamics, fd)) in enumerate(results.items()):
+            for col, (name, title, unit) in enumerate(quantities):
+                x, x_fd = getattr(dynamics, name), getattr(fd, name)
+                x, x_fd = x[len(x) // 2 :], x_fd[len(x_fd) // 2 :]
+                t = np.arange(len(x)) / sim.control_freq
+                for i, axis in enumerate("xyz"):
+                    axes[row, col].plot(t, x_fd[:, i] - x[:, i], f"C{i}", lw=0.8, label=axis)
+                ylabel = f"Finite differences - dynamics [{unit}]"
+                axes[row, col].set(title=f"{title} ({integrator})", ylabel=ylabel)
+        for ax in axes[-1]:
+            ax.set(xlabel="Time [s]")
         axes[0, 0].legend()
         for ax in axes.flat:
             ax.grid()
         fig.tight_layout()
+        plt.savefig("derivatives.png", dpi=300)
         plt.show()
 
 
