@@ -31,10 +31,11 @@ def create_uniform_ang_vel(N: int = 1000, scale: float = 10) -> NDArray:
 
 @pytest.mark.unit
 def test_ang_vel2quat_dot():
-    quats = R.random(1000).as_quat()
-    ang_vels = create_uniform_ang_vel()
+    N = 1000
+    rot = R.random(N)
+    ang_vels = create_uniform_ang_vel(N)
     dt = 1e-5
-    rot = R.from_quat(quats)
+    quats = rot.as_quat()
     quat_next = (rot * R.from_rotvec(ang_vels * dt)).as_quat()
     quat_prev = (rot * R.from_rotvec(-ang_vels * dt)).as_quat()
     quat_next *= np.sign(np.sum(quat_next * quats, axis=-1, keepdims=True))
