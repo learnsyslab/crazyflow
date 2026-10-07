@@ -38,6 +38,7 @@ def test_ang_vel2quat_dot():
     quats = rot.as_quat()
     quat_next = (rot * R.from_rotvec(ang_vels * dt)).as_quat()
     quat_prev = (rot * R.from_rotvec(-ang_vels * dt)).as_quat()
+    # Pick the sign of ±q closest to quats; canonical=True can split pairs near w=0
     quat_next *= np.sign(np.sum(quat_next * quats, axis=-1, keepdims=True))
     quat_prev *= np.sign(np.sum(quat_prev * quats, axis=-1, keepdims=True))
     quat_dot_fd = (quat_next - quat_prev) / (2 * dt)

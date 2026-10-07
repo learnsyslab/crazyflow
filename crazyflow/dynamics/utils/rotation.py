@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 def ang_vel2quat_dot(quat: Array, ang_vel: Array) -> Array:
-    """Calculates the scalar-last quaternion derivative based on a body angular velocity."""
+    """Calculates the quaternion derivative based on a body angular velocity."""
     xp = array_namespace(quat)
     # Split angular velocity
     x = ang_vel[..., 0:1]
@@ -199,8 +199,7 @@ def cs_quat2euler(quat: cs.MX, seq: str = "xyz", degrees: bool = False) -> cs.MX
     CasADi-based solvers.
 
     Args:
-        quat: CasADi ``MX`` column vector of length 4, in scalar-last (xyzw)
-            convention.
+        quat: CasADi ``MX`` column vector of length 4 (xyzw).
         seq: Three-character axis sequence string.  Lowercase letters (e.g.
             ``"xyz"``) denote extrinsic rotations; uppercase (e.g. ``"XYZ"``)
             denote intrinsic rotations.  Consecutive axes must differ.
