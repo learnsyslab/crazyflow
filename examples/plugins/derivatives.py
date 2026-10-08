@@ -77,7 +77,7 @@ def main(plot: bool = True):
         sim.build_step_fn()
 
         log = {"states_deriv": [], "fd_states_deriv": []}
-        for i in range(int(2 * DURATION * sim.control_freq)):
+        for i in range(int(DURATION * sim.control_freq)):
             sim.state_control(trajectory(i / sim.control_freq))
             sim.step(sim.freq // sim.control_freq)
             for key in log:
@@ -102,7 +102,6 @@ def main(plot: bool = True):
         for row, (integrator, (dynamics, fd)) in enumerate(results.items()):
             for col, (name, title, unit) in enumerate(quantities):
                 x, x_fd = getattr(dynamics, name), getattr(fd, name)
-                x, x_fd = x[len(x) // 2 :], x_fd[len(x_fd) // 2 :]
                 t = np.arange(len(x)) / sim.control_freq
                 for i, axis in enumerate("xyz"):
                     axes[row, col].plot(t, x_fd[:, i] - x[:, i], f"C{i}", lw=0.8, label=axis)
@@ -114,7 +113,6 @@ def main(plot: bool = True):
         for ax in axes.flat:
             ax.grid()
         fig.tight_layout()
-        plt.savefig("derivatives.png", dpi=300)
         plt.show()
 
 
