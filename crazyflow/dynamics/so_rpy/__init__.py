@@ -35,9 +35,8 @@ with rates \(\dot{\boldsymbol{\psi}}\). The coefficients \(c_{\psi}\), \(c_{\dot
 from crazyflow.dynamics.so_rpy.dynamics import (
     Params,
     dynamics,
-    sim_dynamics,
     symbolic_dynamics,
     symbolic_dynamics_euler,
 )
 
-__all__ = ["Params", "dynamics", "sim_dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]
+__all__ = ["Params", "dynamics", "symbolic_dynamics", "symbolic_dynamics_euler"]

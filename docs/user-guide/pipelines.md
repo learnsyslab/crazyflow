@@ -237,6 +237,7 @@ sim.step()
 
 See the [disturbance injection example](../examples/index.md#disturbance-injection) for a full run comparing disturbed and undisturbed trajectories.
 
+Aerodynamic effects such as [downwash](../examples/index.md#downwash) and [ground effect](../examples/index.md#ground-effect) use the same approach: insert a stage before `integration` that updates the external force or torque fields.
 
 ## Next steps
 

@@ -10,7 +10,7 @@ from jax import Array
 from jax.numpy import vectorize
 from jax.scipy.spatial.transform import Rotation as R
 
-from crazyflow.sim.data import SimData
+from crazyflow.sim.data import SimData, SimStateDeriv
 
 
 class Integrator(StrEnum):
@@ -20,7 +20,7 @@ class Integrator(StrEnum):
     default = euler
 
 
-def euler(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> SimData:
+def euler(data: SimData, deriv_fn: Callable[[SimData], SimStateDeriv]) -> SimData:
     """Explicit Euler integration.
 
     Args:
@@ -33,7 +33,7 @@ def euler(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> SimData:
     return integrate(data, deriv_fn(data), dt=1 / data.core.freq)
 
 
-def rk4(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> SimData:
+def rk4(data: SimData, deriv_fn: Callable[[SimData], SimStateDeriv]) -> SimData:
     """Runge-Kutta 4 integration.
 
     Args:
@@ -44,14 +44,14 @@ def rk4(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> SimData:
         The integrated simulation data structure.
     """
     dt = 1 / data.core.freq
-    data_d1 = deriv_fn(data)
-    data_d2 = deriv_fn(integrate(data, data_d1, dt=dt / 2))
-    data_d3 = deriv_fn(integrate(data, data_d2, dt=dt / 2))
-    data_d4 = deriv_fn(integrate(data, data_d3, dt=dt))
-    return integrate(data, rk4_average(data_d1, data_d2, data_d3, data_d4), dt=dt)
+    k1 = deriv_fn(data)
+    k2 = deriv_fn(integrate(data, k1, dt=dt / 2))
+    k3 = deriv_fn(integrate(data, k2, dt=dt / 2))
+    k4 = deriv_fn(integrate(data, k3, dt=dt))
+    return integrate(data, rk4_average(k1, k2, k3, k4), dt=dt)
 
 
-def symplectic_euler(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> SimData:
+def symplectic_euler(data: SimData, deriv_fn: Callable[[SimData], SimStateDeriv]) -> SimData:
     """Symplectic Euler integration.
 
     Args:
@@ -61,24 +61,21 @@ def symplectic_euler(data: SimData, deriv_fn: Callable[[SimData], SimData]) -> S
     return integrate_symplectic(data, deriv_fn(data), dt=1 / data.core.freq)
 
 
-def rk4_average(k1: SimData, k2: SimData, k3: SimData, k4: SimData) -> SimData:
+def rk4_average(
+    k1: SimStateDeriv, k2: SimStateDeriv, k3: SimStateDeriv, k4: SimStateDeriv
+) -> SimStateDeriv:
     """Average four derivatives according to the RK4 rules."""
-    data = k1
-    k1, k2, k3, k4 = k1.states_deriv, k2.states_deriv, k3.states_deriv, k4.states_deriv
-    states_deriv = jax.tree.map(
-        lambda x1, x2, x3, x4: (x1 + 2 * x2 + 2 * x3 + x4) / 6, k1, k2, k3, k4
-    )
-    return data.replace(states_deriv=states_deriv)
+    return jax.tree.map(lambda x1, x2, x3, x4: (x1 + 2 * x2 + 2 * x3 + x4) / 6, k1, k2, k3, k4)
 
 
-def integrate(data: SimData, deriv: SimData, dt: float) -> SimData:
+def integrate(data: SimData, deriv: SimStateDeriv, dt: float) -> SimData:
     """Integrate the dynamics forward in time."""
-    states, states_deriv = data.states, deriv.states_deriv
+    states = data.states
 
     pos, quat, vel, ang_vel = states.pos, states.quat, states.vel, states.ang_vel
     rotor_vel = states.rotor_vel
-    dpos, drot = states_deriv.vel, states_deriv.ang_vel
-    dvel, dang_vel, drotor_vel = states_deriv.acc, states_deriv.ang_acc, states_deriv.rotor_acc
+    dpos, drot = deriv.vel, deriv.ang_vel
+    dvel, dang_vel, drotor_vel = deriv.acc, deriv.ang_acc, deriv.rotor_acc
 
     next_pos, next_quat, next_vel, next_ang_vel, next_rotor_vel = _integrate(
         pos, quat, vel, ang_vel, rotor_vel, dpos, drot, dvel, dang_vel, drotor_vel, dt
@@ -89,13 +86,13 @@ def integrate(data: SimData, deriv: SimData, dt: float) -> SimData:
     return data.replace(states=states)
 
 
-def integrate_symplectic(data: SimData, deriv: SimData, dt: float) -> SimData:
+def integrate_symplectic(data: SimData, deriv: SimStateDeriv, dt: float) -> SimData:
     """Integrate the dynamics forward in time."""
-    states, states_deriv = data.states, deriv.states_deriv
+    states = data.states
 
     pos, quat, vel, ang_vel = states.pos, states.quat, states.vel, states.ang_vel
     rotor_vel = states.rotor_vel
-    dvel, dang_vel, drotor_vel = states_deriv.vel, states_deriv.ang_vel, states_deriv.rotor_acc
+    dvel, dang_vel, drotor_vel = deriv.acc, deriv.ang_acc, deriv.rotor_acc
 
     next_pos, next_quat, next_vel, next_ang_vel, next_rotor_vel = _integrate_symplectic(
         pos, quat, vel, ang_vel, rotor_vel, dvel, dang_vel, drotor_vel, dt

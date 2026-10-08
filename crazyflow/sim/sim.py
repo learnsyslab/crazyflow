@@ -14,6 +14,7 @@ import mujoco.mjx as mjx
 import numpy as np
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
+from jax.sharding import NamedSharding, PartitionSpec
 
 import crazyflow.sim.functional as F
 from crazyflow.control import Control
@@ -25,17 +26,20 @@ from crazyflow.control.mellinger import (
     control_state2attitude,
 )
 from crazyflow.control.transform import motor_force2rotor_vel
+from crazyflow.drones import Drone
 from crazyflow.dynamics import Dynamics
 from crazyflow.dynamics import load_params as load_dynamics_params
-from crazyflow.dynamics.first_principles import sim_dynamics as first_principles_dynamics
-from crazyflow.dynamics.so_rpy import sim_dynamics as so_rpy_dynamics
-from crazyflow.dynamics.so_rpy_rotor import sim_dynamics as so_rpy_rotor_dynamics
-from crazyflow.dynamics.so_rpy_rotor_drag import sim_dynamics as so_rpy_rotor_drag_dynamics
 from crazyflow.exception import ConfigError, NotInitializedError
 from crazyflow.sim.data import SimControls, SimCore, SimData, SimParams, SimState, SimStateDeriv
+from crazyflow.sim.dynamics import (
+    first_principles_dynamics,
+    so_rpy_dynamics,
+    so_rpy_rotor_drag_dynamics,
+    so_rpy_rotor_dynamics,
+)
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
-from crazyflow.sim.sharding import build_sharded_data, placement
+from crazyflow.sim.sharding import WORLD_AXIS, build_sharded_data, build_sharded_mjx_data, placement
 from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
@@ -76,7 +80,7 @@ class Sim:
         self,
         n_worlds: int = 1,
         n_drones: int = 1,
-        drone: str = "cf21B_500",
+        drone: Drone = Drone.cf21B_500,
         dynamics: Dynamics = Dynamics.default,
         control: Control = Control.default,
         integrator: Integrator = Integrator.default,
@@ -129,6 +133,7 @@ class Sim:
         self.n_worlds = n_worlds
         self.n_drones = n_drones
         self.freq = freq
+        self.max_geom_pairs = -1 if n_drones < 64 else 2 * n_drones
         self.max_visual_geom = 1000
 
         # Initialize MuJoCo world and data
@@ -286,6 +291,7 @@ class Sim:
         assert self._xml_path.exists(), f"Model file {self._xml_path} does not exist"
         spec = mujoco.MjSpec.from_file(str(self._xml_path))
         spec.option.timestep = 1 / self.freq
+        spec.add_numeric(name="max_geom_pairs", data=[self.max_geom_pairs])
         spec.copy_during_attach = True
         drone_spec = mujoco.MjSpec.from_file(str(self.drone_path))
         frame = spec.worldbody.add_frame(name="world")
@@ -348,7 +354,12 @@ class Sim:
         mj_data = mujoco.MjData(mj_model)
         mjx_model = mjx.put_model(mj_model, device=self.device)
         mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
-        mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
+        if self.mesh is None:
+            mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
+        else:
+            # mjx_model has no world axis, so we replicate it to keep it compatible with the mesh
+            mjx_model = jax.device_put(mjx_model, NamedSharding(self.mesh, PartitionSpec()))
+            mjx_data = build_sharded_mjx_data(mjx_data, self.n_worlds, self.mesh)
         return mj_model, mj_data, mjx_model, mjx_data
 
     def _unweld_drones(self, mj_model: mujoco.MjModel):
@@ -458,7 +469,7 @@ class Sim:
         return self.data
 
     def shard(self, mesh: Mesh) -> SimData:
-        """Distribute the data and default data over a mesh along the world axis.
+        """Distribute the data, default data and MJX data over a mesh along the world axis.
 
         Args:
             mesh: Mesh to distribute the worlds over, as built by
@@ -470,6 +481,11 @@ class Sim:
         self.mesh = mesh
         self.data = jax.device_put(self.data, placement(self.data, mesh))
         self.default_data = jax.device_put(self.default_data, placement(self.default_data, mesh))
+        # We also have to move the mjx_model and mjx_data to the mesh. mjx_model is replicated, data
+        # is sharded along its world axis
+        self.mjx_model = jax.device_put(self.mjx_model, NamedSharding(mesh, PartitionSpec()))
+        world = NamedSharding(mesh, PartitionSpec(WORLD_AXIS))
+        self.mjx_data = jax.device_put(self.mjx_data, world)
         return self.data
 
     def build_default_data(self) -> SimData:
@@ -491,6 +507,7 @@ class Sim:
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+        self.spec.numeric("max_geom_pairs").data = [self.max_geom_pairs]
         self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
 
     def init_data(
@@ -510,7 +527,6 @@ class Sim:
         N, D = self.n_worlds, self.n_drones
         data = SimData(
             states=SimState.create(N, D, device),
-            states_deriv=SimStateDeriv.create(N, D, device),
             controls=SimControls.create(
                 N,
                 D,
@@ -562,11 +578,22 @@ class Sim:
     def contacts(self, body: str | None = None) -> Array:
         """Get contact information from the simulation.
 
+        Note:
+            ``sim.max_geom_pairs`` limits the maximum detectable collision contacts per collision
+            group. This is relevant for swarms, where the full pairwise collision buffer grows
+            quadratically. By default, we allocate 2*n_drones contact pairs if the swarm size
+            exceeds 64. That gives us enough capacity to detect all drone-drone contacts. However,
+            if the swarm collapses e.g. into a single position, this will no longer be correct. If
+            you need to truly detect all contacts, set ``sim.max_geom_pairs`` to -1 and rebuild the
+            simulation.
+
         Args:
             body: Optional body name to filter contacts for. If None, returns flags for all bodies.
 
         Returns:
-            An boolean array of shape (n_worlds,) that is True if any contact is present.
+            A boolean array of shape (n_worlds, n_contacts), one flag per slot in the contact
+            buffer. Which geoms a slot holds is given by the matching entries of
+            ``sim.mjx_data._impl.contact.geom1`` and ``geom2``.
         """
         if body is None:
             return self.mjx_data._impl.contact.dist < 0
@@ -622,7 +649,7 @@ def build_control_fns(
     return stages
 
 
-def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
+def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimStateDeriv]:
     """Select the dynamics function for the given dynamics mode."""
     match dynamics:
         case Dynamics.first_principles:
@@ -638,7 +665,7 @@ def select_dynamics_fn(dynamics: Dynamics) -> Callable[[SimData], SimData]:
 
 
 def select_integrate_fn(
-    integrator: Integrator, dynamics_fn: Callable[[SimData], SimData]
+    integrator: Integrator, dynamics_fn: Callable[[SimData], SimStateDeriv]
 ) -> Callable[[SimData], SimData]:
     """Select the integration function for the given dynamics and integrator mode."""
     match integrator:
@@ -708,7 +735,7 @@ def clip_floor_pos(data: SimData) -> SimData:
     return data.replace(states=data.states.replace(pos=clip_pos, vel=clip_vel))
 
 
-def rotor_vel_limits(dynamics: Dynamics, drone: str) -> tuple[float, float]:
+def rotor_vel_limits(dynamics: Dynamics, drone: Drone) -> tuple[float, float]:
     """Limits of ``rotor_vel`` in RPM (first principles) or collective thrust in N (others)."""
     params = load_dynamics_params(dynamics, drone)
     thrust_min, thrust_max = float(params["thrust_min"]), float(params["thrust_max"])

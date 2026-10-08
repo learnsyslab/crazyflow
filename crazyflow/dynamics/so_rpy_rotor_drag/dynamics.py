@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from jax import Device
 
     from crazyflow._typing import Array  # To be changed to array_api_typing later
-    from crazyflow.sim.data import SimData
 
 
 # Additional symbols specific to these dynamics
@@ -449,23 +448,3 @@ class Params:
             cmd_rpy_coef=jnp.asarray(p["cmd_rpy_coef"], device=device),
             drag_matrix=jnp.asarray(p["drag_matrix"], device=device),
         )
-
-
-def sim_dynamics(data: SimData) -> SimData:
-    """Compute the forces and torques from the so_rpy_rotor_drag dynamics."""
-    params: Params = data.params
-    vel, _, acc, ang_acc, rotor_acc = dynamics(
-        pos=data.states.pos,
-        quat=data.states.quat,
-        vel=data.states.vel,
-        ang_vel=data.states.ang_vel,
-        cmd=data.controls.attitude.cmd,
-        rotor_vel=data.states.rotor_vel,
-        dist_f=data.states.force,
-        dist_t=data.states.torque,
-        **params.__dict__,
-    )
-    states_deriv = data.states_deriv.replace(
-        vel=vel, ang_vel=data.states.ang_vel, acc=acc, ang_acc=ang_acc, rotor_acc=rotor_acc
-    )
-    return data.replace(states_deriv=states_deriv)

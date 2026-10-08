@@ -170,16 +170,23 @@ def _build_residuals_fun_translation(
         constants: dict[str, Array],
         acc_observed: Array,
     ) -> Callable:
+        # The residuals ignore the parameters the dynamics do not have, so their Jacobian columns
+        # must be zero as well. Otherwise the optimizer steps along gradients of the full model
+        # that change nothing in the residuals and settles far from the minimum.
         match dynamics:  # Dummy values for other params
             case "so_rpy":
                 params_jnp = jnp.array([params[0], 0.0, 0.0, 0.0])
+                mask = jnp.array([1.0, 0.0, 0.0, 0.0])
             case "so_rpy_rotor":
                 params_jnp = jnp.array([params[0], params[1], 0.0, 0.0])
+                mask = jnp.array([1.0, 1.0, 0.0, 0.0])
             case "so_rpy_rotor_drag":
                 params_jnp = jnp.array([params[0], params[1], params[2], params[3]])
+                mask = jnp.array([1.0, 1.0, 1.0, 1.0])
             case _:
                 raise ValueError(f"Unknown dynamics type: {dynamics}")
-        return jax.device_get(jac_fun(params_jnp, quat, vel, cmd_f, t, constants, acc_observed))
+        jac = jac_fun(params_jnp, quat, vel, cmd_f, t, constants, acc_observed)
+        return jax.device_get(jac * mask)
 
     return _residual_fun_trans, _residual_fun_trans_jac
 

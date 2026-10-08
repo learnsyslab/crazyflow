@@ -13,7 +13,7 @@ from crazyflow.control.mellinger import (
     force_torque2rotor_vel,
     state2attitude,
 )
-from crazyflow.drones import available_drones
+from crazyflow.drones import Drone
 
 if TYPE_CHECKING:
     from crazyflow._typing import Array  # To be changed to array_api_typing later
@@ -25,7 +25,7 @@ def create_rnd_states(shape: tuple[int, ...] = ()) -> tuple[Array, Array, Array,
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_state2attitude(drone: str) -> None:
     controller = parametrize(state2attitude, drone)
     # Single input
@@ -41,7 +41,7 @@ def test_state2attitude(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_attitude2force_torque(drone: str) -> None:
     controller = parametrize(attitude2force_torque, drone)
     # Single input
@@ -62,7 +62,7 @@ def test_attitude2force_torque(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque(drone: str) -> None:
     controller = parametrize(body_rate2force_torque, drone)
     # Single input
@@ -83,7 +83,7 @@ def test_body_rate2force_torque(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_force_torque2rotor_vel(drone: str) -> None:
     controller = parametrize(force_torque2rotor_vel, drone)
     # Single input
@@ -102,7 +102,7 @@ def test_force_torque2rotor_vel(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_state2attitude_at_setpoint(drone: str) -> None:
     # At setpoint with identity orientation and zero acc, RPY command should be
     # [0, 0, 0] and thrust must be positive (hovering against gravity).
@@ -118,7 +118,7 @@ def test_state2attitude_at_setpoint(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_state2attitude_integral_error_accumulation(drone: str) -> None:
     # A constant position error must cause the integral error to accumulate
     # linearly until it would exceed int_err_max (clipped by the controller).
@@ -145,7 +145,7 @@ def test_state2attitude_integral_error_accumulation(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_attitude2force_torque_at_setpoint(drone: str) -> None:
     # Identity orientation commanded → zero attitude error → zero corrective torque.
     controller = parametrize(attitude2force_torque, drone)
@@ -160,7 +160,7 @@ def test_attitude2force_torque_at_setpoint(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_attitude2force_torque_zero_thrust(drone: str):
     # Zero thrust command → firmware zeros torque; outputs are all zero.
     controller = parametrize(attitude2force_torque, drone)
@@ -173,7 +173,7 @@ def test_attitude2force_torque_zero_thrust(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_at_setpoint(drone: str) -> None:
     # Level drone with measured rates equal to the commanded rates → zero corrective torque.
     controller = parametrize(body_rate2force_torque, drone)
@@ -188,7 +188,7 @@ def test_body_rate2force_torque_at_setpoint(drone: str) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_zero_thrust(drone: str):
     # Zero thrust command → firmware zeros torque; outputs are all zero.
     controller = parametrize(body_rate2force_torque, drone)
@@ -201,7 +201,7 @@ def test_body_rate2force_torque_zero_thrust(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_sign(drone: str):
     # A positive rate error about one axis must produce a positive torque about that axis only.
     controller = parametrize(body_rate2force_torque, drone)
@@ -217,7 +217,7 @@ def test_body_rate2force_torque_sign(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_matches_attitude(drone: str):
     # A zero body rate command is equivalent to commanding a level attitude at the current yaw.
     att_controller = parametrize(attitude2force_torque, drone)
@@ -239,7 +239,7 @@ def test_body_rate2force_torque_matches_attitude(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_leveling(drone: str):
     # The firmware levels a tilted drone even at the rate setpoint. Zero attitude gains disable it.
     controller = parametrize(body_rate2force_torque, drone)
@@ -258,7 +258,7 @@ def test_body_rate2force_torque_leveling(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_state2attitude_batch_consistency(drone: str):
     controller = parametrize(state2attitude, drone)
     batch = (3, 2)
@@ -273,7 +273,7 @@ def test_state2attitude_batch_consistency(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_attitude2force_torque_batch_consistency(drone: str):
     controller = parametrize(attitude2force_torque, drone)
     batch = (3, 2)
@@ -290,7 +290,7 @@ def test_attitude2force_torque_batch_consistency(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_body_rate2force_torque_batch_consistency(drone: str):
     controller = parametrize(body_rate2force_torque, drone)
     batch = (3, 2)
@@ -317,7 +317,7 @@ def test_body_rate2force_torque_batch_consistency(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_force_torque2rotor_vel_batch_consistency(drone: str):
     controller = parametrize(force_torque2rotor_vel, drone)
     batch = (3, 2)
@@ -331,7 +331,7 @@ def test_force_torque2rotor_vel_batch_consistency(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_attitude2force_torque_batch_zero_thrust(drone: str):
     # Drones with zero thrust must stay at zero force, independent of other drones
     controller = parametrize(attitude2force_torque, drone)
@@ -347,7 +347,7 @@ def test_attitude2force_torque_batch_zero_thrust(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_force_torque2rotor_vel_batch_zero_force(drone: str):
     # Drones with zero desired force must not be clipped because other drones have non-zero force.
     controller = parametrize(force_torque2rotor_vel, drone)
@@ -363,7 +363,7 @@ def test_force_torque2rotor_vel_batch_zero_force(drone: str):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("drone", available_drones)
+@pytest.mark.parametrize("drone", Drone)
 def test_force_torque2rotor_vel_symmetric(drone: str):
     # Pure vertical force with zero torque → X-frame symmetry → all 4 RPMs equal.
     controller = parametrize(force_torque2rotor_vel, drone)

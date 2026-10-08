@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytest
 from conftest import available_backends
-from jax.sharding import PartitionSpec
+from jax.sharding import NamedSharding, PartitionSpec
 
 from crazyflow.control import Control
 from crazyflow.sim import Sim
@@ -34,14 +34,27 @@ def assert_sharding(x: Any, sharding: Any):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("platform", multi_device)
-def test_placement(platform: str):
+@pytest.mark.parametrize("at_construction", [True, False])
+@pytest.mark.parametrize("n_drones", [1, 2])
+def test_placement(platform: str, at_construction: bool, n_drones: int):
     devices = jax.devices(platform)
-    sim = Sim(n_worlds=2 * len(devices), device=platform)
-    sim.shard(world_mesh(devices))
+    mesh = world_mesh(devices)
+    n_worlds = 2 * len(devices)
+    if at_construction:
+        sim = Sim(n_worlds=n_worlds, n_drones=n_drones, device=platform, mesh=mesh)
+    else:
+        sim = Sim(n_worlds=n_worlds, n_drones=n_drones, device=platform)
+        sim.shard(mesh)
     assert sim.data.states.pos.sharding.spec == PartitionSpec("worlds")
     assert sim.data.params.mass.sharding.spec == PartitionSpec()
     assert sim.data.params.gravity_vec.sharding.spec == PartitionSpec()
     assert sim.data.params.rotor_dyn_coef.sharding.spec == PartitionSpec()
+    expected = placement(sim.data, mesh)
+    jax.tree.map(assert_sharding, sim.data, expected)  # Sanity-check the rest
+    jax.tree.map(assert_sharding, sim.default_data, expected)
+    # MJX data is also per-world, so should be sharded as well
+    world = NamedSharding(mesh, PartitionSpec("worlds"))
+    jax.tree.map(lambda leaf: assert_sharding(leaf, world), sim.mjx_data)
 
 
 @pytest.mark.unit
@@ -82,8 +95,24 @@ def test_sharded_step_values(platform: str):
     devices = jax.devices(platform)
     sim = Sim(n_worlds=2 * len(devices), device=platform)
     sim.step(10)
-    pos = np.asarray(sim.data.states.pos)
+    pos = np.asarray(sim.data.states.pos)  # Copy to np for comparison across shardings
     sim.reset()
     sim.shard(world_mesh(devices))
     sim.step(10)
     assert np.allclose(np.asarray(sim.data.states.pos), pos, atol=1e-6)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("platform", multi_device)
+def test_sharded_contacts(platform: str):
+    # Put drones in collision every other world, check that contacts can be computed and are correct
+    devices = jax.devices(platform)
+    n_worlds = 2 * len(devices)
+    grounded = jnp.arange(n_worlds) % 2 == 0
+    sim = Sim(n_worlds=n_worlds, device=platform, mesh=world_mesh(devices))
+    pos = sim.data.states.pos.at[:, 0, 2].set(jnp.where(grounded, -0.05, 1.0))
+    sim.data = sim.data.replace(
+        states=sim.data.states.replace(pos=pos), core=sim.data.core.replace(mjx_synced=False)
+    )
+    assert jnp.array_equal(sim.contacts("drone:0").any(axis=-1), grounded), "wrong worlds collide"
+    sim.close()

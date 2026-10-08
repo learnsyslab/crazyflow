@@ -81,11 +81,6 @@ where \(D_b\) is the body-frame drag matrix, \(l\) is the motor arm length, \(J_
 moment of inertia, \(M\) is the \(3\times 4\) mixing matrix, and \(\mathbf{m}_z\) is its last row.
 """
 
-from crazyflow.dynamics.first_principles.dynamics import (
-    Params,
-    dynamics,
-    sim_dynamics,
-    symbolic_dynamics,
-)
+from crazyflow.dynamics.first_principles.dynamics import Params, dynamics, symbolic_dynamics
 
-__all__ = ["dynamics", "symbolic_dynamics", "sim_dynamics", "Params"]
+__all__ = ["dynamics", "symbolic_dynamics", "Params"]

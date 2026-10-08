@@ -69,6 +69,7 @@ nav:
       - Integral errors: user-guide/control/integral-errors.md
       - Batching: user-guide/control/batching.md
       - JIT compilation: user-guide/control/jit.md
+    - Adding a drone: user-guide/adding-drones.md
     - Pipelines: user-guide/pipelines.md
     - The world axis: user-guide/world-axis.md
     - Sharding: user-guide/sharding.md

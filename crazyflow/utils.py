@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import math
 import os
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
@@ -22,8 +23,9 @@ CORE_NDIM_KEY = "core_ndim"
 
 def grid_2d(n: int, spacing: float = 1.0, center: Array | None = None) -> Array:
     """Generate a 2D grid of points."""
+    assert n > 0, "Number of points must be positive"
     center = jnp.zeros(2) if center is None else center
-    N = int(jnp.ceil(jnp.sqrt(n)))
+    N = math.isqrt(n - 1) + 1
     points = jnp.linspace(-0.5 * spacing * (N - 1), 0.5 * spacing * (N - 1), N)
     x, y = jnp.meshgrid(points, points)
     grid = jnp.stack((x.flatten(), y.flatten()), axis=-1) + center
