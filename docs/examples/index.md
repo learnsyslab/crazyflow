@@ -146,21 +146,6 @@ python examples/plugins/ground_effect.py
 
 ---
 
-## UWB
-
-Simulating a UWB tag as a plugin. The tag measures the ranges to eight anchors with noise and a constant bias per anchor and solves them for a position. The drone flies a figure-eight once with the state controller reading the true position and once with the UWB position. The plot compares the flown paths, the observation errors, and the tracking errors of both runs.
-
-<!-- notest: imported script, covered by tests/integration/test_examples.py -->
-```{ .python notest }
---8<-- "examples/plugins/uwb.py"
-```
-
-```bash
-python examples/plugins/uwb.py
-```
-
----
-
 ## Cameras and RGBD
 
 Offscreen rendering returns RGB-D images on every frame. The FPV camera (`fpv_cam`) is attached to the drone and moves with it.

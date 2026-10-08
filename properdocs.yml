@@ -79,6 +79,7 @@ nav:
     - MuJoCo Integration: user-guide/mujoco.md
     - Gymnasium Environments: user-guide/gymnasium-envs.md
   - Examples: examples/index.md
+  - Projects: projects.md
   - API Reference: api/
   - Cite: cite.md
 
