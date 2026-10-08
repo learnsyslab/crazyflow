@@ -246,4 +246,5 @@ pos = sim.data.states.pos[0, 0]  # shape (3,) — position of world 0, drone 0
 - [Quick Start](get-started/quick-start.md) — step-by-step walkthrough of the object-oriented API
 - [Functional API](user-guide/functional-api.md) — JIT compilation, autodiff, and `jax.lax.scan` rollouts
 - [Examples](examples/index.md) — runnable scripts covering hover, gradients, batched simulation, and more
+- [Projects](projects.md) — research and teaching projects built on Crazyflow
 - [API Reference](api/index.md) — full Python API
