@@ -37,6 +37,16 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
     </div>
     <div class="carousel-slide">
       <iframe
+        src="https://www.youtube.com/embed/QhOUePHSmyA?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=QhOUePHSmyA&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
+        title="End-to-end vision-based flight in Crazyflow"
+        allow="autoplay; encrypted-media; picture-in-picture; web-share"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+      <div class="carousel-caption">End-to-end vision-based flight on hardware with a policy trained in Crazyflow.</div>
+    </div>
+    <div class="carousel-slide">
+      <iframe
         src="https://www.youtube.com/embed/iabmLwW8SWQ?autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=iabmLwW8SWQ&amp;controls=0&amp;rel=0&amp;modestbranding=1&amp;playsinline=1"
         title="Swarm choreographies in Crazyflow"
         allow="autoplay; encrypted-media; picture-in-picture; web-share"
@@ -104,6 +114,10 @@ Every configuration ships with an MJCF model, meshes, and fitted dynamics parame
     <div class="carousel-slide carousel-slide-image">
       <img src="img/drones/cf21B_500.png" alt="cf21B_500" loading="lazy" />
       <div class="carousel-caption"><code>cf21B_500</code> — Crazyflie 2.1 Brushless with 500 mAh battery</div>
+    </div>
+    <div class="carousel-slide carousel-slide-image">
+      <img src="img/drones/hb_x500.png" alt="hb_x500" loading="lazy" />
+      <div class="carousel-caption"><code>hb_x500</code> — Holybro X500 V2</div>
     </div>
   </div>
 

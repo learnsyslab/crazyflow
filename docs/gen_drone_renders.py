@@ -67,7 +67,8 @@ else:
 
         camera = mujoco.MjvCamera()
         camera.lookat[:] = model.body("drone").pos
-        camera.distance, camera.azimuth, camera.elevation = 0.28, 135, -28
+        camera.distance = max(0.28, 1.1 * model.stat.extent)
+        camera.azimuth, camera.elevation = 135, -28
         option = mujoco.MjvOption()
         option.geomgroup[:] = 0
         option.geomgroup[2] = 1
