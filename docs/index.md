@@ -95,7 +95,7 @@ Crazyflow is a research simulator for Crazyflie-style quadrotors that runs milli
 
 ## Supported drones
 
-Every configuration ships with an MJCF model, meshes, and fitted dynamics parameters. The renders below are generated from the bundled models when the docs are built.
+Every configuration includes an MJCF model, meshes, and fitted dynamics parameters.
 
 <div class="carousel-container">
   <div class="carousel">
