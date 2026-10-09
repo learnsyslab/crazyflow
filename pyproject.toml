@@ -204,6 +204,11 @@ mkdocs-literate-nav = ">=0.6.0"
 mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
 
+# Headless OpenGL for rendering the drone images during the docs build
+[tool.pixi.feature.docs.target.linux-64.dependencies]
+libegl = "*"
+mesalib = "*"
+
 [tool.pixi.feature.docs.tasks]
 docs-build = { cmd = "properdocs build --strict", description = "Build docs" }
 docs-serve = { cmd = "properdocs serve --livereload", description = "Serve docs locally" }
