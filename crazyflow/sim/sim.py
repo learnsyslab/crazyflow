@@ -614,8 +614,8 @@ class Sim:
         mj_model = self.mj_model
         base = "drone_fused" if self.fused_mjx_model else "drone"
         drone_ids = [mj_model.body(f"{base}:{i}").id for i in range(self.n_drones)]
-        no_drone = self.n_drones  # One past the last drone, gets ignored later
-        body2drone = np.full(mj_model.nbody, no_drone)
+        no_drone_id = self.n_drones  # One past the last drone, gets ignored later
+        body2drone = np.full(mj_model.nbody, no_drone_id)
         body2drone[drone_ids] = np.arange(self.n_drones)
         # We add one row that absorbes all ignored contacts for non-drone bodies
         ignored = np.zeros((self.n_drones + 1, mj_model.nbody), dtype=bool)
