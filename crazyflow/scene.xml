@@ -18,7 +18,8 @@
     </asset>
 
     <worldbody>
-        <light pos="0 0 3" dir="0 0 -1" directional="true"/>
+        <!-- Tilted because software renderers draw shadow acne on the floor under a vertical light -->
+        <light pos="0 0 3" dir="0.05 0 -1" directional="true"/>
         <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
     </worldbody>
 </mujoco>
