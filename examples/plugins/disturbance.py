@@ -36,6 +36,7 @@ def disturbance_fn(data: SimData) -> SimData:
 
 def main(plot: bool = False):
     sim = Sim(control="state")
+    fps = 50
     control = np.zeros((sim.n_worlds, sim.n_drones, 16))
     control[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     control[..., :3] = 0.2
@@ -43,12 +44,13 @@ def main(plot: bool = False):
     # First run
     pos, quat = [], []
     sim.reset()
-    for _ in range(3 * sim.control_freq):
+    for i in range(3 * sim.control_freq):
         sim.state_control(control)
         sim.step(sim.freq // sim.control_freq)
         pos.append(sim.data.states.pos[0, 0])
         quat.append(sim.data.states.quat[0, 0])
-        sim.render()
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render()
 
     # Second run
     # We insert the disturbance function into the step pipeline before the integration step. You can
@@ -58,12 +60,13 @@ def main(plot: bool = False):
     sim.build_step_fn()
     pos_disturbed, quat_disturbed = [], []
     sim.reset()
-    for _ in range(3 * sim.control_freq):
+    for i in range(3 * sim.control_freq):
         sim.state_control(control)
         sim.step(sim.freq // sim.control_freq)
         pos_disturbed.append(sim.data.states.pos[0, 0])
         quat_disturbed.append(sim.data.states.quat[0, 0])
-        sim.render()
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render()
 
     sim.close()
     if plot:

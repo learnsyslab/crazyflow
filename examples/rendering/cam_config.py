@@ -21,7 +21,7 @@ def main(cam_config: dict | None = None):
     sim.reset()
 
     duration = 5.0
-    fps = 60
+    fps = 50
 
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
     cmd[..., 9:13] = R.from_euler("z", 0.0).as_quat()

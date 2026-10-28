@@ -12,7 +12,7 @@ def main():
     """Spawn 25 drones in one world and render each with a trace behind it."""
     n_worlds, n_drones = 1, 25
     sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=Dynamics.so_rpy, device="cpu")
-    fps = 60
+    fps = 50
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))
     cmd[..., 3] = sim.data.params.mass[0] * 9.81 * 1.05
     rgbas = np.random.default_rng(0).uniform(0, 1, (n_drones, 4))

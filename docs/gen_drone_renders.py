@@ -2,16 +2,11 @@
 
 This script is executed by the mkdocs-gen-files plugin during ``mkdocs build`` or
 ``mkdocs serve``. The images are written to ``img/drones/<name>.png`` in the virtual docs tree
-and are never committed. Rendering is headless via EGL on Linux and CGL on macOS unless
-``MUJOCO_GL`` is already set.
+and are never committed. The docs environment renders headless via EGL on Linux and CGL on macOS.
 """
 
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-import headless  # noqa: F401
 import imageio.v3 as iio
 import mkdocs_gen_files
 import mujoco

@@ -208,10 +208,18 @@ mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
 imageio-ffmpeg = "*"
 
-# Headless OpenGL for rendering the drone images during the docs build
+# Headless OpenGL for rendering during the docs build
 [tool.pixi.feature.docs.target.linux-64.dependencies]
 libegl = "*"
 mesalib = "*"
+
+# libglvnd only searches /usr/share/glvnd, which is missing on minimal CI runners
+[tool.pixi.feature.docs.target.linux-64.activation.env]
+MUJOCO_GL = "${MUJOCO_GL:-egl}"
+__EGL_VENDOR_LIBRARY_DIRS = "/usr/share/glvnd/egl_vendor.d:$CONDA_PREFIX/share/glvnd/egl_vendor.d"
+
+[tool.pixi.feature.docs.target.osx-arm64.activation.env]
+MUJOCO_GL = "${MUJOCO_GL:-cgl}"
 
 [tool.pixi.feature.docs.tasks]
 docs-build = { cmd = "properdocs build --strict", description = "Build docs" }

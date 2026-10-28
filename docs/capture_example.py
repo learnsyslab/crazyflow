@@ -15,8 +15,6 @@ from pathlib import Path
 from typing import Any, Callable
 from unittest.mock import patch
 
-import headless  # noqa: F401
-import imageio.v3 as iio
 import imageio_ffmpeg
 import jax
 import matplotlib.pyplot as plt
@@ -26,7 +24,8 @@ from matplotlib import animation
 
 from crazyflow.sim import Sim
 
-WIDTH, HEIGHT, FPS = 960, 540, 30
+WIDTH, HEIGHT = 960, 540
+EXAMPLE_FPS, FPS = 50, 25
 CRF = "28"
 # The initial free camera of the interactive viewer
 CAM_CONFIG = {"lookat": [0.0, 0.0, 0.0], "distance": 2.0, "azimuth": 90.0, "elevation": -45.0}
@@ -34,51 +33,29 @@ MAX_SVG_BYTES = 500_000
 
 
 class Video:
-    """H.264 video of rendered frames, resampled to real time from the sim time of each frame.
-
-    A video of a single frame is saved as png.
-    """
+    """H.264 video of every second frame of an example, which renders at 50 fps."""
 
     def __init__(self, path: Path):
-        """Create the video, the file is written on the second frame."""
+        """Create the video, the file is written on the first frame."""
         self.path = path
         self.writer = None
-        self.first = None
         self.n_frames = 0
-        self.start = None
-        self.offset = 0.0
-        self.last = 0.0
+        self.t = None
 
     def add(self, t: float, render: Callable[[], np.ndarray]) -> bool:
-        """Render and write a frame at sim time ``t`` if the video needs one."""
-        if t + self.offset < self.last:  # The sim was reset
-            self.offset = self.last + 1 / FPS - t
-        t = self.last = t + self.offset
-        if self.start is None:
-            self.start = t
-        if t < self._next():
+        """Render and write the frame at sim time ``t`` if the video needs it."""
+        dt = t - self.t if self.t is not None else 0.0
+        assert dt <= 0 or np.isclose(dt, 1 / EXAMPLE_FPS, atol=1e-4), (
+            f"Examples render at {EXAMPLE_FPS} fps, not {1 / dt:.1f} fps"
+        )
+        self.t = t
+        self.n_frames += 1
+        if (self.n_frames - 1) % (EXAMPLE_FPS // FPS):
             return False
-        frame = np.ascontiguousarray(render())
-        while self._next() <= t:
-            self._write(frame)
-            self.n_frames += 1
-        return True
-
-    def close(self):
-        """Finish writing the video."""
-        if self.writer is not None:
-            self.writer.close()
-        elif self.first is not None:
-            iio.imwrite(self.path.with_suffix(".png"), self.first)
-
-    def _write(self, frame: np.ndarray):
-        if self.first is None:
-            self.first = frame
-            return
         if self.writer is None:
             self.writer = imageio_ffmpeg.write_frames(
                 str(self.path),
-                (frame.shape[1], frame.shape[0]),
+                (WIDTH, HEIGHT),
                 fps=FPS,
                 codec="libx264",
                 quality=None,
@@ -86,11 +63,13 @@ class Video:
                 output_params=["-crf", CRF, "-preset", "slow", "-movflags", "+faststart"],
             )
             self.writer.send(None)
-            self.writer.send(self.first)
-        self.writer.send(frame)
+        self.writer.send(np.ascontiguousarray(render()))
+        return True
 
-    def _next(self) -> float:
-        return self.start + self.n_frames / FPS - 1e-9
+    def close(self):
+        """Finish writing the video."""
+        if self.writer is not None:
+            self.writer.close()
 
 
 def save_figure(fig: plt.Figure, path: Path, anim: animation.FuncAnimation | None):

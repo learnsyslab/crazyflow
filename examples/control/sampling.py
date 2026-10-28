@@ -37,7 +37,7 @@ except RuntimeError:
 # Simulation configuration
 DRONE = "cf21B_500"
 DURATION = 12.0
-FPS = 60
+FPS = 50
 RENDER = True
 
 # Controller configuration

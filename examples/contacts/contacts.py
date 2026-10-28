@@ -15,7 +15,7 @@ from crazyflow.sim.sim import use_box_collision
 def main():
     """Spawn multiple drones in multiple worlds and check for contacts with both geometries."""
     n_worlds, n_drones = 2, 3
-    fps = 60
+    fps = 50
     for box in (False, True):
         sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=Dynamics.so_rpy)
         use_box_collision(sim, enable=box)

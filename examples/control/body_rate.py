@@ -49,7 +49,7 @@ def main():
     sim.build_default_data()
     sim.reset()
     duration = 6.5
-    fps = 60
+    fps = 50
 
     # We use the Mellinger position controller to generate attitude commands, which we then convert
     # to body rates. This could be any controller that outputs [w_x, w_y, w_z, thrust].

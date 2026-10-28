@@ -21,7 +21,7 @@ from crazyflow.control.transform import motor_force2rotor_vel
 from crazyflow.sim import Dynamics, Sim
 
 DURATION = 5.0
-FPS = 60
+FPS = 50
 TRAJ_CENTER = np.array([0.0, 0.0, 1.0])
 TRAJ_SIZE = np.array([1.0, 0.0, 0.5])
 

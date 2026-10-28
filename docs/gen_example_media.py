@@ -25,7 +25,7 @@ import mkdocs_gen_files
 DOCS = Path(__file__).resolve().parent
 ROOT = DOCS.parent
 CACHE = ROOT / ".cache/docs-media"
-SCRIPTS = ("gen_example_media.py", "capture_example.py", "headless.py", "hooks.py")
+SCRIPTS = ("gen_example_media.py", "capture_example.py", "hooks.py")
 WORKERS = min(4, os.process_cpu_count())
 SERVE = os.environ.get("CRAZYFLOW_DOCS_COMMAND") == "serve"
 hooks = runpy.run_path(str(DOCS / "hooks.py"))
