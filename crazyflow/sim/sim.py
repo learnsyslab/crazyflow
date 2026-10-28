@@ -383,8 +383,8 @@ class Sim:
         mj_model = spec.compile()
         self._unweld_drones(mj_model)
         mj_data = mujoco.MjData(mj_model)
-        mjx_model = mjx.put_model(mj_model, device=self.device)
-        mjx_data = mjx.put_data(mj_model, mj_data, device=self.device)
+        mjx_model = mjx.put_model(mj_model, device=self.device, impl="jax")
+        mjx_data = mjx.put_data(mj_model, mj_data, device=self.device, impl="jax")
         if self.mesh is None:
             mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
         else:

@@ -149,7 +149,8 @@ docstring-code-line-length = "dynamic"
 [tool.pixi]
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "osx-arm64"]
+# jax-mps >= 0.11 only has wheels for macOS 14+
+platforms = ["linux-64", { name = "osx-arm64-14", platform = "osx-arm64", macos = "14.0" }]
 
 [tool.pixi.dependencies]
 pip = "*"
@@ -161,6 +162,13 @@ crazyflow = { path = "./", editable = true }
 # splax requires CUDA jax, which has no osx-arm64 wheels, so splats are linux-only by default
 [tool.pixi.target.linux-64.pypi-dependencies]
 splax = { version = ">=0.2.0", extras = ["viewer"] }
+
+# Experimental JAX backend for Apple Silicon GPUs (Metal)
+[tool.pixi.target.osx-arm64.pypi-dependencies]
+jax-mps = "*"
+
+[tool.pixi.target.osx-arm64.activation.env]
+JAX_PLATFORMS = "cpu,mps"  # Use CPU by default, but keep MPS available
 
 [tool.pixi.feature.gpu]
 platforms = ["linux-64"]
