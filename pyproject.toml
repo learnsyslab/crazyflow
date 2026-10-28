@@ -63,6 +63,8 @@ docs = [
     "mkdocs-literate-nav>=0.6.0",
     "mkdocs-section-index>=0.3.0",
     "mkdocs-charts-plugin>=0.0.10",
+    "matplotlib",
+    "imageio-ffmpeg",
 ]
 dist = ["build>=1.3", "twine>=6.0"]
 dev = [
@@ -195,6 +197,7 @@ test-docs = { cmd = "pytest -v --markdown-docs --markdown-docs-syntax=superfence
 python = ">=3.10"
 properdocs = ">=1.5.0"
 mkdocs-material = ">=9.0.0"
+matplotlib-base = "*"
 
 [tool.pixi.feature.docs.pypi-dependencies]
 mkdocs-autorefs = ">=1.2.0"
@@ -203,6 +206,7 @@ mkdocs-gen-files = ">=0.5.0"
 mkdocs-literate-nav = ">=0.6.0"
 mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
+imageio-ffmpeg = "*"
 
 # Headless OpenGL for rendering the drone images during the docs build
 [tool.pixi.feature.docs.target.linux-64.dependencies]

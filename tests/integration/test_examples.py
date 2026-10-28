@@ -62,7 +62,7 @@ def test_example_main(example_script: str):
 
 def test_examples_in_docs():
     """Every example script has a section in the example docs, and every section has a script."""
-    directive = re.compile(r'^--8<-- example "examples/(.+)"$', re.MULTILINE)
+    directive = re.compile(r'^--8<-- example "examples/([^"]+)"(?: \w+="[^"]*")*$', re.MULTILINE)
     pages = DOCS_EXAMPLES_DIR.glob("*.md")
     documented = {path for page in pages for path in directive.findall(page.read_text())}
     scripts = {path.relative_to(EXAMPLES_DIR).as_posix() for path in EXAMPLES_DIR.rglob("*.py")}

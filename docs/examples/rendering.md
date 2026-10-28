@@ -10,27 +10,19 @@ Rendering RGB-D images, changing materials at runtime, raycasting depth, drawing
 
 ### Cameras and RGBD
 
-<figure class="example-media">
-  <img src="../../img/examples/cameras.gif" alt="RGB-D camera outputs from a Crazyflow drone simulation">
-</figure>
-
---8<-- example "examples/rendering/cameras.py"
+--8<-- example "examples/rendering/cameras.py" media="plot,output"
 
 ---
 
 ### LED deck and materials
 
-<figure class="example-media example-media--compact">
-  <img src="../../img/examples/led_decks.png" alt="Crazyflow drones with runtime-controlled LED deck materials">
-</figure>
-
---8<-- example "examples/rendering/led_deck.py"
+--8<-- example "examples/rendering/led_deck.py" media="video" cam_config="distance=1.6 elevation=-45 lookat=0.5,0.5,1.4"
 
 ---
 
 ### Raycasting and depth sensing
 
---8<-- example "examples/rendering/raycasting.py"
+--8<-- example "examples/rendering/raycasting.py" media="plot"
 
 ---
 
@@ -42,7 +34,7 @@ Rendering RGB-D images, changing materials at runtime, raycasting depth, drawing
 
 ### Camera configuration
 
---8<-- example "examples/rendering/cam_config.py"
+--8<-- example "examples/rendering/cam_config.py" media="video"
 
 ---
 

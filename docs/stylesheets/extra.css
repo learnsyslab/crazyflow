@@ -249,17 +249,12 @@
 
 .example-media img,
 .example-media video,
-.example-media-grid img {
+.example-media-grid img,
+.example-media-grid video {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 8px;
-}
-
-.example-media--compact img,
-.example-media--compact video {
-  max-width: 720px;
-  margin: 0 auto;
 }
 
 .example-media-grid {
@@ -272,11 +267,4 @@
 
 .example-media-grid figure {
   margin: 0;
-}
-
-.example-media-grid--contacts img {
-  width: auto;
-  max-width: 100%;
-  max-height: 560px;
-  object-fit: contain;
 }
