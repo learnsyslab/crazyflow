@@ -50,7 +50,7 @@ JAX defaults to CPU-only execution. The `gpu` extra swaps in `jax[cuda12]`, enab
 
 ### Apple Silicon (experimental)
 
-On Apple Silicon, [jax-mps](https://github.com/tillahoffmann/jax-mps) runs JAX on the GPU via Metal. Install the jax-mps version matching your JAX version and set `device="mps"`. 
+On Apple Silicon, [jax-mps](https://github.com/tillahoffmann/jax-mps) runs JAX on the GPU via Metal. Install the jax-mps version matching your JAX version and set `device="mps"`. If you use crazyflow via pixi on macOS, we already include jax-mps in the environment.
 
 !!! warning
     This backend is untested.
