@@ -98,6 +98,7 @@ plugins:
       scripts:
         - docs/gen_ref_pages.py
         - docs/gen_drone_renders.py
+        - docs/gen_example_media.py
   - literate-nav:
       nav_file: SUMMARY.md
   - section-index

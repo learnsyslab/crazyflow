@@ -2,25 +2,10 @@
 
 This script is executed by the mkdocs-gen-files plugin during ``mkdocs build`` or
 ``mkdocs serve``. The images are written to ``img/drones/<name>.png`` in the virtual docs tree
-and are never committed. Rendering is headless via EGL on Linux and CGL on macOS unless
-``MUJOCO_GL`` is already set.
+and are never committed. The docs environment renders headless via EGL on Linux and CGL on macOS.
 """
 
-import os
-import sys
 from pathlib import Path
-
-if sys.platform == "linux":
-    os.environ.setdefault("MUJOCO_GL", "egl")
-    # libglvnd only searches /usr/share/glvnd, which does not exist on a minimal CI runner. Append
-    # the Mesa driver of this environment so EGL still finds a (software) device there.
-    _vendors = Path(sys.prefix, "share/glvnd/egl_vendor.d")
-    if _vendors.is_dir():
-        os.environ.setdefault(
-            "__EGL_VENDOR_LIBRARY_DIRS", f"/usr/share/glvnd/egl_vendor.d:{_vendors}"
-        )
-elif sys.platform == "darwin":
-    os.environ.setdefault("MUJOCO_GL", "cgl")
 
 import imageio.v3 as iio
 import mkdocs_gen_files

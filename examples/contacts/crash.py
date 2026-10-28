@@ -19,7 +19,7 @@ def main():
     """Example showing a drone crash."""
     sim = Sim(control=Control.state, freq=500, attitude_freq=500, state_freq=100)
     sim.reset()
-    fps = 60
+    fps = 50
     use_box_collision(sim, enable=False)
 
     print("Phase 1: Hovering at [0, 0, 0.5] for 3 seconds")

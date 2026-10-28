@@ -13,7 +13,7 @@ def main():
     sim = Sim(control=Control.force_torque)
     sim.reset()
     duration = 5.0
-    fps = 60
+    fps = 50
 
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))  # [fz, tx, ty, tz]
     mass, gravity = sim.data.params.mass, -sim.data.params.gravity_vec[-1]

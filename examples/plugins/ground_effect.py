@@ -67,7 +67,7 @@ def measure_hover_points(
 
     settle_steps = int(SETTLE_DURATION * sim.control_freq)
     total_steps = settle_steps + int(SAMPLE_DURATION * sim.control_freq)
-    fps = 60
+    fps = 50
 
     hover_heights, hover_thrusts = [], []
 

@@ -36,8 +36,8 @@ except RuntimeError:
 
 # Simulation configuration
 DRONE = "cf21B_500"
-DURATION = 10.0
-FPS = 60
+DURATION = 12.0
+FPS = 50
 RENDER = True
 
 # Controller configuration
@@ -45,13 +45,13 @@ CTRL_FREQ = 50
 T = 1.0  # Prediction horizon in seconds
 N = 25  # Prediction steps
 N_SAMPLES = 500_000 if DEVICE_CONTROLLER == "gpu" else 2_000
-NOISE_SIGMA = jnp.array([0.10, 0.10, 0.0, 0.08], dtype=jnp.float32)
+NOISE_SIGMA = jnp.array([0.20, 0.20, 0.0, 0.08], dtype=jnp.float32)
 ELITE_FRACTION = 0.01  # Fraction of samples in (0,1] to use for the mean update
 MAX_CMD_ANGLE = np.deg2rad(60.0)
 
 # Lissajous trajectory configuration
 TRAJ_CENTER = jnp.array([0.0, 0.0, 1.0], dtype=jnp.float32)
-TRAJ_SIZE = jnp.array([1.0, 0.75, 0.0], dtype=jnp.float32)
+TRAJ_SIZE = jnp.array([1.0, 1.0, 0.0], dtype=jnp.float32)
 TRAJ_PERIOD = 6.0
 
 # Visualization configuration
@@ -109,7 +109,7 @@ def step_sim(
     # Tracking cost
     pos_error = jnp.linalg.norm(pos - reference["pos"], axis=-1)
     vel_error = jnp.linalg.norm(vel - reference["vel"], axis=-1)
-    track_cost = 50.0 * pos_error**2 + vel_error**2
+    track_cost = 100.0 * pos_error**2 + vel_error**2
 
     # Control cost
     tilt_cost = 5.0 * jnp.linalg.norm(cmd[:, :2], axis=-1) ** 2
@@ -326,8 +326,8 @@ def main() -> None:
                 draw_capsule(sim, pole, pole_top, radius=OBSTACLE_RADIUS, rgba=col_pole)
             sim.render(
                 cam_config={
-                    "distance": 3.0,
-                    "elevation": -45.0,
+                    "distance": 4.0,
+                    "elevation": -90.0,
                     "azimuth": 90.0,
                     "lookat": [0.0, 0.0, 1.0],
                 }

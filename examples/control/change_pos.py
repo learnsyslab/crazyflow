@@ -16,6 +16,7 @@ from crazyflow.sim import Sim
 
 def main():
     sim = Sim(control="state")
+    fps = 50
     sim.reset()
     # Replace the position of the first drone in the first world. JAX arrays are immutable, which is
     # why we cannot change the sim.data object in-place. Instead, we need to create a new sim.data
@@ -33,10 +34,11 @@ def main():
     control[..., 9:13] = R.from_euler("z", 0.0).as_quat()
     control[..., :3] = np.array([[0.0, 0.0, 0.3]])
 
-    for _ in range(3 * sim.control_freq):
+    for i in range(3 * sim.control_freq):
         sim.state_control(control)
         sim.step(sim.freq // sim.control_freq)
-        sim.render()
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render()
     sim.close()
 
 

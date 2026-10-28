@@ -32,7 +32,7 @@ def main():
     sim = Sim(control=Control.attitude)
     sim.reset()
     duration = 6.5
-    fps = 60
+    fps = 50
 
     # We use the Mellinger position controller to generate attitude commands. This could be any
     # controller that outputs [roll, pitch, yaw, thrust], e.g. a learned policy.

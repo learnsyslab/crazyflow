@@ -142,7 +142,7 @@ def main():
 
     mask = np.array([True, False, False])  # Only randomize the first world
     duration = 5.0
-    fps = 60
+    fps = 50
 
     for _ in range(3):
         cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))

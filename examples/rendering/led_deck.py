@@ -53,7 +53,7 @@ def main():
             tmp_path = Path(tmp.name)
 
         sim = Sim(n_drones=25, drone="cf21B_500", control=Control.state, xml_path=tmp_path)
-        fps = 60
+        fps = 50
         cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))
         cmd[..., 3] = sim.data.params.mass[0] * 9.81
         rgbas = np.random.default_rng(0).uniform(0, 1, (sim.n_drones, 4))

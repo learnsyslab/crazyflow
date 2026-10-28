@@ -190,6 +190,7 @@ def plot_hover_velocity_field(source_positions: np.ndarray, data: SimData) -> No
 def main(plot: bool = False) -> None:
     """Hover drone 0 while drone 1 makes three downwash passes at different height and velocity."""
     sim = Sim(n_drones=2, drone="cf21B_500", control="state")
+    fps = 50
 
     insert_fn_before(sim.step_pipeline, "integration", downwash_fn)
     sim.build_step_fn()
@@ -235,7 +236,7 @@ def main(plot: bool = False) -> None:
     downwash_force_z = []
     downwash_pitch_torque = []
 
-    for position in waypoints:
+    for i, position in enumerate(waypoints):
         command[0, 1, :3] = position
 
         sim.state_control(command)
@@ -244,7 +245,8 @@ def main(plot: bool = False) -> None:
         z_positions.append(sim.data.states.pos[0, :, 2])
         downwash_force_z.append(sim.data.states.force[0, 1, 2])
         downwash_pitch_torque.append(sim.data.states.torque[0, 1, 1])
-        sim.render()
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render()
 
     sim.close()
 

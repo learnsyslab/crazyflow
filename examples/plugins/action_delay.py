@@ -48,13 +48,15 @@ def action_delay(data: SimData) -> SimData:
 
 def main():
     sim = Sim(control="state")
+    fps = 50
     states = []
     steps = 500
     for i in range(steps):
         cmd = trajectory(i / sim.control_freq)
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
-        sim.render(camera="track_cam:0")
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render(camera="track_cam:0")
         states.append(sim.data.states.pos[0, 0])
 
     # Delay settings
@@ -78,8 +80,9 @@ def main():
         cmd = trajectory(i / sim.control_freq)
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
-        draw_points(sim, states[i], size=0.02)
-        sim.render()
+        if ((i * fps) % sim.control_freq) < fps:
+            draw_points(sim, states[i], size=0.02)
+            sim.render()
         delayed_states.append(sim.data.states.pos[0, 0])
 
     position_differences = jnp.linalg.norm(jnp.array(states) - jnp.array(delayed_states), axis=-1)

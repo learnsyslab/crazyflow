@@ -6,25 +6,16 @@ Querying contacts between drones and the scene, and choosing the collision geome
 
 ## Contact queries
 
-<div class="example-media-grid example-media-grid--contacts">
-  <figure>
-    <img src="../../img/examples/contact_sphere.png" alt="Contact query visualization using the default sphere collision geometry">
-  </figure>
-  <figure>
-    <img src="../../img/examples/contact_box.png" alt="Contact query visualization using the oriented box collision geometry">
-  </figure>
-</div>
-
---8<-- example "examples/contacts/contacts.py"
+--8<-- example "examples/contacts/contacts.py" media="video" cam_config="distance=2.2 azimuth=110 elevation=-25 lookat=-0.1,0,0.35" geomgroup="0,1,2,3"
 
 ---
 
 ## Crash detection
 
---8<-- example "examples/contacts/crash.py"
+--8<-- example "examples/contacts/crash.py" media="video" camera="track_cam:0"
 
 ---
 
 ## Collision pairs
 
---8<-- example "examples/contacts/collision_pairs.py"
+--8<-- example "examples/contacts/collision_pairs.py" media="video,output" camera="track_cam:0"

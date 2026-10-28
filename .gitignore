@@ -26,6 +26,7 @@ uv.lock
 
 # ProperDocs build output
 site/
+.cache/
 # Temporary files
 .DS_Store
 Thumbs.db

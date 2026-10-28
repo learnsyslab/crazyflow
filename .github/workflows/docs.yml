@@ -35,6 +35,13 @@ jobs:
         environments: docs
         activate-environment: false
         locked: true
+
+    - name: Cache example media
+      uses: actions/cache@v4
+      with:
+        path: .cache/docs-media
+        key: docs-media-${{ hashFiles('crazyflow/**', 'examples/**', 'docs/*.py', 'docs/examples/*.md', 'pyproject.toml') }}
+        restore-keys: docs-media-
         
     - name: Build documentation
       run: pixi run -e docs docs-build

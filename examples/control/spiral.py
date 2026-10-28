@@ -24,7 +24,7 @@ def main():
     sim = Sim(n_drones=4, control=Control.state, integrator="rk4", dynamics="first_principles")
     sim.reset()
     duration = 5.0
-    fps = 60
+    fps = 50
 
     start_xy = sim.data.states.pos[..., :2]
     for i in range(int(duration * sim.control_freq)):

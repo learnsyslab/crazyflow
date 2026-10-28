@@ -29,7 +29,7 @@ def main():
 
     sim.reset()
     duration = 5.0
-    fps = 60
+    fps = 50
 
     # State cmd is [x, y, z, vx, vy, vz, ax, ay, az, qx, qy, qz, qw, wx, wy, wz]
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 16))
