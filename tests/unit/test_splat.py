@@ -132,6 +132,21 @@ def test_render_splat_before_attach():
 
 
 @pytest.mark.unit
+def test_render_splat_cpu_warning(tmp_path: Path):
+    _write_splat(tmp_path / "splat.ply")
+    sim = Sim(device="cpu")
+    attach_splats(sim, drone=tmp_path / "splat.ply")
+    with pytest.warns(UserWarning, match="on the CPU"):
+        render_splat_rgb(sim, resolution=(32, 24)).block_until_ready()
+    with pytest.warns(UserWarning, match="on the CPU"):
+        render_splat_rgbd(sim, resolution=(32, 24)).block_until_ready()
+    with pytest.warns(UserWarning, match="on the CPU"):
+        build_render_splat_fn(sim, resolution=(32, 24))
+    with pytest.warns(UserWarning, match="on the CPU"):
+        build_render_splat_rgbd_fn(sim, resolution=(32, 24))
+
+
+@pytest.mark.unit
 def test_render_splat_rgb(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
     sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
