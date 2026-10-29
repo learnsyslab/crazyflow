@@ -50,16 +50,16 @@ Viewing the simulation as gaussian splats, rendering RGB-D images from the drone
 
 ### Splat camera
 
---8<-- example "examples/rendering/splat_camera.py"
+--8<-- example "examples/rendering/splat_camera.py" media="plot"
 
 ---
 
 ### Splat depth camera
 
---8<-- example "examples/rendering/splat_depth.py"
+--8<-- example "examples/rendering/splat_depth.py" media="plot"
 
 ---
 
 ### Differentiable splat rendering
 
---8<-- example "examples/rendering/splat_gradients.py"
+--8<-- example "examples/rendering/splat_gradients.py" media="plot"

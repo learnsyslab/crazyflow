@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import jax
 import numpy as np
 import pytest
-from conftest import available_backends
 from scipy.spatial.transform import Rotation as R
 
 splax = pytest.importorskip("splax", reason="the splat modules require the optional splats extra")
@@ -26,8 +25,6 @@ from crazyflow.sim.splat import SPLATS_KEY, SplatViewer, attach_splats  # noqa: 
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-requires_gpu = pytest.mark.skipif("gpu" not in available_backends(), reason="splax requires CUDA")
 
 
 def _write_splat(path: Path, n: int = 64, extent: float = 0.5, n_coeffs: int = 1):
@@ -135,21 +132,9 @@ def test_render_splat_before_attach():
 
 
 @pytest.mark.unit
-def test_render_splat_requires_gpu(tmp_path: Path):
-    _write_splat(tmp_path / "splat.ply")
-    sim = Sim(device="cpu")
-    attach_splats(sim, drone=tmp_path / "splat.ply")
-    with pytest.raises(RuntimeError, match="GPU"):
-        render_splat_rgb(sim)
-    with pytest.raises(RuntimeError, match="GPU"):
-        render_splat_rgbd(sim)
-
-
-@pytest.mark.unit
-@requires_gpu
 def test_render_splat_rgb(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     # Every drone's fpv camera renders into a (n_worlds, n_drones, H, W, 3) stack
     img = render_splat_rgb(sim, resolution=(32, 24))
@@ -169,7 +154,6 @@ def test_render_splat_rgb(tmp_path: Path):
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_render_splat_clips(tmp_path: Path):
     n = 64
     rng = np.random.default_rng(0)
@@ -179,17 +163,16 @@ def test_render_splat_clips(tmp_path: Path):
     sh_colors = np.asarray(splax.io.rgb_to_sh(np.full((n, 3), 3.0, np.float32)))[:, None]
     opacities = np.full((n,), 10.0, np.float32)
     splax.io.write_ply(tmp_path / "bright.ply", means, log_scales, quats, sh_colors, opacities)
-    sim = Sim(device="gpu")
+    sim = Sim(device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "bright.ply")
     img = render_splat_rgb(sim, resolution=(32, 24), background=(0.0, 0.0, 0.0))
     assert img.max() == 1.0, "Colors above the sensor range must saturate, not exceed it"
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_render_splat_camera_prefix(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     fpv = render_splat_rgb(sim, resolution=(32, 24))
     track = render_splat_rgb(sim, resolution=(32, 24), camera_prefix="track_cam")
@@ -204,10 +187,9 @@ def test_render_splat_camera_prefix(tmp_path: Path):
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_render_splat_rgbd(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     # Every drone's fpv camera renders into a (n_worlds, n_drones, H, W, 4) rgbd stack
     img = render_splat_rgbd(sim, resolution=(32, 24), max_range=7.0)
@@ -233,10 +215,9 @@ def test_render_splat_rgbd(tmp_path: Path):
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_render_splat_rgbd_range(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(device="gpu")
+    sim = Sim(device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     render = partial(render_splat_rgbd, sim, resolution=(32, 24), max_range=7.0)
     # Demanding more coverage can only reject hits, never create them, so nothing moves closer
@@ -253,10 +234,9 @@ def test_render_splat_rgbd_range(tmp_path: Path):
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_build_render_splat_fn(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     # The renderer is a pure function of the simulation data, so it traces and jits
     render_fn = build_render_splat_fn(sim, resolution=(32, 24))
@@ -277,10 +257,9 @@ def test_build_render_splat_fn(tmp_path: Path):
 
 
 @pytest.mark.unit
-@requires_gpu
 def test_build_render_splat_rgbd_fn(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
-    sim = Sim(n_worlds=2, n_drones=2, device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     render_fn = build_render_splat_rgbd_fn(sim, resolution=(32, 24), max_range=7.0)
     assert np.allclose(render_fn(sim.data), jax.jit(render_fn)(sim.data), atol=1e-5)

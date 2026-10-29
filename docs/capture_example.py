@@ -42,20 +42,22 @@ class Video:
         self.n_frames = 0
         self.t = None
 
-    def add(self, t: float, render: Callable[[], np.ndarray]) -> bool:
-        """Render and write the frame at sim time ``t`` if the video needs it."""
-        dt = t - self.t if self.t is not None else 0.0
-        assert dt <= 0 or np.isclose(dt, 1 / EXAMPLE_FPS, atol=1e-4), (
-            f"Examples render at {EXAMPLE_FPS} fps, not {1 / dt:.1f} fps"
-        )
-        self.t = t
+    def add(self, t: float | None, render: Callable[[], np.ndarray]) -> bool:
+        """Render and write a frame if the video needs it, checking the fps at sim time ``t``."""
+        if t is not None:
+            dt = t - self.t if self.t is not None else 0.0
+            assert dt <= 0 or np.isclose(dt, 1 / EXAMPLE_FPS, atol=1e-4), (
+                f"Examples render at {EXAMPLE_FPS} fps, not {1 / dt:.1f} fps"
+            )
+            self.t = t
         self.n_frames += 1
         if (self.n_frames - 1) % (EXAMPLE_FPS // FPS):
             return False
+        frame = np.ascontiguousarray(render())
         if self.writer is None:
             self.writer = imageio_ffmpeg.write_frames(
                 str(self.path),
-                (WIDTH, HEIGHT),
+                (frame.shape[1], frame.shape[0]),
                 fps=FPS,
                 codec="libx264",
                 quality=None,
@@ -63,7 +65,7 @@ class Video:
                 output_params=["-crf", CRF, "-preset", "slow", "-movflags", "+faststart"],
             )
             self.writer.send(None)
-        self.writer.send(np.ascontiguousarray(render()))
+        self.writer.send(frame)
         return True
 
     def close(self):
@@ -114,6 +116,7 @@ def capture(
     sim_render = Sim.render
     func_animation_init = animation.FuncAnimation.__init__
     videos: list[Video] = []
+    figure_videos: dict[plt.Figure, Video] = {}
     animations = {}
     plot_ids = itertools.count(1)
 
@@ -153,12 +156,22 @@ def capture(
         func_animation_init(self, fig, *args, **kwargs)
         animations[fig] = self
 
-    def show(*args: Any, **kwargs: Any):
+    def show(*args: Any, block: bool | None = None, **kwargs: Any):
+        if block is False:  # A live plot, recorded by pause
+            return
         if "plot" in kinds:
             for num in plt.get_fignums():
                 fig = plt.figure(num)
                 save_figure(fig, out / f"plot-{next(plot_ids):02d}", animations.get(fig))
         plt.close("all")
+
+    def pause(interval: float):
+        for num in plt.get_fignums():
+            fig = plt.figure(num)
+            if fig not in figure_videos:
+                figure_videos[fig] = Video(out / f"plot-{next(plot_ids):02d}.mp4")
+            fig.canvas.draw()
+            figure_videos[fig].add(None, lambda: np.asarray(fig.canvas.buffer_rgba())[..., :3])
 
     sys.argv = [str(example), *(["--plot"] if "plot" in kinds else [])]
     spec = importlib.util.spec_from_file_location("__main__", example)
@@ -179,10 +192,11 @@ def capture(
             patch.object(Sim, "render", render),
             patch.object(animation.FuncAnimation, "__init__", func_animation),
             patch.object(plt, "show", show),
+            patch.object(plt, "pause", pause),
         ):
             spec.loader.exec_module(module)
     finally:
-        for video in videos:
+        for video in [*videos, *figure_videos.values()]:
             video.close()
     if "output" in kinds and output.getvalue().strip():
         (out / "output.txt").write_text(output.getvalue())

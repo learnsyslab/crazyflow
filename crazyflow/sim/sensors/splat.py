@@ -1,9 +1,8 @@
 """Gaussian splat camera sensors built on [splax](https://github.com/learnsyslab/splax).
 
 Renders batched RGB(-D) images of the splats attached via
-[attach_splats][crazyflow.sim.splat.attach_splats] from any model camera. splax rasterizes with Warp
-kernels only, so this module requires the ``splats`` extra and a simulation constructed with
-``device="gpu"``.
+[attach_splats][crazyflow.sim.splat.attach_splats] from any model camera. Requires the ``splats``
+extra. Rendering on the CPU is much slower than on the GPU.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ import splax
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim.sim import sync_sim2mjx
-from crazyflow.sim.splat import SPLATS_KEY, requires_gpu, requires_splats
+from crazyflow.sim.splat import SPLATS_KEY, requires_splats
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
@@ -32,7 +31,6 @@ if TYPE_CHECKING:
 
 
 @requires_splats
-@requires_gpu
 def render_splat_rgb(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -74,7 +72,6 @@ def render_splat_rgb(
 
 
 @requires_splats
-@requires_gpu
 def render_splat_rgbd(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -142,7 +139,6 @@ def _camera_id(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
 
 
 @requires_splats
-@requires_gpu
 def build_render_splat_fn(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -175,7 +171,6 @@ def build_render_splat_fn(
 
 
 @requires_splats
-@requires_gpu
 def build_render_splat_rgbd_fn(
     sim: Sim,
     drones: int | Sequence[int] | None = None,

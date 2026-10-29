@@ -8,7 +8,7 @@ streams the splats to a web-based viewer.
 The batched RGB camera sensor that renders splats lives in [crazyflow.sim.sensors.splat][].
 
 Splat files must be aligned to the simulation frames. The viewer renders in the browser and works on
-any device. Camera sensors rasterize on the GPU only.
+any device. Camera sensors rasterize significantly faster on the GPU.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import splax
+import warp as wp
 from flax.struct import dataclass, field
 from splax.viewer import Viewer
 
@@ -33,6 +34,9 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from crazyflow.sim.sim import Sim
+
+# splax's tiled kernels need cooperative blocks to render correctly on the CPU
+wp.config.enable_cpu_blocks = True
 
 Params = ParamSpec("Params")
 Return = TypeVar("Return")
@@ -75,18 +79,6 @@ def requires_splats(fn: Callable[Params, Return]) -> Callable[Params, Return]:
     def wrapper(sim: Sim, *args: Any, **kwargs: Any) -> Return:
         if SPLATS_KEY not in sim.data.plugins:
             raise RuntimeError("No splats attached to this simulation, call attach_splats first")
-        return fn(sim, *args, **kwargs)
-
-    return wrapper
-
-
-def requires_gpu(fn: Callable[Params, Return]) -> Callable[Params, Return]:
-    """Decorator to ensure that the simulation is running on the GPU."""
-
-    @wraps(fn)
-    def wrapper(sim: Sim, *args: Any, **kwargs: Any) -> Return:
-        if sim.device.platform != "gpu":
-            raise RuntimeError("Gaussian splatting requires running on the GPU.")
         return fn(sim, *args, **kwargs)
 
     return wrapper

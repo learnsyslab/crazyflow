@@ -1,7 +1,7 @@
 """Render the FPV cameras of two drones looking at each other with gaussian splats.
 
 `render_splat_rgb` renders the FPV camera of every drone in every world in a single batched call.
-Requires splax (`pip install "crazyflow[splats]"`) and a CUDA GPU.
+Requires splax (`pip install "crazyflow[splats]"`) and runs much faster on a GPU.
 
 Run with `--plot` to plot the results, which requires matplotlib from the `tests` environment.
 """
@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 os.environ["SCIPY_ARRAY_API"] = "1"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
+import jax
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
@@ -49,7 +50,7 @@ def trajectory(t: float, n_worlds: int, n_drones: int) -> np.ndarray:
 
 def main(plot: bool = False):
     """Render the splat camera views of both drones in both worlds."""
-    sim = Sim(n_worlds=2, n_drones=2, control="state", device="gpu")
+    sim = Sim(n_worlds=2, n_drones=2, control="state", device=jax.default_backend())
     scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
     drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
     attach_splats(sim, scene=scene, drone=drone)
@@ -63,7 +64,7 @@ def main(plot: bool = False):
     sim.data = sim.data.replace(states=states)
 
     duration = 6
-    fps = 30
+    fps = 50
     n_frames = int(duration * fps)
     resolution = (320, 240)
 
@@ -72,7 +73,7 @@ def main(plot: bool = False):
         t = sim.data.core.steps[0, 0] / sim.freq
         sim.state_control(trajectory(t, sim.n_worlds, sim.n_drones))
         sim.step(sim.freq // fps)
-        # Render each drone's fpv across all worlds, hiding each drone from its own view.
+        # Render each drone's fpv across all worlds.
         views = render_splat_rgb(sim, resolution=resolution)
         if plot:
             update_plot(views)
