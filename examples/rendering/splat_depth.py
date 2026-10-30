@@ -1,7 +1,7 @@
 """Fly a lap through a hall and renders gaussian splat depth images.
 
 `build_render_splat_rgbd_fn` compiles an RGB-D renderer that is a pure function of `sim.data`.
-Requires splax (`pip install "crazyflow[splats]"`) and a CUDA GPU.
+Requires splax (`pip install "crazyflow[splats]"`) and runs much faster on a GPU.
 
 Run with `--plot` to plot the results, which requires matplotlib from the `tests` environment.
 """
@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 os.environ["SCIPY_ARRAY_API"] = "1"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 
+import jax
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
@@ -36,7 +37,7 @@ TRAJ_SIZE = np.array([9.0, 3.5, 0.0])
 MAX_RANGE = 12.0
 RESOLUTION = (320, 240)
 DURATION = 40
-FPS = 30
+FPS = 50
 
 
 def trajectory(t: float) -> np.ndarray:
@@ -52,7 +53,7 @@ def trajectory(t: float) -> np.ndarray:
 
 def main(plot: bool = False):
     """Fly the lap and render the depth channel of the drone's fpv camera."""
-    sim = Sim(control="state", device="gpu")
+    sim = Sim(control="state", device=jax.default_backend())
     scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
     drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
     attach_splats(sim, scene=scene, drone=drone)
@@ -89,7 +90,7 @@ def plot_depth() -> Callable[[NDArray], None]:
     def update(depth: NDArray) -> None:
         im.set_data(depth)
         fig.canvas.draw_idle()
-        fig.canvas.flush_events()
+        plt.pause(1e-12)
 
     return update
 

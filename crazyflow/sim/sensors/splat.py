@@ -1,13 +1,13 @@
 """Gaussian splat camera sensors built on [splax](https://github.com/learnsyslab/splax).
 
 Renders batched RGB(-D) images of the splats attached via
-[attach_splats][crazyflow.sim.splat.attach_splats] from any model camera. splax rasterizes with Warp
-kernels only, so this module requires the ``splats`` extra and a simulation constructed with
-``device="gpu"``.
+[attach_splats][crazyflow.sim.splat.attach_splats] from any model camera. Requires the ``splats``
+extra. Rendering on the CPU is much slower than on the GPU.
 """
 
 from __future__ import annotations
 
+import warnings
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -19,7 +19,7 @@ import splax
 from scipy.spatial.transform import Rotation as R
 
 from crazyflow.sim.sim import sync_sim2mjx
-from crazyflow.sim.splat import SPLATS_KEY, requires_gpu, requires_splats
+from crazyflow.sim.splat import SPLATS_KEY, requires_splats
 
 if TYPE_CHECKING:
     from typing import Callable, Sequence
@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 
 
 @requires_splats
-@requires_gpu
 def render_splat_rgb(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -57,6 +56,7 @@ def render_splat_rgb(
     Returns:
         RGB images with values in [0, 1] of shape (n_worlds, n_selected, height, width, 3).
     """
+    _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
@@ -74,7 +74,6 @@ def render_splat_rgb(
 
 
 @requires_splats
-@requires_gpu
 def render_splat_rgbd(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -105,6 +104,7 @@ def render_splat_rgbd(
         RGB in [0, 1] followed by depth in meters along the camera's optical axis, of shape
         (n_worlds, n_selected, height, width, 4).
     """
+    _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
@@ -132,6 +132,15 @@ def _resolve_drones(sim: Sim, drones: int | Sequence[int] | None) -> tuple[int, 
     return tuple(int(d) for d in ids)
 
 
+def _warn_if_cpu(sim: Sim):
+    """Warn if the splats render on the CPU."""
+    if sim.device.platform == "cpu":
+        warnings.warn(
+            "Rendering splats on the CPU, which is much slower than on a GPU. If a GPU is "
+            "available, make sure JAX has CUDA support and create the Sim with device='gpu'."
+        )
+
+
 def _camera_id(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
     """Camera index of a drone for the given camera name prefix."""
     name = f"{prefix}:{drone}"
@@ -142,7 +151,6 @@ def _camera_id(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
 
 
 @requires_splats
-@requires_gpu
 def build_render_splat_fn(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -156,6 +164,7 @@ def build_render_splat_fn(
     We bake all arguments into the function to avoid the overhead of flattening static arguments,
     significantly improving performance.
     """
+    _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
     cameras_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras_ids[0], resolution)
@@ -175,7 +184,6 @@ def build_render_splat_fn(
 
 
 @requires_splats
-@requires_gpu
 def build_render_splat_rgbd_fn(
     sim: Sim,
     drones: int | Sequence[int] | None = None,
@@ -190,6 +198,7 @@ def build_render_splat_rgbd_fn(
 
     Mirrors [build_render_splat_fn][crazyflow.sim.sensors.splat.build_render_splat_fn].
     """
+    _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
     camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)

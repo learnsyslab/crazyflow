@@ -2,7 +2,7 @@
 
 Splat rendering is differentiable w.r.t. the camera pose. A reference FPV image is rendered at a
 baseline pose, and its photometric error is differentiated over small z and yaw offsets.
-Requires splax (`pip install "crazyflow[splats]"`) and a CUDA GPU.
+Requires splax (`pip install "crazyflow[splats]"`) and runs much faster on a GPU.
 
 Run with `--plot` to plot the results, which requires matplotlib from the `tests` environment.
 """
@@ -131,7 +131,7 @@ def plot_results(experiments: tuple[tuple[NDArray, NDArray, NDArray, str, str], 
 
 def main(plot: bool = False) -> None:
     """Compare photometric and known pose gradients for independent z and yaw sweeps."""
-    sim = Sim(n_worlds=1, n_drones=1, device="gpu")
+    sim = Sim(n_worlds=1, n_drones=1, device=jax.default_backend())
     scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
     attach_splats(sim, scene=scene)
     render = _build_renderer(sim)
