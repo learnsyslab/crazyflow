@@ -156,8 +156,8 @@ def capture(
         func_animation_init(self, fig, *args, **kwargs)
         animations[fig] = self
 
-    def show(*args: Any, block: bool | None = None, **kwargs: Any):
-        if block is False:  # A live plot, recorded by pause
+    def show(*args: Any, block: bool = True, **kwargs: Any):
+        if not block:  # A live plot, recorded by pause
             return
         if "plot" in kinds:
             for num in plt.get_fignums():
