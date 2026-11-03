@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import array_api_strict as xp
+import casadi as cs
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
@@ -240,3 +241,32 @@ def test_rpy2matrix_symbolic():
         # compare casadi/symbolic implementation to scipy
         mat_cs = np.array(rotation.cs_rpy2matrix_func(rpy))
         assert np.allclose(mat_cs, mat_scipy, atol=tol), "Symbolic rpy->matrix differs from scipy."
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("seq", ["xyz", "zyx", "zxz", "XYZ", "ZYX", "ZXZ"])
+@pytest.mark.parametrize("degrees", [False, True])
+def test_quat2euler_symbolic(seq: str, degrees: bool):
+    rot = R.random(100)
+    quat = cs.MX.sym("quat", 4)
+    quat2euler = cs.Function("quat2euler", [quat], [rotation.cs_quat2euler(quat, seq, degrees)])
+    period = 360.0 if degrees else 2 * np.pi
+    for q, euler_scipy in zip(rot.as_quat(), rot.as_euler(seq, degrees=degrees)):
+        euler_cs = np.array(quat2euler(q)).flatten()
+        diff = (euler_cs - euler_scipy + period / 2) % period - period / 2  # Wrap to [-p/2, p/2)
+        assert np.allclose(diff, 0.0, atol=tol), "Symbolic quat->euler differs from scipy."
+
+
+@pytest.mark.unit
+def test_symbolic_function_names_unique():
+    fns = [
+        rotation.cs_ang_vel2rpy_rates,
+        rotation.cs_rpy_rates2ang_vel,
+        rotation.cs_ang_vel_deriv2rpy_rates_deriv,
+        rotation.cs_rpy_rates_deriv2ang_vel_deriv,
+        rotation.cs_quat2matrix_func,
+        rotation.cs_rpy2matrix_func,
+    ]
+    names = [fn.name() for fn in fns]
+    # Duplicate names produce conflicting C symbols when generating code for several functions
+    assert len(set(names)) == len(names), f"CasADi function names are not unique: {names}"
