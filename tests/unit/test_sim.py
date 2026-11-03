@@ -402,6 +402,13 @@ def test_control_frequency(dynamics: Dynamics):
 
 
 @pytest.mark.unit
+def test_control_frequency_rotor_vel():
+    sim = Sim(freq=1000, dynamics=Dynamics.first_principles, control=Control.rotor_vel)
+    assert sim.control_freq == sim.freq, "Rotor velocity commands are applied every sim step"
+    sim.close()
+
+
+@pytest.mark.unit
 def test_seed(device: str):
     sim = Sim(rng_key=42, device=device)
     assert (jax.random.key_data(sim.data.core.rng_key)[1] == 42).all(), "rng_key not set correctly"
