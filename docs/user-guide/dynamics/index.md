@@ -51,7 +51,7 @@ The `so_rpy` dynamics are identified from flight data using a small number of fl
 These dynamics are a good choice when:
 
 - You are training RL agents and want speed over fidelity
-- Your controller outputs attitude targets (as most Crazyflie firmware does)
+- Your controller outputs attitude targets
 - You do not need rotor-level detail
 
 ```python

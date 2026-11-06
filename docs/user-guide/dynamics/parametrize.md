@@ -16,12 +16,13 @@ list(dynamics.keywords.keys())
 
 ## Available drone configurations
 
-The following configurations ship with pre-fitted parameters. They cover both the brushed Crazyflie 2.x series and the brushless Crazyflie 2.1:
+The following configurations ship with pre-fitted parameters:
 
-```python
-from crazyflow.drones import Drone
+```pycon
+>>> from crazyflow.drones import Drone
+>>> print(*Drone)
+cf21B_500 cf2x_L250 cf2x_P250 cf2x_T350 hb_x500
 
-list(Drone)  # [Drone.cf21B_500, Drone.cf2x_L250, Drone.cf2x_P250, Drone.cf2x_T350, Drone.hb_x500]
 ```
 
 | `drone` | Platform |
@@ -36,11 +37,13 @@ If your drone is not listed, you can [add it](../adding-drones.md). The fitted m
 
 Not every dynamics is available for every drone. [`supported_dynamics`][crazyflow.dynamics.supported_dynamics] and [`supported_drones`][crazyflow.dynamics.supported_drones] list the available pairs:
 
-```python
-from crazyflow.dynamics import supported_drones, supported_dynamics
+```pycon
+>>> from crazyflow.dynamics import supported_drones, supported_dynamics
+>>> print(*supported_dynamics("cf21B_500"))
+first_principles so_rpy so_rpy_rotor so_rpy_rotor_drag
+>>> print(*supported_drones("so_rpy_rotor_drag"))
+cf21B_500 cf2x_L250 cf2x_P250 cf2x_T350 hb_x500
 
-supported_dynamics("cf21B_500")  # (first_principles, so_rpy, so_rpy_rotor, so_rpy_rotor_drag)
-supported_drones("so_rpy_rotor_drag")  # ('cf21B_500', 'cf2x_L250', 'cf2x_P250', 'cf2x_T350')
 ```
 
 ## Switching array backends

@@ -1,5 +1,5 @@
 site_name: Crazyflow
-site_description: Fast, parallelizable simulations of Crazyflie drones with JAX and MuJoCo
+site_description: Fast, parallelizable simulations of quadrotor drones with JAX
 site_url: https://learnsyslab.github.io/crazyflow/
 repo_name: learnsyslab/crazyflow
 repo_url: https://github.com/learnsyslab/crazyflow
