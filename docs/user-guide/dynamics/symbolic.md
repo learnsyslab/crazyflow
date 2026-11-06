@@ -104,4 +104,4 @@ X_dot, X, U, Y = symbolic_dynamics(model_rotor_vel=True, model_dist_f=True, mode
 
 ---
 
-The dynamics covered so far all come with pre-fitted parameters for the supported Crazyflie platforms. For other drones, the next page explains how to extract parameters from your own flight data.
+Crazyflow provides pre-fitted parameters for a range of platforms. For drones that are not yet supported, the next page explains how to extract parameters from your own flight data.

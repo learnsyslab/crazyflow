@@ -4,7 +4,7 @@ This page walks through a complete minimal workflow: create a simulator, send a 
 
 ## Create a simulator
 
-`Sim` is the top-level object. All configuration is provided at construction time: dynamics, control mode, simulation frequency, number of parallel worlds, and number of drones per world.
+`Sim` is the top-level object. All configuration is provided at construction time: drone platform, dynamics, control mode, simulation frequency, number of parallel worlds, and number of drones per world.
 
 ```python
 from crazyflow.sim import Sim

@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 <div align="center">
 
-  **Fast, parallelizable simulations of Quadrotor drones with JAX.**
+  **Fast, parallelizable simulations of quadrotor drones with JAX.**
 
   [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
   [![arXiv](https://img.shields.io/badge/arXiv-2606.01478-b31b1b.svg)](https://arxiv.org/abs/2606.01478)
@@ -12,7 +12,7 @@
 
 </div>
 
-Crazyflow is a research simulator for quadrotors. It runs batched, differentiable simulations on CPU and GPU via JAX, with analytical and abstracted dynamics for the Crazyflie 2.x family.
+Crazyflow is a research simulator for quadrotors. It runs batched, differentiable simulations on CPU and GPU via JAX, with analytical and abstracted dynamics.
 
 ```python
 import numpy as np
@@ -41,9 +41,23 @@ for _ in range(100):
 - **GPU-accelerated** — up to 914 M steps/s on an RTX 4090 (first-principles dynamics, 262 K worlds)
 - **Differentiable** — `jax.grad` works through the full dynamics and control pipeline
 - **First-principles dynamics** — dynamics using first-principles equations and parameters identified from real-world measurements
-- **Abstracted dynamics** — simplified dynamics in three flavors fitted from real Crazyflie flight data
+- **Abstracted dynamics** — simplified dynamics in three flavors fitted from real flight data
 - **Modular pipelines** — step and reset are tuples of plain JAX functions; insert anything, anywhere
 - **MuJoCo integration** — onscreen and offscreen rendering, raycasting, and contact detection via MJX
+
+## Supported drones
+
+Crazyflow supports a variety of drones:
+
+| Drone | Platform |
+|---|---|
+| `cf2x_L250` | Crazyflie 2.x |
+| `cf2x_P250` | Crazyflie 2.x, plus propellers |
+| `cf2x_T350` | Crazyflie 2.x, thrust upgrade kit |
+| `cf21B_500` | Crazyflie 2.1 Brushless (default) |
+| `hb_x500` | Holybro X500 V2 |
+
+New platforms can be added as described in the [docs](https://learnsyslab.github.io/crazyflow/user-guide/adding-drones/).
 
 ## Installation
 
