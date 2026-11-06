@@ -8,15 +8,15 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install submodules
         run: git submodule update --init --recursive
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+        uses: prefix-dev/setup-pixi@v0.11.3
         with:
-          pixi-version: v0.76.0
+          pixi-version: v0.84.1
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: tests
@@ -31,15 +31,15 @@ jobs:
   test-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install submodules
         run: git submodule update --init --recursive
 
       - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.3
+        uses: prefix-dev/setup-pixi@v0.11.3
         with:
-          pixi-version: v0.76.0
+          pixi-version: v0.84.1
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: tests
