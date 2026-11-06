@@ -21,23 +21,23 @@ jobs:
     
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install submodules
       run: |
         git submodule update --init --recursive
 
     - name: Setup pixi
-      uses: prefix-dev/setup-pixi@v0.9.3
+      uses: prefix-dev/setup-pixi@v0.11.3
       with:
-        pixi-version: v0.76.0
+        pixi-version: v0.84.1
         cache: true
         environments: docs
         activate-environment: false
         locked: true
 
     - name: Cache example media
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: .cache/docs-media
         key: docs-media-${{ hashFiles('crazyflow/**', 'examples/**', 'docs/*.py', 'docs/examples/*.md', 'pyproject.toml') }}
@@ -47,10 +47,10 @@ jobs:
       run: pixi run -e docs docs-build
       
     - name: Setup Pages
-      uses: actions/configure-pages@v3
+      uses: actions/configure-pages@v6
       
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v5
       with:
         path: ./site
 
@@ -65,4 +65,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@v5
