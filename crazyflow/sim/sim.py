@@ -593,6 +593,8 @@ class Sim:
             return self.data.controls.body_rate.freq
         if self.control == Control.force_torque:
             return self.data.controls.force_torque.freq
+        if self.control == Control.rotor_vel:
+            return self.freq  # Rotor velocity commands are applied at every simulation step
         raise NotImplementedError(f"Control mode {self.control} not implemented")
 
     @property
