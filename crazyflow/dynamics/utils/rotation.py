@@ -305,7 +305,7 @@ def cs_quat2euler(quat: cs.MX, seq: str = "xyz", degrees: bool = False) -> cs.MX
         )
 
     if degrees:
-        angles = (cs.np.pi / 180.0) * cs.horzcat(angles)
+        angles = (180.0 / cs.np.pi) * angles
 
     return angles
 
@@ -483,7 +483,9 @@ def create_cs_ang_vel_deriv2rpy_rates_deriv() -> cs.Function:
     W_dot = cs.vertcat(row1, row2, row3)
     rpy_rates_deriv = W_dot @ ang_vel + cs_ang_vel2rpy_rates(quat, ang_vel_deriv)
 
-    return cs.Function("cs_ang_vel2rpy_rates", [quat, ang_vel, ang_vel_deriv], [rpy_rates_deriv])
+    return cs.Function(
+        "cs_ang_vel_deriv2rpy_rates_deriv", [quat, ang_vel, ang_vel_deriv], [rpy_rates_deriv]
+    )
 
 
 cs_ang_vel_deriv2rpy_rates_deriv = create_cs_ang_vel_deriv2rpy_rates_deriv()
@@ -528,7 +530,9 @@ def create_cs_rpy_rates_deriv2ang_vel_deriv() -> cs.Function:
     W_dot = cs.vertcat(row1, row2, row3)
     ang_vel_deriv = W_dot @ rpy_rates + cs_rpy_rates2ang_vel(quat, rpy_rates_deriv)
 
-    return cs.Function("cs_ang_vel2rpy_rates", [quat, rpy_rates, rpy_rates_deriv], [ang_vel_deriv])
+    return cs.Function(
+        "cs_rpy_rates_deriv2ang_vel_deriv", [quat, rpy_rates, rpy_rates_deriv], [ang_vel_deriv]
+    )
 
 
 cs_rpy_rates_deriv2ang_vel_deriv = create_cs_rpy_rates_deriv2ang_vel_deriv()
