@@ -86,8 +86,8 @@ crazyflow = ["scene.xml"]
 "crazyflow.control" = ["*/params.toml"]
 
 [tool.pytest.ini_options]
-markers = ["unit", "integration", "render"]
-addopts = "-m 'not render'"
+markers = ["unit", "integration", "render", "fuzzing: opt-in native controller comparisons"]
+addopts = "-m 'not render and not fuzzing'"
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
