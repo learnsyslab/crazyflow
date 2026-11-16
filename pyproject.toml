@@ -45,7 +45,7 @@ Homepage = "https://github.com/learnsyslab/crazyflow"
 Repository = "https://github.com/learnsyslab/crazyflow"
 
 # Dependency groups for uv-based developer workflows. These mirror the pixi features below
-# ([tool.pixi.feature.*]). `uv sync` installs the `dev` group by default. pixi ignores this table.
+# ([tool.pixi.feature.*]). `uv sync` installs the `dev` group by default.
 [dependency-groups]
 tests = [
     "pytest>=8.4.1",
@@ -86,8 +86,8 @@ crazyflow = ["scene.xml"]
 "crazyflow.control" = ["*/params.toml"]
 
 [tool.pytest.ini_options]
-markers = ["unit", "integration", "render", "fuzzing: opt-in native controller comparisons"]
-addopts = "-m 'not render and not fuzzing'"
+markers = ["unit", "integration", "render"]
+addopts = "-m 'not render' --ignore=tests/fuzzing"
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -187,6 +187,7 @@ gpu = { features = ["gpu"], solve-group = "gpu" }
 benchmark = { features = ["benchmark", "gpu"], solve-group = "gpu" }
 gpu-tests = { features = ["tests", "gpu"], solve-group = "gpu" }
 dist = { features = ["dist"], solve-group = "default" }
+fuzzing = { features = ["tests", "fuzzing"], solve-group = "default" }
 
 [tool.pixi.feature.tests.dependencies]
 pytest = ">=8.4.1"
@@ -200,6 +201,19 @@ pytest-markdown-docs = "*"
 [tool.pixi.feature.tests.tasks]
 tests = { cmd = "pytest -v tests", description = "Run tests" }
 test-docs = { cmd = "pytest -v --markdown-docs --markdown-docs-syntax=superfences --doctest-glob='*.md' crazyflow/ docs/", description = "Run doctests in docs and docstrings" }
+
+[tool.pixi.feature.fuzzing]
+platforms = ["linux-64"]
+
+[tool.pixi.feature.fuzzing.tasks]
+fuzzing = { cmd = "pytest -v tests/fuzzing", description = "Compare controllers against the Crazyflie firmware" }
+
+[tool.pixi.feature.fuzzing.dependencies]
+pybind11 = "*"
+cmake = "*"
+ninja = "*"
+cxx-compiler = "*"
+git = "*"
 
 [tool.pixi.feature.docs.dependencies]
 python = ">=3.10"

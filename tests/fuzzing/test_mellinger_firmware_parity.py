@@ -31,8 +31,6 @@ FUZZING_DIR = Path(__file__).resolve().parent
 HARNESS_DIR = FUZZING_DIR / "mellinger"
 CRAZYFLOW_ROOT = FUZZING_DIR.parents[1]
 
-pytestmark = pytest.mark.fuzzing
-
 
 @contextmanager
 def _owned_workspace():
