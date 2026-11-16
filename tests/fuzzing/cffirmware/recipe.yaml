@@ -3,25 +3,23 @@ package:
   version: 0.1.0
 
 source:
-  - path: .
-  - git: https://github.com/bitcraze/crazyflie-firmware.git
-    rev: f45ff8fdce4e73e5ce88ec06eee76309d2fa9a39
-    target_directory: firmware
+  git: https://github.com/bitcraze/crazyflie-firmware.git
+  rev: f45ff8fdce4e73e5ce88ec06eee76309d2fa9a39
 
 build:
   script:
-    - cmake -S . -B build -G Ninja -DCF_FIRMWARE=$SRC_DIR/firmware
-    - cmake --build build
-    - cp build/mellinger_fuzz_oracle*.so $SP_DIR/
+    - make cf2_defconfig
+    - env -u CFLAGS -u LDFLAGS make bindings_python
+    - cp build/cffirmware.py build/_cffirmware*.so $SP_DIR/
 
 requirements:
   build:
     - ${{ compiler('c') }}
-    - ${{ compiler('cxx') }}
-    - cmake
-    - ninja
+    - make
+    - swig
   host:
     - python
-    - pybind11
+    - setuptools
   run:
     - python
+    - numpy
