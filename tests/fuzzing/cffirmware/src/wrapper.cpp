@@ -17,22 +17,6 @@ extern "C" {
 #include "stabilizer_types.h"
 }
 
-#ifndef MELLINGER_FIRMWARE_COMMIT
-#define MELLINGER_FIRMWARE_COMMIT "unknown"
-#endif
-#ifndef MELLINGER_CONTROLLER_SHA256
-#define MELLINGER_CONTROLLER_SHA256 "unknown"
-#endif
-#ifndef MELLINGER_MIXER_SHA256
-#define MELLINGER_MIXER_SHA256 "unknown"
-#endif
-#ifndef MELLINGER_C_COMPILER_ID
-#define MELLINGER_C_COMPILER_ID "unknown"
-#endif
-#ifndef MELLINGER_C_COMPILER_VERSION
-#define MELLINGER_C_COMPILER_VERSION "unknown"
-#endif
-
 namespace py = pybind11;
 
 namespace {
@@ -282,12 +266,6 @@ class MellingerFuzzOracle {
 PYBIND11_MODULE(mellinger_fuzz_oracle, module) {
     module.doc() =
         "Transient pinned Mellinger controller and raw mixer fuzz oracle";
-    module.attr("firmware_commit") = MELLINGER_FIRMWARE_COMMIT;
-    module.attr("controller_sha256") = MELLINGER_CONTROLLER_SHA256;
-    module.attr("mixer_sha256") = MELLINGER_MIXER_SHA256;
-    module.attr("c_compiler") =
-        std::string(MELLINGER_C_COMPILER_ID) + " " +
-        MELLINGER_C_COMPILER_VERSION;
     module.attr("attitude_rate_hz") = ATTITUDE_RATE;
     module.attr("platform_mass_kg") =
         static_cast<float>(CF_MASS);

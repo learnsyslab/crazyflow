@@ -1,96 +1,18 @@
-"""On-demand source-pinned native Mellinger parity smoke for Linux x86-64."""
+"""Compare the Crazyflow Mellinger controller against the pinned firmware."""
 
 from __future__ import annotations
 
 import json
-import os
-import platform
-import shutil
-import tempfile
 import warnings
-from contextlib import contextmanager
-from importlib.util import find_spec
-from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-import jax
-import pytest
+import mellinger_fuzz_oracle
 
-from .mellinger.fetch_build import (
-    EXPECTED_MANIFEST_RELATIVE_PATHS,
-    FirmwareFetchUnavailable,
-    FirmwareVerificationError,
-    build_verified_oracle,
-    fetch_exact_firmware,
-    verify_git_checkout,
-    verify_manifest,
-)
 from .mellinger.parameter_gate import mismatches
-
-FUZZING_DIR = Path(__file__).resolve().parent
-HARNESS_DIR = FUZZING_DIR / "mellinger"
-CRAZYFLOW_ROOT = FUZZING_DIR.parents[1]
+from .mellinger.parity import run_parity_smoke
 
 
-@contextmanager
-def _owned_workspace():
-    """Yield one exact TemporaryDirectory and let its owner remove only it."""
-    with tempfile.TemporaryDirectory(prefix="crazyflow-mellinger-fuzz-") as temporary_name:
-        workspace = Path(temporary_name).resolve(strict=True)
-        yield workspace
-
-
-def _fetch_with_network_policy(
-    destination: Path,
-    *,
-    network_required: bool,
-    fetcher: Callable[[Path], dict[str, Any]] = fetch_exact_firmware,
-) -> dict[str, Any]:
-    try:
-        return fetcher(destination)
-    except FirmwareFetchUnavailable as error:
-        if network_required:
-            raise AssertionError(
-                f"FAIL: required firmware retrieval infrastructure failed: {error}"
-            ) from error
-        pytest.skip(
-            "SKIP: optional local firmware retrieval failed with a positively "
-            f"classified network/transport error: {error}"
-        )
-
-
-def _network_required() -> bool:
-    raw_value = os.environ.get("MELLINGER_FUZZ_NETWORK_REQUIRED", "0")
-    if raw_value not in {"0", "1"}:
-        raise AssertionError("MELLINGER_FUZZ_NETWORK_REQUIRED must be exactly 0 or 1")
-    return raw_value == "1"
-
-
-def _generated_checkout_artifacts() -> list[str]:
-    """Detect build, firmware, binary, or result residue in fuzzing."""
-    forbidden_directory_names = {"build", "crazyflie-firmware", "results"}
-    forbidden_file_names = {"CMakeCache.txt", "compile_commands.json"}
-    forbidden_suffixes = {".o", ".so", ".pyd", ".dylib"}
-    residue = []
-    for path in FUZZING_DIR.rglob("*"):
-        relative = path.relative_to(FUZZING_DIR).as_posix()
-        if (
-            (path.is_dir() and path.name in forbidden_directory_names)
-            or path.name in forbidden_file_names
-            or path.suffix in forbidden_suffixes
-        ):
-            residue.append(relative)
-    return sorted(residue)
-
-
-def _compact_result(
-    fetch: dict[str, Any],
-    compiled_inputs: tuple[str, ...],
-    compiled_sources: tuple[str, ...],
-    parity: dict[str, Any],
-    *,
-    workspace_removed: bool,
-) -> dict[str, Any]:
+def _compact_result(parity: dict[str, Any]) -> dict[str, Any]:
     def compact_worst_case(level: dict[str, Any]) -> dict[str, Any]:
         worst = level["worst_case"]
         return {
@@ -109,17 +31,6 @@ def _compact_result(
     stateful_b = stateful["production_end_to_end_mixer"]
     return {
         "status": parity["status"],
-        "firmware_fetch": fetch,
-        "firmware_manifest": {
-            "status": "PASS",
-            "compiled_inputs_verified": len(compiled_inputs),
-            "compiled_inputs": list(compiled_inputs),
-        },
-        "native_build": {"status": "PASS", "compiled_sources": list(compiled_sources)},
-        "cleanup": {
-            "workspace_removed": workspace_removed,
-            "checkout_residue": _generated_checkout_artifacts(),
-        },
         "parameter_mode": parity["parameter_mode"],
         "comparison_kd_z": parity["comparison_kd_z"],
         "parameters_transferred": parity["parameters_transferred"],
@@ -191,42 +102,6 @@ def _compact_result(
         "old_four_pwm_regression": parity["permanent_four_pwm_counterexample"],
         "runtime": parity["runtime"],
     }
-
-
-def test_optional_network_failure_maps_to_pytest_skip() -> None:
-    def unavailable(_destination: Path):
-        raise FirmwareFetchUnavailable("simulated: network is unreachable")
-
-    with pytest.raises(pytest.skip.Exception, match="SKIP: optional local"):
-        _fetch_with_network_policy(
-            Path("/not-created"), network_required=False, fetcher=unavailable
-        )
-
-
-def test_required_network_failure_is_nonzero_failure() -> None:
-    def unavailable(_destination: Path):
-        raise FirmwareFetchUnavailable("simulated: network is unreachable")
-
-    with pytest.raises(AssertionError, match="FAIL: required firmware retrieval"):
-        _fetch_with_network_policy(Path("/not-created"), network_required=True, fetcher=unavailable)
-
-
-def test_hash_mismatch_is_failure_not_skip() -> None:
-    workspace = None
-    try:
-        with _owned_workspace() as owned:
-            workspace = owned
-            firmware = owned / "firmware"
-            for relative_path in EXPECTED_MANIFEST_RELATIVE_PATHS:
-                target = firmware / relative_path
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(b"deliberate hash mismatch\n")
-            with pytest.raises(
-                FirmwareVerificationError, match="firmware source manifest mismatch"
-            ):
-                verify_manifest(firmware, HARNESS_DIR / "firmware_sources.sha256")
-    finally:
-        assert workspace is None or not workspace.exists()
 
 
 def test_parameter_mismatch_fails_before_rng_and_controllers() -> None:
@@ -308,78 +183,8 @@ def test_parameter_mismatch_fails_before_rng_and_controllers() -> None:
     )
 
 
-def test_owned_workspace_cleanup_after_success_and_error() -> None:
-    successful_workspace = None
-    with _owned_workspace() as owned:
-        successful_workspace = owned
-        (owned / "firmware").mkdir()
-        (owned / "build").mkdir()
-    assert successful_workspace is not None
-    assert not successful_workspace.exists()
-
-    failed_workspace = None
-    with pytest.raises(RuntimeError, match="intentional lifecycle failure"):
-        with _owned_workspace() as owned:
-            failed_workspace = owned
-            (owned / "firmware").mkdir()
-            (owned / "build").mkdir()
-            raise RuntimeError("intentional lifecycle failure")
-    assert failed_workspace is not None
-    assert not failed_workspace.exists()
-
-
-@pytest.mark.skipif(
-    os.environ.get("CRAZYFLOW_RUN_MELLINGER_FUZZING") != "1",
-    reason="set CRAZYFLOW_RUN_MELLINGER_FUZZING=1 to fetch and build the native reference",
-)
-@pytest.mark.skipif(
-    platform.system() != "Linux" or platform.machine().lower() not in {"x86_64", "amd64"},
-    reason="native Mellinger harness supports Linux x86-64",
-)
-def test_mellinger_firmware_parity_online() -> None:
-    missing = [tool for tool in ("git", "cmake", "ninja") if shutil.which(tool) is None]
-    assert not missing, f"Install the native Mellinger build tools: {', '.join(missing)}"
-    assert find_spec("pybind11") is not None, "Install pybind11 in the active Crazyflow environment"
-    residue_before = _generated_checkout_artifacts()
-    workspace = None
-    fetch_result = None
-    native_build = None
-    parity_result = None
-    previous_cache_setting = jax.config.jax_enable_compilation_cache
-    try:
-        jax.config.update("jax_enable_compilation_cache", False)
-        with _owned_workspace() as owned:
-            workspace = owned
-            firmware = owned / "crazyflie-firmware"
-            build = owned / "native-build"
-            fetch_result = _fetch_with_network_policy(
-                firmware, network_required=_network_required()
-            )
-            verify_git_checkout(firmware)
-            manifest = verify_manifest(firmware, HARNESS_DIR / "firmware_sources.sha256")
-            assert manifest["manifest_entries"] == 13
-            native_build = build_verified_oracle(HARNESS_DIR, firmware, build)
-            from .mellinger.parity import run_parity_smoke
-
-            parity_result = run_parity_smoke(CRAZYFLOW_ROOT, native_build.build_dir)
-            verify_manifest(firmware, HARNESS_DIR / "firmware_sources.sha256")
-            verify_git_checkout(firmware)
-    finally:
-        jax.config.update("jax_enable_compilation_cache", previous_cache_setting)
-        assert workspace is None or not workspace.exists()
-
-    assert fetch_result is not None
-    assert native_build is not None
-    assert parity_result is not None
-    assert _generated_checkout_artifacts() == residue_before
-    result = _compact_result(
-        fetch_result,
-        native_build.compiled_firmware_inputs,
-        native_build.compiled_sources,
-        parity_result,
-        workspace_removed=not workspace.exists(),
-    )
-    assert result["cleanup"]["workspace_removed"] is True
+def test_mellinger_firmware_parity():
+    result = _compact_result(run_parity_smoke(mellinger_fuzz_oracle))
     if result["status"] == "PASS_CHECKED_SCOPE_WITH_DIFFERENCES":
         stock = [
             item["semantic_name"] for item in result["stock_parameter_differences"]["mismatches"]

@@ -151,6 +151,11 @@ docstring-code-line-length = "dynamic"
 channels = ["conda-forge"]
 # jax-mps >= 0.11 only has wheels for macOS 14+
 platforms = ["linux-64", { name = "osx-arm64-14", platform = "osx-arm64", macos = "14.0" }]
+preview = ["pixi-build"]
+
+# Python ABI for packages built from source
+[tool.pixi.workspace.build-variants]
+python = ["3.14.*"]
 
 [tool.pixi.dependencies]
 pip = "*"
@@ -209,11 +214,7 @@ platforms = ["linux-64"]
 fuzzing = { cmd = "pytest -v tests/fuzzing", description = "Compare controllers against the Crazyflie firmware" }
 
 [tool.pixi.feature.fuzzing.dependencies]
-pybind11 = "*"
-cmake = "*"
-ninja = "*"
-cxx-compiler = "*"
-git = "*"
+cffirmware = { path = "tests/fuzzing/cffirmware" }
 
 [tool.pixi.feature.docs.dependencies]
 python = ">=3.10"

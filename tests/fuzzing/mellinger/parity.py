@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import importlib.util
 import inspect
 import platform
-import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,9 +20,6 @@ from .parameter_gate import evaluate_parameter_gate, format_parameter_gate
 from .raw_mixer_parity import (
     EXPECTED_ANALYSIS_CONTRACT,
     INTERFACE_MATCHED_TOLERANCE_PWM,
-    PINNED_CONTROLLER_SHA256,
-    PINNED_FIRMWARE_COMMIT,
-    PINNED_MIXER_SHA256,
     PRODUCTION_END_TO_END_BOUND_DERIVATION,
     PRODUCTION_END_TO_END_TOLERANCE_PWM,
     aggregate_mixer_errors,
@@ -74,24 +69,10 @@ class ControllerModules:
     raw_mixer: Any
 
 
-def import_controller_modules(crazyflow_root: Path, bridge_build_dir: Path) -> ControllerModules:
-    """Import only source-local controller modules and the transient extension."""
-    crazyflow_root = crazyflow_root.resolve(strict=True)
-    bridge_build_dir = bridge_build_dir.resolve(strict=True)
+def import_controller_modules(bridge: Any) -> ControllerModules:
+    """Import the Crazyflow controller functions next to the firmware module."""
     from crazyflow.control.core import load_fn_params
     from crazyflow.control.mellinger import control
-
-    source = Path(control.__file__).resolve()
-    expected_source = (crazyflow_root / "crazyflow/control/mellinger/control.py").resolve()
-    if source != expected_source:
-        raise AssertionError(f"imported Crazyflow controller outside checkout: {source}")
-    (extension,) = bridge_build_dir.glob("mellinger_fuzz_oracle*.so")
-    if extension.resolve().parent != bridge_build_dir:
-        raise AssertionError(f"native oracle resolves outside transient build: {extension}")
-    spec = importlib.util.spec_from_file_location("mellinger_fuzz_oracle", extension)
-    assert spec is not None and spec.loader is not None
-    bridge = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(bridge)
 
     def state_with_raw_thrust(*, cmd: Any, **kwargs: Any) -> tuple[Any, Any, Any]:
         # The C oracle uses yaw plus rates, Crazyflow takes quaternion plus rates.
@@ -344,9 +325,6 @@ def _bridge_metadata(bridge: Any) -> dict[str, Any]:
     return {
         name: getattr(bridge, name, None)
         for name in (
-            "firmware_commit",
-            "controller_sha256",
-            "mixer_sha256",
             "mixer_motor_order",
             "mixer_raw",
             "mixer_uncapped",
@@ -1024,23 +1002,11 @@ def runtime_metadata() -> dict[str, Any]:
     }
 
 
-def run_parity_smoke(crazyflow_root: Path, bridge_build_dir: Path) -> dict[str, Any]:
+def run_parity_smoke(bridge: Any) -> dict[str, Any]:
     """Measure stock differences and compare outputs at matching gains."""
-    machine = platform.machine().lower()
-    if not sys.platform.startswith("linux") or machine not in {"x86_64", "amd64"}:
-        raise AssertionError(
-            f"mellinger-fuzzing is Linux x86-64 only, got {sys.platform}/{machine}"
-        )
     if not analytical_bounds_are_valid():
         raise AssertionError("analytical raw bounds are not valid before RNG/controller work")
-    modules = import_controller_modules(crazyflow_root, bridge_build_dir)
-    bridge = modules.bridge
-    if bridge.firmware_commit != PINNED_FIRMWARE_COMMIT:
-        raise AssertionError("transient oracle firmware commit mismatch")
-    if bridge.controller_sha256 != PINNED_CONTROLLER_SHA256:
-        raise AssertionError("transient oracle controller hash mismatch")
-    if bridge.mixer_sha256 != PINNED_MIXER_SHA256:
-        raise AssertionError("transient oracle mixer hash mismatch")
+    modules = import_controller_modules(bridge)
     if not np.isclose(float(bridge.platform_mass_kg), float(np.float32(0.029)), rtol=0.0, atol=0.0):
         raise AssertionError("transient oracle CF_MASS mismatch")
 
@@ -1095,11 +1061,7 @@ def run_parity_smoke(crazyflow_root: Path, bridge_build_dir: Path) -> dict[str, 
             else "PASS_CHECKED_SCOPE"
         ),
         "scope": "on-demand Linux x86-64 Mellinger and raw-mixer smoke",
-        "firmware_commit": bridge.firmware_commit,
-        "controller_sha256": bridge.controller_sha256,
-        "mixer_sha256": bridge.mixer_sha256,
         "cf_mass": float(bridge.platform_mass_kg),
-        "firmware_c_compiler": bridge.c_compiler,
         "parameter_mode": COMPARISON_MODE,
         "comparison_kd_z": COMPARISON_KD_Z,
         "parameters_transferred": False,

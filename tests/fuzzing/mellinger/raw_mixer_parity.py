@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .fetch_build import PINNED_CONTROLLER_SHA256, PINNED_FIRMWARE_COMMIT, PINNED_MIXER_SHA256
-
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
@@ -353,9 +351,6 @@ def evaluate_raw_mixer_configuration(
         actual=actual_matrix,
     )
     for field, expected in (
-        ("firmware_commit", PINNED_FIRMWARE_COMMIT),
-        ("controller_sha256", PINNED_CONTROLLER_SHA256),
-        ("mixer_sha256", PINNED_MIXER_SHA256),
         ("mixer_motor_order", "M1,M2,M3,M4"),
         ("mixer_raw", True),
         ("mixer_uncapped", True),
@@ -523,17 +518,14 @@ def evaluate_raw_mixer_configuration(
 
 
 def mixer_configuration_summary(configuration_gate: Mapping[str, Any]) -> dict[str, Any]:
-    """Return the stable 17-value matrix/metadata/basis sub-gate.
+    """Return the stable 14-value matrix/metadata/basis sub-gate.
 
     The full pre-work gate also proves ranges, Float32 operation order, and
-    both analytical bounds. This sub-gate preserves the original 17-value
-    mixer-configuration contract: one matrix, eight native boundary metadata
+    both analytical bounds. This sub-gate preserves the original 14-value
+    mixer-configuration contract: one matrix, five native boundary metadata
     values, and eight real-function basis results.
     """
     native_configuration_names = {
-        "native_firmware_commit",
-        "native_controller_sha256",
-        "native_mixer_sha256",
         "native_mixer_motor_order",
         "native_mixer_raw",
         "native_mixer_uncapped",
@@ -547,8 +539,8 @@ def mixer_configuration_summary(configuration_gate: Mapping[str, Any]) -> dict[s
         or check["name"] in native_configuration_names
         or check["name"].startswith("basis_")
     ]
-    if len(selected) != 17:
-        raise ValueError(f"expected exactly 17 mixer configuration values, got {len(selected)}")
+    if len(selected) != 14:
+        raise ValueError(f"expected exactly 14 mixer configuration values, got {len(selected)}")
     passed = sum(check["status"] == "PASS" for check in selected)
     return {
         "status": "PASS" if passed == len(selected) else "FAIL",

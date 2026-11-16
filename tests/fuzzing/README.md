@@ -6,20 +6,12 @@ clipping and battery compensation.
 
 ## Run the test
 
-From the repository root on Linux x86-64, use a Crazyflow development
-environment with pytest and pybind11. Install Git, CMake, Ninja and a C/C++
-compiler.
-
 ```sh
-CRAZYFLOW_RUN_MELLINGER_FUZZING=1 MELLINGER_FUZZ_NETWORK_REQUIRED=1 \
-  python -m pytest -q -s -m fuzzing tests/fuzzing
+pixi run fuzzing
 ```
 
-The test fetches the pinned [Bitcraze firmware](https://github.com/bitcraze/crazyflie-firmware),
-checks all 13 firmware inputs against their SHA-256 hashes and builds the
-native reference in a temporary directory. The command above treats a failed fetch
-as a test failure. Omit `MELLINGER_FUZZ_NETWORK_REQUIRED=1` to allow a
-recognized network outage to skip the native test.
+The fuzzing environment builds the controller and mixer of the pinned
+[Bitcraze firmware](https://github.com/bitcraze/crazyflie-firmware) commit into a Python module.
 
 ## What it checks
 
