@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -16,7 +15,7 @@ from hypothesis import strategies as st
 from hypothesis.extra import numpy as hnp
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import load_fn_params, parametrize
+from crazyflow.control import load_fn_params, load_params, parametrize
 from crazyflow.control.mellinger import control
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 from crazyflow.drones import Drone
@@ -55,7 +54,7 @@ def _states(draw: st.DrawFn) -> tuple[NDArray, ...]:
     return draw(_vector(10)), draw(_vector(5)), quat, draw(_vector(35))
 
 
-def _carry_overs() -> st.SearchStrategy[tuple[NDArray, ...]]:
+def _ctrl_states() -> st.SearchStrategy[tuple[NDArray, ...]]:
     """Draw integrators, previous body rates and previous body rate setpoints."""
     # Beyond the integrator limits to cover clamping
     return st.tuples(_vector(3), _vector(2000), _vector(35), _vector(35))
@@ -110,7 +109,7 @@ def _reference_step(
     state.attitude.yaw = float(np.rad2deg(cf.quat2rpy(cf.mkquat(*quat.tolist())).z))
     sensors.gyro.x, sensors.gyro.y, sensors.gyro.z = np.rad2deg(ang_vel).tolist()
     out = cf.control_t()
-    cf.controllerMellinger(ctrl, out, setpoint, sensors, state, 0)
+    cf.controllerMellinger(ctrl, out, setpoint, sensors, state, 0)  # 0 to step the controller
     return out
 
 
@@ -147,11 +146,11 @@ def test_params(drone: Drone):
 
 
 @pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
-@given(state=_states(), carry_over=_carry_overs(), cmd=_state_cmds())
+@given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
 def test_state2attitude(
     ref: cf.controllerMellinger_t,
     state: tuple[NDArray, ...],
-    carry_over: tuple[NDArray, ...],
+    ctrl_state: tuple[NDArray, ...],
     cmd: NDArray,
 ):
     """Compare thrust, desired z axis and position integrators for state commands."""
@@ -163,19 +162,21 @@ def test_state2attitude(
     # values and compare their arguments instead of the final output. Monkey-patching is
     # incompatible with jit, so we use numpy here
     with patch.object(control, "pwm2force", wraps=control.pwm2force) as spy:
-        rpyt, pos_err_i = state2attitude(pos, quat, vel, cmd, carry_over[0], cf.ATTITUDE_RATE)
+        rpyt, pos_err_i = state2attitude(pos, quat, vel, cmd, ctrl_state[0], cf.ATTITUDE_RATE)
     thrust = spy.call_args.args[0]
     setpoint = cf.setpoint_t()
-    setpoint.position.x, setpoint.position.y, setpoint.position.z = cmd[:3].tolist()
-    setpoint.velocity.x, setpoint.velocity.y, setpoint.velocity.z = cmd[3:6].tolist()
-    acc = setpoint.acceleration
-    acc.x, acc.y, acc.z = cmd[6:9].tolist()
-    yaw = R.from_quat(cmd[9:13]).as_euler("xyz", suppress_warnings=True)[2]
-    setpoint.attitude.yaw = float(np.rad2deg(yaw))
+    sp_pos = setpoint.position
+    sp_pos.x, sp_pos.y, sp_pos.z = cmd[:3].tolist()
+    sp_vel = setpoint.velocity
+    sp_vel.x, sp_vel.y, sp_vel.z = cmd[3:6].tolist()
+    sp_acc = setpoint.acceleration
+    sp_acc.x, sp_acc.y, sp_acc.z = cmd[6:9].tolist()
+    sp_att = setpoint.attitude
+    sp_att.yaw = R.from_quat(cmd[9:13]).as_euler("xyz", degrees=True, suppress_warnings=True)[2]
     rate = setpoint.attitudeRate
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
-    out = _reference_step(ref, setpoint, *state, *carry_over)
+    out = _reference_step(ref, setpoint, *state, *ctrl_state)
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     z_axis, ref_z_axis = R.from_euler("xyz", rpyt[:3]).as_matrix()[:, 2], ref.z_axis_desired
     np.testing.assert_allclose(z_axis, [ref_z_axis.x, ref_z_axis.y, ref_z_axis.z], atol=1e-6)
@@ -186,16 +187,16 @@ def test_state2attitude(
 
 
 @pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
-@given(state=_states(), carry_over=_carry_overs(), cmd=_attitude_cmds())
+@given(state=_states(), ctrl_state=_ctrl_states(), cmd=_attitude_cmds())
 def test_attitude2force_torque(
     ref: cf.controllerMellinger_t,
     state: tuple[NDArray, ...],
-    carry_over: tuple[NDArray, ...],
+    ctrl_state: tuple[NDArray, ...],
     cmd: NDArray,
 ):
     """Compare thrust, torques and attitude integrators for attitude commands."""
     _, _, quat, ang_vel = state
-    _, rot_err_i, prev_ang_vel, _ = carry_over
+    _, rot_err_i, prev_ang_vel, _ = ctrl_state
     params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250)
     attitude2force_torque = parametrize(control.attitude2force_torque, Drone.cf2x_L250)
     # See test_state2attitude for why we spy on the intermediate PWM values
@@ -203,7 +204,9 @@ def test_attitude2force_torque(
     with patch.object(control, "force_torque_pwms2pwms", wraps=mixer) as spy:
         _, _, rot_err_i = attitude2force_torque(quat, ang_vel, cmd, prev_ang_vel, rot_err_i)
     thrust = spy.call_args.args[0]
-    # The firmware runs in the legacy Crazyflie frame with flipped pitch and yaw torques
+    # The firmware runs in the legacy Crazyflie frame with flipped pitch and yaw torques. Pitch uses
+    # the legacy frame, yaw inverts later in the controller. See
+    # https://github.com/bitcraze/crazyflie-firmware/blob/d794c5ca081d19aa1e1bbcb6fd4a3711784fb8b1/src/modules/src/controller/controller_mellinger.c#L309
     torque = spy.call_args.args[1] * [1, -1, -1]
     setpoint = cf.setpoint_t()
     # The firmware takes the pitch setpoint in the legacy Crazyflie frame
@@ -212,7 +215,7 @@ def test_attitude2force_torque(
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeAbs
     # Crazyflow does not allow controllers to switch mode in between, so attitude_rate must be zero
-    out = _reference_step(ref, setpoint, *state, *carry_over[:3], np.zeros(3, np.float32))
+    out = _reference_step(ref, setpoint, *state, *ctrl_state[:3], np.zeros(3, np.float32))
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # Zero thrust turns off torques. If the firmware and crazyflow controller disagree within
     # numerical noise, the torque contribution can still lead to significant differences. We hence
@@ -228,16 +231,16 @@ def test_attitude2force_torque(
     reason="TODO: Report the firmware levelling upside down in body rate mode once its z thrust "
     "target turns negative, and reset the integrators at zero thrust as the firmware",
 )
-@given(state=_states(), carry_over=_carry_overs(), cmd=_body_rate_cmds())
+@given(state=_states(), ctrl_state=_ctrl_states(), cmd=_body_rate_cmds())
 def test_body_rate2force_torque(
     ref: cf.controllerMellinger_t,
     state: tuple[NDArray, ...],
-    carry_over: tuple[NDArray, ...],
+    ctrl_state: tuple[NDArray, ...],
     cmd: NDArray,
 ):
     """Compare thrust, torques and attitude integrators for body rate commands."""
     _, _, quat, ang_vel = state
-    _, rot_err_i, prev_ang_vel, prev_ang_vel_des = carry_over
+    _, rot_err_i, prev_ang_vel, prev_ang_vel_des = ctrl_state
     params = load_fn_params(control.body_rate2force_torque, Drone.cf2x_L250)
     body_rate2force_torque = parametrize(control.body_rate2force_torque, Drone.cf2x_L250)
     prev_cmd = np.concatenate((prev_ang_vel_des, cmd[3:]))
@@ -255,7 +258,7 @@ def test_body_rate2force_torque(
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[:3]).tolist()
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeVelocity
-    out = _reference_step(ref, setpoint, *state, *carry_over)
+    out = _reference_step(ref, setpoint, *state, *ctrl_state)
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
     assume(abs(out.thrust) > 1)
@@ -288,37 +291,41 @@ def test_mixer(thrust: NDArray, torque: NDArray):
     reason="TODO: Clip as the firmware, uniform above the maximum and at 0, and use the current "
     "and previous body rate setpoint",
 )
-@given(state=_states(), carry_over=_carry_overs(), cmd=_state_cmds())
+@given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
 def test_end_to_end(
     ref: cf.controllerMellinger_t,
     state: tuple[NDArray, ...],
-    carry_over: tuple[NDArray, ...],
+    ctrl_state: tuple[NDArray, ...],
     cmd: NDArray,
 ):
     """Compare the rotor velocities for state commands."""
     pos, vel, quat, ang_vel = map(jnp.asarray, state)
-    pos_err_i, rot_err_i, prev_ang_vel, _ = map(jnp.asarray, carry_over)
+    pos_err_i, rot_err_i, prev_ang_vel, _ = map(jnp.asarray, ctrl_state)
     # Jitting the module functions keeps JAX's compilation cache across examples
-    state_params = load_fn_params(control.state2attitude, Drone.cf2x_L250, xp=jnp)
-    attitude_params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250, xp=jnp)
-    state2attitude = partial(jax.jit(control.state2attitude), **state_params)
-    attitude2force_torque = partial(jax.jit(control.attitude2force_torque), **attitude_params)
-    rotor_params = load_fn_params(control.force_torque2rotor_vel, Drone.cf2x_L250, xp=jnp)
-    force_torque2rotor_vel = partial(jax.jit(control.force_torque2rotor_vel), **rotor_params)
+    state2attitude = parametrize(jax.jit(control.state2attitude), Drone.cf2x_L250, xp=jnp)
+    attitude2force_torque = parametrize(
+        jax.jit(control.attitude2force_torque), Drone.cf2x_L250, xp=jnp
+    )
+    force_torque2rotor_vel = parametrize(
+        jax.jit(control.force_torque2rotor_vel), Drone.cf2x_L250, xp=jnp
+    )
+    params = load_params("mellinger", Drone.cf2x_L250)["core"]
     rpyt, _ = state2attitude(pos, quat, vel, jnp.asarray(cmd), pos_err_i, cf.ATTITUDE_RATE)
     force, torque, _ = attitude2force_torque(quat, ang_vel, rpyt, prev_ang_vel, rot_err_i)
     rotor_vel = force_torque2rotor_vel(force, torque)
     setpoint = cf.setpoint_t()
-    setpoint.position.x, setpoint.position.y, setpoint.position.z = cmd[:3].tolist()
-    setpoint.velocity.x, setpoint.velocity.y, setpoint.velocity.z = cmd[3:6].tolist()
-    acc = setpoint.acceleration
-    acc.x, acc.y, acc.z = cmd[6:9].tolist()
-    yaw = R.from_quat(cmd[9:13]).as_euler("xyz", suppress_warnings=True)[2]
-    setpoint.attitude.yaw = float(np.rad2deg(yaw))
+    sp_pos = setpoint.position
+    sp_pos.x, sp_pos.y, sp_pos.z = cmd[:3].tolist()
+    sp_vel = setpoint.velocity
+    sp_vel.x, sp_vel.y, sp_vel.z = cmd[3:6].tolist()
+    sp_acc = setpoint.acceleration
+    sp_acc.x, sp_acc.y, sp_acc.z = cmd[6:9].tolist()
+    sp_att = setpoint.attitude
+    sp_att.yaw = R.from_quat(cmd[9:13]).as_euler("xyz", degrees=True, suppress_warnings=True)[2]
     rate = setpoint.attitudeRate
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
-    out = _reference_step(ref, setpoint, *state, *carry_over)
+    out = _reference_step(ref, setpoint, *state, *ctrl_state)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
     assume(abs(out.thrust) > 1)
     uncapped, capped = cf.motors_thrust_uncapped_t(), cf.motors_thrust_pwm_t()
@@ -326,6 +333,6 @@ def test_end_to_end(
     cf.powerDistributionCap(uncapped, capped)  # We always assume perfect battery compensation
     m = capped.motors
     pwms = np.array([m.m1, m.m2, m.m3, m.m4])
-    motor_forces = pwm2force(pwms, rotor_params["thrust_max"], attitude_params["pwm_max"])
-    ref_rotor_vel = motor_force2rotor_vel(motor_forces, rotor_params["rpm2thrust"])
+    motor_forces = pwm2force(pwms, params["thrust_max"], params["pwm_max"])
+    ref_rotor_vel = motor_force2rotor_vel(motor_forces, params["rpm2thrust"])
     np.testing.assert_allclose(rotor_vel, ref_rotor_vel, atol=2)  # Tolerance in RPM
