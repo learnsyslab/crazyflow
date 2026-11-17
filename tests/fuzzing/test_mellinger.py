@@ -107,8 +107,8 @@ def _reference_step(
     q = state.attitudeQuaternion
     q.x, q.y, q.z, q.w = quat.tolist()
     # The state estimator converts the quaternion with the firmware's own Euler angle convention
-    state.attitude.yaw = float(np.degrees(cf.quat2rpy(cf.mkquat(*quat.tolist())).z))
-    sensors.gyro.x, sensors.gyro.y, sensors.gyro.z = np.degrees(ang_vel).tolist()
+    state.attitude.yaw = float(np.rad2deg(cf.quat2rpy(cf.mkquat(*quat.tolist())).z))
+    sensors.gyro.x, sensors.gyro.y, sensors.gyro.z = np.rad2deg(ang_vel).tolist()
     out = cf.control_t()
     cf.controllerMellinger(ctrl, out, setpoint, sensors, state, 0)
     return out
@@ -171,9 +171,9 @@ def test_state2attitude(
     acc = setpoint.acceleration
     acc.x, acc.y, acc.z = cmd[6:9].tolist()
     yaw = R.from_quat(cmd[9:13]).as_euler("xyz", suppress_warnings=True)[2]
-    setpoint.attitude.yaw = float(np.degrees(yaw))
+    setpoint.attitude.yaw = float(np.rad2deg(yaw))
     rate = setpoint.attitudeRate
-    rate.roll, rate.pitch, rate.yaw = np.degrees(cmd[13:16]).tolist()
+    rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
     out = _reference_step(ref, setpoint, *state, *carry_over)
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
@@ -208,7 +208,7 @@ def test_attitude2force_torque(
     setpoint = cf.setpoint_t()
     # The firmware takes the pitch setpoint in the legacy Crazyflie frame
     att = setpoint.attitude
-    att.roll, att.pitch, att.yaw = (np.degrees(cmd[:3]) * [1, -1, 1]).tolist()
+    att.roll, att.pitch, att.yaw = (np.rad2deg(cmd[:3]) * [1, -1, 1]).tolist()
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeAbs
     # Crazyflow does not allow controllers to switch mode in between, so attitude_rate must be zero
@@ -252,7 +252,7 @@ def test_body_rate2force_torque(
     torque = spy.call_args.args[1] * [1, -1, -1]
     setpoint = cf.setpoint_t()
     rate = setpoint.attitudeRate
-    rate.roll, rate.pitch, rate.yaw = np.degrees(cmd[:3]).tolist()
+    rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[:3]).tolist()
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeVelocity
     out = _reference_step(ref, setpoint, *state, *carry_over)
@@ -314,9 +314,9 @@ def test_end_to_end(
     acc = setpoint.acceleration
     acc.x, acc.y, acc.z = cmd[6:9].tolist()
     yaw = R.from_quat(cmd[9:13]).as_euler("xyz", suppress_warnings=True)[2]
-    setpoint.attitude.yaw = float(np.degrees(yaw))
+    setpoint.attitude.yaw = float(np.rad2deg(yaw))
     rate = setpoint.attitudeRate
-    rate.roll, rate.pitch, rate.yaw = np.degrees(cmd[13:16]).tolist()
+    rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
     out = _reference_step(ref, setpoint, *state, *carry_over)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
