@@ -1236,7 +1236,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.4.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
-      - conda_source: cffirmware[a9e6ab27] @ tests/fuzzing/cffirmware
+      - conda_source: cffirmware[7f064a80] @ tests/fuzzing/cffirmware
       - pypi: ./
       - pypi: https://files.pythonhosted.org/packages/05/98/716a473cfb24750858ddd5d14e6527539dd206583a46408d08eeb2844a75/trimesh-4.12.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/30/19cebe8b381179ccd45faab303f4279c3aaa3a707387c42fbbb43ca778ac/orbax_checkpoint-0.12.4-py3-none-any.whl
@@ -7366,9 +7366,8 @@ packages:
     - zstd >=1.5.7,<1.6.0a0
   size: 433687
   timestamp: 1786599629846
-- conda_source: cffirmware[a9e6ab27] @ tests/fuzzing/cffirmware
+- conda_source: cffirmware[7f064a80] @ tests/fuzzing/cffirmware
   variants:
-    python: 3.14.*
     target_platform: linux-64
   depends:
   - libgcc >=16
