@@ -1,0 +1,24 @@
+name: Fuzzing
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fuzzing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          pixi-version: v0.84.1
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+          environments: fuzzing
+          activate-environment: false
+          locked: true
+
+      - name: Run fuzzing tests
+        run: pixi run -e fuzzing fuzzing

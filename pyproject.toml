@@ -192,7 +192,7 @@ gpu = { features = ["gpu"], solve-group = "gpu" }
 benchmark = { features = ["benchmark", "gpu"], solve-group = "gpu" }
 gpu-tests = { features = ["tests", "gpu"], solve-group = "gpu" }
 dist = { features = ["dist"], solve-group = "default" }
-fuzzing = { features = ["tests", "fuzzing"], solve-group = "default" }
+fuzzing = { features = ["tests", "fuzzing"], solve-group = "fuzzing" }
 
 [tool.pixi.feature.tests.dependencies]
 pytest = ">=8.4.1"

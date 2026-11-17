@@ -7,6 +7,7 @@
   [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
   [![arXiv](https://img.shields.io/badge/arXiv-2606.01478-b31b1b.svg)](https://arxiv.org/abs/2606.01478)
   [![Tests](https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/testing.yml)
+  [![Fuzzing](https://github.com/learnsyslab/crazyflow/actions/workflows/fuzzing.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/fuzzing.yml)
   [![Ruff](https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml/badge.svg)](https://github.com/learnsyslab/crazyflow/actions/workflows/ruff.yml)
   [![Docs](https://github.com/learnsyslab/crazyflow/actions/workflows/docs.yml/badge.svg)](https://learnsyslab.github.io/crazyflow)
 
