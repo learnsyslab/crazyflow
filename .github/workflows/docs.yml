@@ -23,10 +23,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
 
-    - name: Install submodules
-      run: |
-        git submodule update --init --recursive
-
     - name: Setup pixi
       uses: prefix-dev/setup-pixi@v0.11.3
       with:
