@@ -114,13 +114,16 @@ def _reference_step(
     return out
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: cf2x_L250 uses kd_z = 0.5, the firmware 0.4")
-def test_params():
+@pytest.mark.xfail(strict=True, reason="TODO: The Crazyflies use kd_z = 0.5, the firmware 0.4")
+@pytest.mark.parametrize(
+    "drone", [Drone.cf2x_L250, Drone.cf2x_P250, Drone.cf2x_T350, Drone.cf21B_500]
+)
+def test_params(drone: Drone):
     """Compare the gains with the firmware defaults."""
     ctrl = cf.controllerMellinger_t()
     cf.controllerMellingerInit(ctrl)
-    state_params = load_fn_params(control.state2attitude, Drone.cf2x_L250, xp=jnp)
-    attitude_params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250, xp=jnp)
+    state_params = load_fn_params(control.state2attitude, drone, xp=jnp)
+    attitude_params = load_fn_params(control.attitude2force_torque, drone, xp=jnp)
     xy_z = {
         "kp": (ctrl.kp_xy, ctrl.kp_z),
         "kd": (ctrl.kd_xy, ctrl.kd_z),
@@ -137,8 +140,10 @@ def test_params():
     np.testing.assert_allclose(state_params["int_err_max"], i_range, rtol=1e-6)
     i_range_m = [ctrl.i_range_m_xy, ctrl.i_range_m_xy, ctrl.i_range_m_z]
     np.testing.assert_allclose(attitude_params["int_err_max"], i_range_m, rtol=1e-6)
-    np.testing.assert_allclose(state_params["mass"], ctrl.mass, rtol=1e-6)
     np.testing.assert_allclose(state_params["mass_thrust"], ctrl.massThrust, rtol=1e-6)
+    # The firmware is built for the Crazyflie 2 without the thrust upgrade kit
+    if drone in (Drone.cf2x_L250, Drone.cf2x_P250):
+        np.testing.assert_allclose(state_params["mass"], ctrl.mass, rtol=1e-6)
 
 
 @pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
