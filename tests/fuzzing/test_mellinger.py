@@ -180,11 +180,7 @@ def test_state2attitude(
     np.testing.assert_allclose(pos_err_i, [ref.i_error_x, ref.i_error_y, ref.i_error_z], atol=1e-6)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="TODO: Use the previous body rate setpoint and reset the integrators at zero thrust as "
-    "the firmware",
-)
+@pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
 @given(state=_states(), carry_over=_carry_overs(), cmd=_attitude_cmds())
 def test_attitude2force_torque(
     ref: cf.controllerMellinger_t,
@@ -210,7 +206,8 @@ def test_attitude2force_torque(
     att.roll, att.pitch, att.yaw = (np.degrees(cmd[:3]) * [1, -1, 1]).tolist()
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeAbs
-    out = _reference_step(ref, setpoint, *state, *carry_over)
+    # Crazyflow does not allow controllers to switch mode in between, so attitude_rate must be zero
+    out = _reference_step(ref, setpoint, *state, *carry_over[:3], np.zeros(3, np.float32))
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # Zero thrust turns off torques. If the firmware and crazyflow controller disagree within
     # numerical noise, the torque contribution can still lead to significant differences. We hence
