@@ -17,7 +17,7 @@ quat = jnp.array([0.0, 0.0, 0.0, 1.0])
 vel = jnp.zeros(3)
 cmd = jnp.zeros(16).at[9:13].set(R.from_euler("z", 0.0).as_quat())
 
-rpyt, int_pos_err = jit_ctrl(pos, quat, vel, cmd)
+rpyt, pos_err_i = jit_ctrl(pos, quat, vel, cmd)
 ```
 
 ## Integral errors under JIT

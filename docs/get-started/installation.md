@@ -76,6 +76,7 @@ Adds `pytest` and `pytest-markdown-docs` for running the test suite and doc snip
     ```bash
     pixi run tests          # unit and integration tests
     pixi run test-docs      # doc code snippet tests
+    pixi run fuzzing        # differential fuzzing against the real firmware
     ```
 
 === "uv"

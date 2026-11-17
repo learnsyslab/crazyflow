@@ -68,7 +68,7 @@ pos_err_i.shape  # (3,)
 | `ang_vel` | `(..., 3)` | Current angular velocity in body frame [rad/s] |
 | `cmd` | `(..., 4)` | RPYT from stage 1: `[roll_rad, pitch_rad, yaw_rad, thrust_N]` |
 | `prev_ang_vel` | `(..., 3)` or `None` | Angular velocity from the previous call. `None` initialises to zero |
-| `r_int_error` | `(..., 3)` or `None` | Angular velocity integral error from the previous call. `None` initialises to zero |
+| `rot_err_i` | `(..., 3)` or `None` | Rotation integral error from the previous call. `None` initialises to zero |
 | `ctrl_freq` | `int` | Control frequency in Hz (default 500) |
 
 **Outputs:**
@@ -77,7 +77,7 @@ pos_err_i.shape  # (3,)
 |---|---|---|
 | `force` | `(..., 1)` | Collective thrust [N] |
 | `torque` | `(..., 3)` | Body-frame torques [N·m] |
-| `r_int_error` | `(..., 3)` | Angular velocity integral error. Pass back as `r_int_error` on the next call |
+| `rot_err_i` | `(..., 3)` | Rotation integral error. Pass back as `rot_err_i` on the next call |
 
 ```python
 import numpy as np
@@ -108,7 +108,7 @@ torque.shape  # (3,)
 | `cmd` | `(..., 4)` | Body rate command: `[wx, wy, wz, thrust_N]` |
 | `prev_ang_vel` | `(..., 3)` or `None` | Angular velocity from the previous call. `None` initialises to zero |
 | `prev_cmd` | `(..., 4)` or `None` | Command from the previous call, used for the setpoint derivative. `None` assumes a constant setpoint |
-| `r_int_error` | `(..., 3)` or `None` | Angular velocity integral error from the previous call. `None` initialises to zero |
+| `rot_err_i` | `(..., 3)` or `None` | Rotation integral error from the previous call. `None` initialises to zero |
 | `ctrl_freq` | `int` | Control frequency in Hz (default 500) |
 
 **Outputs:**
@@ -117,7 +117,7 @@ torque.shape  # (3,)
 |---|---|---|
 | `force` | `(..., 1)` | Collective thrust [N] |
 | `torque` | `(..., 3)` | Body-frame torques [N·m] |
-| `r_int_error` | `(..., 3)` | Angular velocity integral error. Pass back as `r_int_error` on the next call |
+| `rot_err_i` | `(..., 3)` | Rotation integral error. Pass back as `rot_err_i` on the next call |
 
 ```python
 import numpy as np

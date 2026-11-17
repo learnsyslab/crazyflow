@@ -390,7 +390,7 @@ def test_control_frequency(dynamics: Dynamics):
     att_ctrl_1000 = sim_1000.data.controls.attitude
     assert np.all(att_ctrl_500.cmd == att_ctrl_1000.cmd)
     assert np.all(att_ctrl_500.staged_cmd == att_ctrl_1000.staged_cmd)
-    assert np.all(att_ctrl_500.r_int_error == att_ctrl_1000.r_int_error)
+    assert np.all(att_ctrl_500.rot_err_i == att_ctrl_1000.rot_err_i)
     # and force torque
     ft_ctrl_500 = sim_500.data.controls.force_torque
     ft_ctrl_1000 = sim_1000.data.controls.force_torque
