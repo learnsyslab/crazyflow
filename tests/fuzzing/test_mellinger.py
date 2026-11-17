@@ -91,16 +91,16 @@ def _reference_step(
     quat: NDArray,
     ang_vel: NDArray,
     pos_err_i: NDArray,
-    r_int_error: NDArray,
+    rot_err_i: NDArray,
     prev_ang_vel: NDArray,
-    prev_rate_des: NDArray,
+    prev_ang_vel_des: NDArray,
 ) -> cf.control_t:
     """Run one firmware controller step from the given state and carry-over."""
     ctrl.i_error_x, ctrl.i_error_y, ctrl.i_error_z = pos_err_i.tolist()
     # The firmware runs in the legacy Crazyflie frame with a flipped pitch axis
-    ctrl.i_error_m_x, ctrl.i_error_m_y, ctrl.i_error_m_z = (r_int_error * [1, -1, 1]).tolist()
+    ctrl.i_error_m_x, ctrl.i_error_m_y, ctrl.i_error_m_z = (rot_err_i * [1, -1, 1]).tolist()
     ctrl.prev_omega_roll, ctrl.prev_omega_pitch = (prev_ang_vel[:2] * [1, -1]).tolist()
-    ctrl.prev_setpoint_omega_roll, ctrl.prev_setpoint_omega_pitch = prev_rate_des[:2].tolist()
+    ctrl.prev_setpoint_omega_roll, ctrl.prev_setpoint_omega_pitch = prev_ang_vel_des[:2].tolist()
     state, sensors = cf.state_t(), cf.sensorData_t()
     state.position.x, state.position.y, state.position.z = pos.tolist()
     state.velocity.x, state.velocity.y, state.velocity.z = vel.tolist()
@@ -195,13 +195,13 @@ def test_attitude2force_torque(
 ):
     """Compare thrust, torques and attitude integrators for attitude commands."""
     _, _, quat, ang_vel = state
-    _, r_int_error, prev_ang_vel, _ = carry_over
+    _, rot_err_i, prev_ang_vel, _ = carry_over
     params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250)
     attitude2force_torque = parametrize(control.attitude2force_torque, Drone.cf2x_L250)
     # See test_state2attitude for why we spy on the intermediate PWM values
     mixer = control.force_torque_pwms2pwms
     with patch.object(control, "force_torque_pwms2pwms", wraps=mixer) as spy:
-        _, _, r_int_error = attitude2force_torque(quat, ang_vel, cmd, prev_ang_vel, r_int_error)
+        _, _, rot_err_i = attitude2force_torque(quat, ang_vel, cmd, prev_ang_vel, rot_err_i)
     thrust = spy.call_args.args[0]
     # The firmware runs in the legacy Crazyflie frame with flipped pitch and yaw torques
     torque = spy.call_args.args[1] * [1, -1, -1]
@@ -219,8 +219,8 @@ def test_attitude2force_torque(
     # only compare torques if we have at least 1 PWM of thrust
     assume(abs(out.thrust) > 1)
     np.testing.assert_allclose(torque, [out.roll, out.pitch, out.yaw], atol=2)
-    ref_r_int_error = [ref.i_error_m_x, -ref.i_error_m_y, ref.i_error_m_z]
-    np.testing.assert_allclose(r_int_error, ref_r_int_error, atol=1e-6)
+    ref_rot_err_i = [ref.i_error_m_x, -ref.i_error_m_y, ref.i_error_m_z]
+    np.testing.assert_allclose(rot_err_i, ref_rot_err_i, atol=1e-6)
 
 
 @pytest.mark.xfail(
@@ -237,15 +237,15 @@ def test_body_rate2force_torque(
 ):
     """Compare thrust, torques and attitude integrators for body rate commands."""
     _, _, quat, ang_vel = state
-    _, r_int_error, prev_ang_vel, prev_rate_des = carry_over
+    _, rot_err_i, prev_ang_vel, prev_ang_vel_des = carry_over
     params = load_fn_params(control.body_rate2force_torque, Drone.cf2x_L250)
     body_rate2force_torque = parametrize(control.body_rate2force_torque, Drone.cf2x_L250)
-    prev_cmd = np.concatenate((prev_rate_des, cmd[3:]))
+    prev_cmd = np.concatenate((prev_ang_vel_des, cmd[3:]))
     # See test_state2attitude for why we spy on the intermediate PWM values
     mixer = control.force_torque_pwms2pwms
     with patch.object(control, "force_torque_pwms2pwms", wraps=mixer) as spy:
-        _, _, r_int_error = body_rate2force_torque(
-            quat, ang_vel, cmd, prev_ang_vel, prev_cmd, r_int_error
+        _, _, rot_err_i = body_rate2force_torque(
+            quat, ang_vel, cmd, prev_ang_vel, prev_cmd, rot_err_i
         )
     thrust = spy.call_args.args[0]
     # The firmware runs in the legacy Crazyflie frame with flipped pitch and yaw torques
@@ -262,8 +262,8 @@ def test_body_rate2force_torque(
     # The yaw is undefined at 90 degrees pitch, and both controllers level at the current yaw
     assume(abs(R.from_quat(quat).as_matrix()[2, 0]) < 1 - 1e-6)
     np.testing.assert_allclose(torque, [out.roll, out.pitch, out.yaw], atol=2)
-    ref_r_int_error = [ref.i_error_m_x, -ref.i_error_m_y, ref.i_error_m_z]
-    np.testing.assert_allclose(r_int_error, ref_r_int_error, atol=1e-6)
+    ref_rot_err_i = [ref.i_error_m_x, -ref.i_error_m_y, ref.i_error_m_z]
+    np.testing.assert_allclose(rot_err_i, ref_rot_err_i, atol=1e-6)
 
 
 @given(thrust=_vector(70000, 1), torque=hnp.arrays(np.int16, 3))
@@ -297,7 +297,7 @@ def test_end_to_end(
 ):
     """Compare the rotor velocities for state commands."""
     pos, vel, quat, ang_vel = map(jnp.asarray, state)
-    pos_err_i, r_int_error, prev_ang_vel, _ = map(jnp.asarray, carry_over)
+    pos_err_i, rot_err_i, prev_ang_vel, _ = map(jnp.asarray, carry_over)
     # Jitting the module functions keeps JAX's compilation cache across examples
     state_params = load_fn_params(control.state2attitude, Drone.cf2x_L250, xp=jnp)
     attitude_params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250, xp=jnp)
@@ -306,7 +306,7 @@ def test_end_to_end(
     rotor_params = load_fn_params(control.force_torque2rotor_vel, Drone.cf2x_L250, xp=jnp)
     force_torque2rotor_vel = partial(jax.jit(control.force_torque2rotor_vel), **rotor_params)
     rpyt, _ = state2attitude(pos, quat, vel, jnp.asarray(cmd), pos_err_i, cf.ATTITUDE_RATE)
-    force, torque, _ = attitude2force_torque(quat, ang_vel, rpyt, prev_ang_vel, r_int_error)
+    force, torque, _ = attitude2force_torque(quat, ang_vel, rpyt, prev_ang_vel, rot_err_i)
     rotor_vel = force_torque2rotor_vel(force, torque)
     setpoint = cf.setpoint_t()
     setpoint.position.x, setpoint.position.y, setpoint.position.z = cmd[:3].tolist()

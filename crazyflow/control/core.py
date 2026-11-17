@@ -86,7 +86,7 @@ def parametrize(
     pos, quat = np.zeros(3), np.array([0.0, 0.0, 0.0, 1.0])
     vel, cmd = np.zeros(3), np.zeros(16)
     cmd[9:13] = R.from_euler("z", 0.0).as_quat()
-    rpyt, int_pos_err = ctrl(pos, quat, vel, cmd)
+    rpyt, pos_err_i = ctrl(pos, quat, vel, cmd)
     ```
 
     Returns:

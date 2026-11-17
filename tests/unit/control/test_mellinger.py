@@ -47,18 +47,18 @@ def test_attitude2force_torque(drone: str) -> None:
     # Single input
     pos, quat, vel, ang_vel = create_rnd_states()
     rpyt_cmd = np.array([0.1, 0.1, 0.1, 1.0])  # roll, pitch, yaw, thrust command
-    force_des, torque_des, r_int_error = controller(quat, ang_vel, rpyt_cmd)
+    force_des, torque_des, rot_err_i = controller(quat, ang_vel, rpyt_cmd)
     assert force_des.shape == (1,)
     assert torque_des.shape == (3,)
-    assert r_int_error.shape == (3,)
+    assert rot_err_i.shape == (3,)
     # Batch input
     pos, quat, vel, ang_vel = create_rnd_states((5, 4))
     rpyt_cmd = np.random.randn(5, 4, 4)
     rpyt_cmd[..., 3] = np.abs(rpyt_cmd[..., 3])  # Ensure positive thrust
-    force_des, torque_des, r_int_error = controller(quat, ang_vel, rpyt_cmd)
+    force_des, torque_des, rot_err_i = controller(quat, ang_vel, rpyt_cmd)
     assert force_des.shape == (5, 4, 1)
     assert torque_des.shape == (5, 4, 3)
-    assert r_int_error.shape == (5, 4, 3)
+    assert rot_err_i.shape == (5, 4, 3)
 
 
 @pytest.mark.unit
@@ -68,18 +68,18 @@ def test_body_rate2force_torque(drone: str) -> None:
     # Single input
     _, quat, _, ang_vel = create_rnd_states()
     cmd = np.array([0.1, 0.1, 0.1, 1.0])  # body rates and thrust command
-    force_des, torque_des, r_int_error = controller(quat, ang_vel, cmd)
+    force_des, torque_des, rot_err_i = controller(quat, ang_vel, cmd)
     assert force_des.shape == (1,)
     assert torque_des.shape == (3,)
-    assert r_int_error.shape == (3,)
+    assert rot_err_i.shape == (3,)
     # Batch input
     _, quat, _, ang_vel = create_rnd_states((5, 4))
     cmd = np.random.randn(5, 4, 4)
     cmd[..., 3] = np.abs(cmd[..., 3])  # Ensure positive thrust
-    force_des, torque_des, r_int_error = controller(quat, ang_vel, cmd)
+    force_des, torque_des, rot_err_i = controller(quat, ang_vel, cmd)
     assert force_des.shape == (5, 4, 1)
     assert torque_des.shape == (5, 4, 3)
-    assert r_int_error.shape == (5, 4, 3)
+    assert rot_err_i.shape == (5, 4, 3)
 
 
 @pytest.mark.unit
