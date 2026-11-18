@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import array_api_strict as xp
+import casadi as cs
 import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation as R
@@ -240,3 +241,30 @@ def test_rpy2matrix_symbolic():
         # compare casadi/symbolic implementation to scipy
         mat_cs = np.array(rotation.cs_rpy2matrix_func(rpy))
         assert np.allclose(mat_cs, mat_scipy, atol=tol), "Symbolic rpy->matrix differs from scipy."
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("seq", ["xyz", "zyx", "zxz", "XYZ", "ZYX", "ZXZ"])
+@pytest.mark.parametrize("degrees", [False, True])
+def test_quat2euler_symbolic(seq: str, degrees: bool):
+    rot = R.random(100, rng=0)
+    quat = cs.MX.sym("quat", 4)
+    quat2euler = cs.Function("quat2euler", [quat], [rotation.cs_quat2euler(quat, seq, degrees)])
+    for q, euler_scipy in zip(rot.as_quat(), rot.as_euler(seq, degrees=degrees)):
+        euler_cs = np.array(quat2euler(q)).flatten()
+        assert np.allclose(euler_cs, euler_scipy, atol=tol), "Symbolic quat->euler differs."
+    lock = [0.0, np.pi] if seq[0] == seq[2] else [np.pi / 2, -np.pi / 2]
+    rot = R.from_euler(seq, [[0.3, angle, 0.4] for angle in lock])
+    with pytest.warns(UserWarning, match="Gimbal lock"):
+        reference = rot.as_euler(seq, degrees=degrees)
+    for q, euler_scipy in zip(rot.as_quat(), reference):
+        euler_cs = np.array(quat2euler(q)).flatten()
+        assert np.allclose(euler_cs, euler_scipy, atol=tol), "Symbolic quat->euler differs at lock."
+
+
+@pytest.mark.unit
+def test_symbolic_function_names_unique():
+    names = [fn.name() for fn in vars(rotation).values() if isinstance(fn, cs.Function)]
+    assert names, "No CasADi functions found in the rotation module."
+    # Duplicate names produce conflicting C symbols when generating code for several functions
+    assert len(set(names)) == len(names), f"CasADi function names are not unique: {names}"
