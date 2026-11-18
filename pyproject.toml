@@ -22,8 +22,8 @@ dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.17.0",
     "jax>=0.7.0,!=0.10.2", # 0.10.2 XLA:GPU miscompiles for larger swarms. See https://github.com/jax-ml/jax/issues/39157
-    "mujoco>=3.3.0",
-    "mujoco-mjx>=3.3.0",
+    "mujoco>=3.3.0,<4",
+    "mujoco-mjx>=3.3.0,<4",
     "gymnasium[mujoco]>=1.4.0",
     "imageio",
     "einops",
@@ -33,7 +33,7 @@ dependencies = [
     "array-api-compat",
     "array-api-extra",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
@@ -146,14 +146,20 @@ line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
+[tool.uv]
+exclude-newer = "1 week"
+
 [tool.pixi]
 [tool.pixi.workspace]
 channels = ["conda-forge"]
+exclude-newer = "7d"
 # jax-mps >= 0.11 only has wheels for macOS 14+
 platforms = ["linux-64", { name = "osx-arm64-14", platform = "osx-arm64", macos = "14.0" }]
 preview = ["pixi-build"]
+build-variants = { python = ["3.14.*"] }
 
 [tool.pixi.dependencies]
+python = "3.14.*"  # tensorstore has no Python 3.15 wheels yet
 pip = "*"
 ruff = "*"
 
@@ -217,7 +223,7 @@ cffirmware = { path = "tests/fuzzing/cffirmware" }
 hypothesis = ">=6.170,<7"
 
 [tool.pixi.feature.docs.dependencies]
-python = ">=3.10"
+python = ">=3.12"
 properdocs = ">=1.5.0"
 mkdocs-material = ">=9.0.0"
 matplotlib-base = "*"
