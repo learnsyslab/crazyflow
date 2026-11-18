@@ -65,7 +65,7 @@ obstacle_spec = mujoco.MjSpec.from_string(box_xml)
 frame = sim.spec.worldbody.add_frame()
 for i, pos in enumerate([[1.0, 0.0, 0.5], [2.0, 0.0, 0.5]]):
     body = obstacle_spec.body("obstacle")
-    attached = frame.attach_body(body, "", f":{i}")
+    attached = frame.attach_body(body, f"{i}:")
     attached.pos = pos
 
 # Recompile — closes the viewer if open, rebuilds mj_model and mjx_model/mjx_data

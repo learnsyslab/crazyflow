@@ -76,9 +76,9 @@ def _camera_viewmats(
 
 def _build_renderer(sim: Sim) -> Callable[[Array, Array], Array]:
     """Build a differentiable FPV renderer parameterized by z and yaw."""
-    camera_id = mujoco.mj_name2id(sim.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, "fpv_cam:0")
+    camera_id = mujoco.mj_name2id(sim.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, "0:fpv_cam")
     if camera_id < 0:
-        raise ValueError("Camera 'fpv_cam:0' not found in the model")
+        raise ValueError("Camera '0:fpv_cam' not found in the model")
 
     camera_position = jnp.asarray(sim.mj_model.cam_pos[camera_id], dtype=jnp.float32)
     camera_quaternion = jnp.roll(

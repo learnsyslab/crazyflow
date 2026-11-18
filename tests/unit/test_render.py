@@ -7,7 +7,7 @@ from crazyflow import Sim
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("cam_name", ["fpv_cam:0", "track_cam:0", "fpv_cam:1", "track_cam:1"])
+@pytest.mark.parametrize("cam_name", ["0:fpv_cam", "0:track_cam", "1:fpv_cam", "1:track_cam"])
 @pytest.mark.render
 @skip_if_headless
 def test_render_camera_selection_from_name(cam_name: str):
@@ -34,7 +34,7 @@ def test_render_camera_selection_from_id(cam_id: int):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("cam_name", ["fpv_cam:0", "track_cam:0"])
+@pytest.mark.parametrize("cam_name", ["0:fpv_cam", "0:track_cam"])
 @pytest.mark.render
 @skip_if_headless
 def test_drone_camera_follows_drone(cam_name: str):

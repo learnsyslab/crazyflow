@@ -330,8 +330,8 @@ class Sim:
         if (drone_body := drone_spec.body(name)) is None:
             raise ValueError("Drone body not found in drone spec")
         drone_body.mocap = True
-        frame.attach_body(drone_body, "", ":0")  # Attach a single drone, then stamp out the swarm.
-        spec = self._replicate_drone(spec, f"{name}:0", drone_spec.meshdir)
+        frame.attach_body(drone_body, "0:")  # Attach a single drone, then stamp out the swarm.
+        spec = self._replicate_drone(spec, f"0:{name}", drone_spec.meshdir)
         # Mocap bodies avoid the nv^2 cost of qM/qLD/efc_J. A single dummy slide joint keeps nv=1 so
         # mjx.kinematics doesn't error on a zero-DOF mjx_model. Added after _replicate_drone because
         # to_xml() drops this geom-less body's mass/inertia (the result would fail to recompile).
@@ -350,11 +350,11 @@ class Sim:
         """Stamp the single attached drone body into ``n_drones`` instances by cloning its XML.
 
         Avoids the O(n_drones^2) cost and per-instance mesh copies of repeated ``attach_body``.
-        Only element ``name``s are suffixed ``:0`` -> ``:i``, so meshes and static materials stay
+        Only element ``name``s are re-prefixed ``0:`` -> ``i:``, so meshes and static materials stay
         shared. Dynamic materials are duplicated per drone.
         """
         # Name prefixes of the drone's "dynamic" materials which get per-copy materials
-        _DYN_MATERIAL = ("led",)
+        _DYN_MATERIAL = ("0:led",)
         # Absolute meshdir so the serialized mesh file paths resolve when re-parsed from a string.
         spec.meshdir = str((self.drone_path.parent / drone_meshdir).resolve())
         root = ET.fromstring(spec.to_xml())
@@ -364,15 +364,15 @@ class Sim:
         dynamic = [m for m in asset.findall("material") if m.get("name").startswith(_DYN_MATERIAL)]
         for i in range(1, self.n_drones):
             body = copy.deepcopy(body0)
-            for el in body.iter():  # suffix unique names + dynamic-material refs. keep shared refs
-                if (name := el.get("name", "")).endswith(":0"):
-                    el.set("name", f"{name[:-2]}:{i}")
+            for el in body.iter():  # prefix unique names + dynamic-material refs. keep shared refs
+                if (name := el.get("name", "")).startswith("0:"):
+                    el.set("name", f"{i}:{name[2:]}")
                 if (mat := el.get("material", "")).startswith(_DYN_MATERIAL):
-                    el.set("material", f"{mat[:-2]}:{i}")
+                    el.set("material", f"{i}:{mat[2:]}")
             frame.append(body)
             for material in dynamic:
                 clone = copy.deepcopy(material)
-                clone.set("name", f"{material.get('name')[:-2]}:{i}")
+                clone.set("name", f"{i}:{material.get('name')[2:]}")
                 asset.append(clone)
         new_spec = mujoco.MjSpec.from_string(ET.tostring(root, encoding="unicode"))
         new_spec.copy_during_attach = True  # write-only, re-apply after from_string() drops it
@@ -402,7 +402,7 @@ class Sim:
         """
         base = "drone_fused" if self.fused_mjx_model else "drone"
         for i in range(self.n_drones):
-            body_id = mj_model.body(f"{base}:{i}").id
+            body_id = mj_model.body(f"{i}:{base}").id
             mj_model.body_weldid[body_id] = body_id  # Each drone becomes its own weld root
 
     def build_step_fn(self) -> Callable[[SimData, int], SimData]:
@@ -554,7 +554,7 @@ class Sim:
         device = self.device if self.mesh is None else None  # Sharded data is placed by the caller
         drone_name = "drone_fused" if self.fused_mjx_model else "drone"
         drone_mocap_ids = [
-            self.mj_model.body(f"{drone_name}:{i}").mocapid.item() for i in range(self.n_drones)
+            self.mj_model.body(f"{i}:{drone_name}").mocapid.item() for i in range(self.n_drones)
         ]
         N, D = self.n_worlds, self.n_drones
         data = SimData(
@@ -643,7 +643,7 @@ class Sim:
         """
         mj_model = self.mj_model
         base = "drone_fused" if self.fused_mjx_model else "drone"
-        drone_ids = [mj_model.body(f"{base}:{i}").id for i in range(self.n_drones)]
+        drone_ids = [mj_model.body(f"{i}:{base}").id for i in range(self.n_drones)]
         no_drone_id = self.n_drones  # One past the last drone, gets ignored later
         body2drone = np.full(mj_model.nbody, no_drone_id)
         body2drone[drone_ids] = np.arange(self.n_drones)

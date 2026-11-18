@@ -49,7 +49,7 @@ SPLATS_KEY = "splats"
 class SplatData:
     """Gaussian splat plugin data.
 
-    Gaussians are stored in a single array as ``[scene | drone:0 | ... | drone:n-1]``. Scene
+    Gaussians are stored in a single array as ``[scene | 0:drone | ... | n-1:drone]``. Scene
     gaussians are not part of any slice and remain static. Drone slices follow the drone's pose.
     """
 
@@ -142,7 +142,7 @@ class SplatViewer:
             self.viewer.add_splats("scene", *scene.params)
         for i, (start, stop) in enumerate(splats.slices):
             drone = jax.tree.map(lambda x, a=start, b=stop: x[a:b], splats)
-            self.viewer.add_splats(f"drone:{i}", *drone.params)
+            self.viewer.add_splats(f"{i}:drone", *drone.params)
         self._n_drones = len(splats.slices)
 
     def update(self, sim: Sim, world: int = 0):
@@ -156,7 +156,7 @@ class SplatViewer:
             return
         pos, quat = self._drone_mocap_poses(sim, world)
         for i in range(self._n_drones):
-            self.viewer.update_pose(f"drone:{i}", pos[i], quat[i])
+            self.viewer.update_pose(f"{i}:drone", pos[i], quat[i])
 
     def close(self):
         """Shut down the web server."""

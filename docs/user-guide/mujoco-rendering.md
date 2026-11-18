@@ -26,17 +26,17 @@ Crazyflow supports onscreen interactive rendering and offscreen RGB/depth captur
 sim.render()                                   # interactive window
 rgb = sim.render(mode="rgb_array")             # numpy array (H, W, 3)
 depth = sim.render(mode="depth_array")         # numpy array (H, W)
-rgb, depth = sim.render(mode="rgbd_tuple", camera="fpv_cam:0", width=320, height=240)
+rgb, depth = sim.render(mode="rgbd_tuple", camera="0:fpv_cam", width=320, height=240)
 sim.close()                                    # close the viewer
 ```
 
 ## Cameras
 
-Pass a camera name or integer ID to select which camera to render from. The default (`camera=-1`) uses the free camera. Each drone ships with a first-person view camera named `fpv_cam:<drone_index>`:
+Pass a camera name or integer ID to select which camera to render from. The default (`camera=-1`) uses the free camera. Each drone ships with a first-person view camera named `<drone_index>:fpv_cam`:
 
 <!-- notest: requires rendering -->
 ```{ .python notest }
-sim.render(camera="fpv_cam:0")   # first-person view from drone 0
+sim.render(camera="0:fpv_cam")   # first-person view from drone 0
 sim.render(camera=0)             # camera by integer ID
 ```
 

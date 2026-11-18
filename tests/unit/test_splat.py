@@ -185,20 +185,20 @@ def test_render_splat_clips(tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_render_splat_camera_prefix(tmp_path: Path):
+def test_render_splat_camera(tmp_path: Path):
     _write_splat(tmp_path / "splat.ply", extent=1.0)
     sim = Sim(n_worlds=2, n_drones=2, device=jax.default_backend())
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
     fpv = render_splat_rgb(sim, resolution=(32, 24))
-    track = render_splat_rgb(sim, resolution=(32, 24), camera_prefix="track_cam")
+    track = render_splat_rgb(sim, resolution=(32, 24), camera="track_cam")
     assert track.shape == fpv.shape
     assert not np.allclose(fpv, track), "track_cam and fpv_cam must give different views"
-    # The builder fuses the prefix in and matches the direct call
-    render_fn = build_render_splat_fn(sim, resolution=(32, 24), camera_prefix="track_cam")
+    # The builder fuses the camera in and matches the direct call
+    render_fn = build_render_splat_fn(sim, resolution=(32, 24), camera="track_cam")
     assert np.allclose(track, render_fn(sim.data), atol=1e-5)
-    # An unknown prefix raises
+    # An unknown camera raises
     with pytest.raises(ValueError, match="not found"):
-        render_splat_rgb(sim, resolution=(32, 24), camera_prefix="does_not_exist")
+        render_splat_rgb(sim, resolution=(32, 24), camera="does_not_exist")
 
 
 @pytest.mark.unit
