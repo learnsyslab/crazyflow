@@ -266,11 +266,7 @@ def test_mixer(thrust: NDArray, torque: NDArray):
     np.testing.assert_allclose(motors, [m.m1, m.m2, m.m3, m.m4], atol=3)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="TODO: Clip as the firmware, uniform above the maximum and at 0, and use the current "
-    "and previous body rate setpoint",
-)
+@pytest.mark.xfail(strict=True, reason="TODO: Use the current and previous body rate setpoint")
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
 def test_end_to_end(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray):
     """Compare the rotor velocities for state commands."""
@@ -305,7 +301,12 @@ def test_end_to_end(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...],
     assume(abs(out.thrust) > 1)
     uncapped, capped = cf.motors_thrust_uncapped_t(), cf.motors_thrust_pwm_t()
     cf.powerDistribution(out, uncapped)
-    cf.powerDistributionCap(uncapped, capped)  # We always assume perfect battery compensation
+    # cffirmware does not run the battery compensation. The battery compensation turns off motors
+    # below the minimum thrust. We assume perfect compensation, so we clip manually
+    m = uncapped.motors
+    pwms = [m.m1, m.m2, m.m3, m.m4]
+    m.m1, m.m2, m.m3, m.m4 = [0 if pwm < params["pwm_min"] else pwm for pwm in (pwms)]
+    cf.powerDistributionCap(uncapped, capped)
     m = capped.motors
     pwms = np.array([m.m1, m.m2, m.m3, m.m4])
     motor_forces = pwm2force(pwms, params["thrust_max"], params["pwm_max"])
