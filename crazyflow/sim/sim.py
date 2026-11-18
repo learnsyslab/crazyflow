@@ -309,15 +309,18 @@ class Sim:
         return self.viewer.render(mode)
 
     def _spin_props(self, world: int):
-        """Turn the propeller bodies to their rotor angle at the current sim time."""
+        """Turn the propeller bodies by the angle their rotors travelled since the last render."""
+        time = float(self.time[world, 0])
+        dt = max(time - self.mj_data.time, 0.0)  # Time jumps back on reset
+        self.mj_data.time = time
         # Rotors spin opposite to the yaw torque they exert on the body
         rpm = -self.data.states.rotor_vel * self.data.params.mixing_matrix[..., 2, :]
-        angle = np.asarray(rpm[world]) * float(self.time[world, 0]) * 2 * np.pi / 60
+        angle = np.asarray(rpm[world]) * 2 * np.pi / 60 * dt
         names = [f"{i}:prop{j}" for i in range(self.n_drones) for j in range(4)]
         ids = [self.mj_model.body(name).id for name in names]
-        rot_rest = R.from_quat(np.asarray(self.mjx_model.body_quat)[ids], scalar_first=True)
-        rot_prop = rot_rest * R.from_euler("z", angle.reshape(-1, 1))
-        self.mj_model.body_quat[ids] = rot_prop.as_quat(scalar_first=True)
+        rot_prop = R.from_quat(self.mj_model.body_quat[ids], scalar_first=True)
+        rot_delta = R.from_euler("z", angle.reshape(-1, 1))
+        self.mj_model.body_quat[ids] = (rot_prop * rot_delta).as_quat(scalar_first=True)
 
     def seed(self, seed: int):
         """Set the JAX rng key for the simulation.
