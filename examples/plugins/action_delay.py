@@ -56,7 +56,7 @@ def main():
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
         if ((i * fps) % sim.control_freq) < fps:
-            sim.render(camera="track_cam:0")
+            sim.render(camera="0:track_cam")
         states.append(sim.data.states.pos[0, 0])
 
     # Delay settings

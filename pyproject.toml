@@ -22,8 +22,8 @@ dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.17.0",
     "jax>=0.7.0,!=0.10.2", # 0.10.2 XLA:GPU miscompiles for larger swarms. See https://github.com/jax-ml/jax/issues/39157
-    "mujoco>=3.3.0,<4",
-    "mujoco-mjx>=3.3.0,<4",
+    "mujoco>=4.0.0",
+    "mujoco-mjx>=4.0.0",
     "gymnasium[mujoco]>=1.4.0",
     "imageio",
     "einops",

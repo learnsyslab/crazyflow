@@ -133,7 +133,7 @@ def change_material(
     mj_model = sim.mj_model
     mat_ids = []
     for i, drone_id in enumerate(drone_ids):
-        full_mat_name = f"{mat_name}:{drone_id}"
+        full_mat_name = f"{drone_id}:{mat_name}"
         mat_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, full_mat_name)
         if mat_id < 0:
             raise ValueError(f"Material '{full_mat_name}' not found in MuJoCo model.")

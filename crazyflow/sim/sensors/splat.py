@@ -38,7 +38,7 @@ def render_splat_rgb(
     resolution: tuple[int, int] = (640, 480),
     background: tuple[float, float, float] = (1.0, 1.0, 1.0),
     exclude_self: bool = False,
-    camera_prefix: str = "fpv_cam",
+    camera: str = "fpv_cam",
 ) -> Array:
     """Render RGB images of the attached splats in all worlds.
 
@@ -51,14 +51,14 @@ def render_splat_rgb(
         resolution: Image resolution as (width, height).
         background: RGB background color with values in [0, 1].
         exclude_self: Hide each drone's own splat from its camera so a drone does not see itself.
-        camera_prefix: Camera name prefix, resolved to ``{camera_prefix}:{drone}`` for each drone.
+        camera: Drone camera name, resolved to ``{drone}:{camera}`` for each drone.
 
     Returns:
         RGB images with values in [0, 1] of shape (n_worlds, n_selected, height, width, 3).
     """
     _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     return _render(
         sim.data,
@@ -82,7 +82,7 @@ def render_splat_rgbd(
     alpha_threshold: float = 0.5,
     max_range: float = 10.0,
     exclude_self: bool = False,
-    camera_prefix: str = "fpv_cam",
+    camera: str = "fpv_cam",
 ) -> Array:
     """Render RGB-D images of the attached splats in all worlds.
 
@@ -98,7 +98,7 @@ def render_splat_rgbd(
         alpha_threshold: Accumulated coverage a pixel needs before its depth counts as a hit.
         max_range: Sensor range in meters. Reported where nothing is hit, and depth clips to it.
         exclude_self: Hide each drone's own splat from its camera so a drone does not see itself.
-        camera_prefix: Camera name prefix, resolved to ``{camera_prefix}:{drone}`` for each drone.
+        camera: Drone camera name, resolved to ``{drone}:{camera}`` for each drone.
 
     Returns:
         RGB in [0, 1] followed by depth in meters along the camera's optical axis, of shape
@@ -106,7 +106,7 @@ def render_splat_rgbd(
     """
     _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     return _render(
         sim.data,
@@ -141,9 +141,9 @@ def _warn_if_cpu(sim: Sim):
         )
 
 
-def _camera_id(mj_model: mujoco.MjModel, prefix: str, drone: int) -> int:
-    """Camera index of a drone for the given camera name prefix."""
-    name = f"{prefix}:{drone}"
+def _camera_id(mj_model: mujoco.MjModel, camera: str, drone: int) -> int:
+    """Camera index of a drone for the given camera name."""
+    name = f"{drone}:{camera}"
     camera_id = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_CAMERA, name)
     if camera_id < 0:
         raise ValueError(f"Camera '{name}' not found in the model")
@@ -157,16 +157,16 @@ def build_render_splat_fn(
     resolution: tuple[int, int] = (640, 480),
     background: tuple[float, float, float] = (1.0, 1.0, 1.0),
     exclude_self: bool = False,
-    camera_prefix: str = "fpv_cam",
+    camera: str = "fpv_cam",
 ) -> Callable[[SimData], Array]:
-    """Build a splat renderer function for a given drone selection, camera prefix, and resolution.
+    """Build a splat renderer function for a given drone selection, camera, and resolution.
 
     We bake all arguments into the function to avoid the overhead of flattening static arguments,
     significantly improving performance.
     """
     _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
-    cameras_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    cameras_ids = tuple(_camera_id(sim.mj_model, camera, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, cameras_ids[0], resolution)
     return jax.jit(
         partial(
@@ -192,15 +192,15 @@ def build_render_splat_rgbd_fn(
     alpha_threshold: float = 0.5,
     max_range: float = 10.0,
     exclude_self: bool = False,
-    camera_prefix: str = "fpv_cam",
+    camera: str = "fpv_cam",
 ) -> Callable[[SimData], Array]:
-    """Build a splat RGB-D renderer for a drone selection, camera prefix, and resolution.
+    """Build a splat RGB-D renderer for a drone selection, camera, and resolution.
 
     Mirrors [build_render_splat_fn][crazyflow.sim.sensors.splat.build_render_splat_fn].
     """
     _warn_if_cpu(sim)
     drone_ids = _resolve_drones(sim, drones)
-    camera_ids = tuple(_camera_id(sim.mj_model, camera_prefix, d) for d in drone_ids)
+    camera_ids = tuple(_camera_id(sim.mj_model, camera, d) for d in drone_ids)
     f, c = camera_intrinsics(sim.mj_model, camera_ids[0], resolution)
     # The outer jit turns the MuJoCo model and data into baked-in constants rather than arguments
     # flattened on every call, which otherwise dominates the runtime of a single render.

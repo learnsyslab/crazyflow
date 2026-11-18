@@ -57,12 +57,12 @@ def test_contacts_ignore():
     assert jnp.array_equal(sim.contacts(), expected)
 
     # Drone pairs are correctly ignored
-    sim.build_contact_fn(ignore=[("drone:1", "drone:0")])
+    sim.build_contact_fn(ignore=[("1:drone", "0:drone")])
     expected = jnp.array([[False, False, False], [False, False, True]])
     assert jnp.array_equal(sim.contacts(), expected), "Pairs apply in both directions"
 
     # Single pairs are correctly ignored. Using the body ID also works
-    sim.build_contact_fn(ignore=[(sim.mj_model.body("drone:2").id, "world")])
+    sim.build_contact_fn(ignore=[(sim.mj_model.body("2:drone").id, "world")])
     expected = jnp.array([[True, True, False], [False, False, False]])
     assert jnp.array_equal(sim.contacts(), expected), "Floor contact not ignored"
 
@@ -72,7 +72,7 @@ def test_contacts_ignore():
     assert jnp.array_equal(sim.contacts(), expected), "Floor contact not ignored"
 
     # Single drones are also ignored by all other drones
-    sim.build_contact_fn(ignore=["drone:0"])
+    sim.build_contact_fn(ignore=["0:drone"])
     expected = jnp.array([[False, False, False], [False, False, True]])
     assert jnp.array_equal(sim.contacts(), expected), "Drone 0 not ignored"
     sim.close()
@@ -90,7 +90,7 @@ def test_contact_bodies():
     body1, body2, touching = sim.contact_bodies()
     assert body1.shape == body2.shape == touching.shape
     assert touching.sum(axis=-1).tolist() == [1, 1], "Each collision should appear once"
-    drone_0, drone_1, drone_2 = (sim.mj_model.body(f"drone:{i}").id for i in range(3))
+    drone_0, drone_1, drone_2 = (sim.mj_model.body(f"{i}:drone").id for i in range(3))
     floor = sim.mj_model.body("world").id
     collisions = [{int(body1[w][touching[w]][0]), int(body2[w][touching[w]][0])} for w in range(2)]
     assert collisions == [{drone_0, drone_1}, {floor, drone_2}]
@@ -110,7 +110,7 @@ def _attach_obstacle(sim: Sim, pos: list[float], mocap: bool):
     """
     obstacle_spec = mujoco.MjSpec.from_string(OBSTACLE_XML)
     frame = sim.spec.worldbody.add_frame()
-    obstacle = frame.attach_body(obstacle_spec.body("obstacle"), "", ":0")
+    obstacle = frame.attach_body(obstacle_spec.body("obstacle"), "0:")
     obstacle.pos = pos
     obstacle.mocap = mocap  # Mocap bodies (like the gates) are still welded to the world
     sim.build_mjx()
@@ -134,7 +134,7 @@ def test_contacts_with_obstacle(mocap: bool):
     sim.data = sim.data.replace(states=states.replace(pos=pos))
     sim.data = sim.data.replace(core=sim.data.core.replace(mjx_synced=False))
     assert jnp.all(sim.contacts()), "Drone should collide with the obstacle"
-    sim.build_contact_fn(ignore=["obstacle:0"])
+    sim.build_contact_fn(ignore=["0:obstacle"])
     assert not jnp.any(sim.contacts()), "Obstacle contact should be ignored"
     sim.close()
 

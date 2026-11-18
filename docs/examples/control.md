@@ -18,19 +18,19 @@ Flying drones with the different control modes, from state commands down to forc
 
 ## Spirals
 
---8<-- example "examples/control/spiral.py" media="video" camera="track_cam:0"
+--8<-- example "examples/control/spiral.py" media="video" camera="0:track_cam"
 
 ---
 
 ## Attitude control
 
---8<-- example "examples/control/attitude.py" media="video" camera="track_cam:0"
+--8<-- example "examples/control/attitude.py" media="video" camera="0:track_cam"
 
 ---
 
 ## Body rate control
 
---8<-- example "examples/control/body_rate.py" media="video" camera="track_cam:0"
+--8<-- example "examples/control/body_rate.py" media="video" camera="0:track_cam"
 
 ---
 

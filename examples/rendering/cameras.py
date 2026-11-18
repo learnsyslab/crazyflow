@@ -62,7 +62,7 @@ def add_smiley(sim: Sim):
     ]
     for i, x in enumerate(boxes):
         box_body = box_spec.body("cube")
-        box = frame.attach_body(box_body, "", f":{i}")
+        box = frame.attach_body(box_body, f"{i}:")
         box.pos = x[0]
         box.quat = x[1]
     sim.build_mjx()
@@ -98,11 +98,11 @@ def main(plot: bool = False, save: bool = False):
         # mode: Either "human" for the regular window, "rgb_array" for an RGB array,
         #       "depth_array" for a depth array, or "rgbd_tuple" for both at the same time.
         # camera: The name or id of the camera. The names are specified in the corresponding
-        #         xml file in crazyflow/drones. For example, "fpv_cam:0" is the first-person view
-        #         camera of the first drone, "track_cam:0" is the tracking camera of the first
+        #         xml file in crazyflow/drones. For example, "0:fpv_cam" is the first-person view
+        #         camera of the first drone, "0:track_cam" is the tracking camera of the first
         #         drone. Id -1 is the global camera.
         rgbd = sim.render(
-            width=resolution[0], height=resolution[1], mode="rgbd_tuple", camera="fpv_cam:0"
+            width=resolution[0], height=resolution[1], mode="rgbd_tuple", camera="0:fpv_cam"
         )
         t2 = time.perf_counter()
         timings.append(t2 - t1)

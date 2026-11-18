@@ -1,6 +1,6 @@
 """Expand ``--8<-- example "<path>"`` lines into the docstring, media and source of the script.
 
-Options after the path, e.g. ``media="video,plot" camera="track_cam:0"``, configure the media that
+Options after the path, e.g. ``media="video,plot" camera="0:track_cam"``, configure the media that
 ``gen_example_media.py`` generates. ``media`` is a comma-separated list of ``video``, ``plot`` and
 ``output``. ``camera`` and ``cam_config`` (e.g. ``"distance=3 elevation=-20 lookat=0,0,1"``)
 override the camera of the video, and ``cam_config`` alone selects the free camera. ``geomgroup``

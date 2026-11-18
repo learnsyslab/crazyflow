@@ -12,10 +12,10 @@ Querying contacts between drones and the scene, and choosing the collision geome
 
 ## Crash detection
 
---8<-- example "examples/contacts/crash.py" media="video" camera="track_cam:0"
+--8<-- example "examples/contacts/crash.py" media="video" camera="0:track_cam"
 
 ---
 
 ## Collision pairs
 
---8<-- example "examples/contacts/collision_pairs.py" media="video,output" camera="track_cam:0"
+--8<-- example "examples/contacts/collision_pairs.py" media="video,output" camera="0:track_cam"
