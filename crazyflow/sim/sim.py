@@ -15,6 +15,7 @@ import numpy as np
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 from jax.sharding import NamedSharding, PartitionSpec
+from scipy.spatial.transform import Rotation as R
 
 import crazyflow.sim.functional as F
 from crazyflow.control import Control
@@ -297,12 +298,26 @@ class Sim:
         self.mj_data.qpos[:] = self.mjx_data.qpos[world, :]
         self.mj_data.mocap_pos[:] = self.mjx_data.mocap_pos[world, :]
         self.mj_data.mocap_quat[:] = self.mjx_data.mocap_quat[world, :]
+        # Only first principles dynamics track rotor RPM. The fused mesh has no separate propellers
+        if self.dynamics == Dynamics.first_principles and not self.fused_mjx_model:
+            self._spin_props(world)
         # mj_forward raises on contacts between two static bodies (e.g. drones welded to the world).
         # We only need poses, cameras and lights for rendering
         mujoco.mj_kinematics(self.mj_model, self.mj_data)
         mujoco.mj_comPos(self.mj_model, self.mj_data)
         mujoco.mj_camlight(self.mj_model, self.mj_data)
         return self.viewer.render(mode)
+
+    def _spin_props(self, world: int):
+        """Turn the propeller bodies to their rotor angle at the current sim time."""
+        # Rotors spin opposite to the yaw torque they exert on the body
+        rpm = -self.data.states.rotor_vel * self.data.params.mixing_matrix[..., 2, :]
+        angle = np.asarray(rpm[world]) * float(self.time[world, 0]) * 2 * np.pi / 60
+        names = [f"{i}:prop{j}" for i in range(self.n_drones) for j in range(4)]
+        ids = [self.mj_model.body(name).id for name in names]
+        rot_rest = R.from_quat(np.asarray(self.mjx_model.body_quat)[ids], scalar_first=True)
+        rot_prop = rot_rest * R.from_euler("z", angle.reshape(-1, 1))
+        self.mj_model.body_quat[ids] = rot_prop.as_quat(scalar_first=True)
 
     def seed(self, seed: int):
         """Set the JAX rng key for the simulation.
