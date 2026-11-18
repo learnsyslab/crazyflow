@@ -301,8 +301,8 @@ def test_end_to_end(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...],
     assume(abs(out.thrust) > 1)
     uncapped, capped = cf.motors_thrust_uncapped_t(), cf.motors_thrust_pwm_t()
     cf.powerDistribution(out, uncapped)
-    # cffirmware does not run the battery compensation, which turns off motors below the minimum
-    # thrust. We assume perfect compensation
+    # cffirmware does not run the battery compensation. The battery compensation turns off motors
+    # below the minimum thrust. We assume perfect compensation, so we clip manually
     m = uncapped.motors
     pwms = [m.m1, m.m2, m.m3, m.m4]
     m.m1, m.m2, m.m3, m.m4 = [0 if pwm < params["pwm_min"] else pwm for pwm in (pwms)]

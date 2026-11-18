@@ -351,7 +351,8 @@ def test_attitude2force_torque_batch_zero_thrust(drone: str):
 def test_force_torque2rotor_vel_batch_zero_force(drone: str):
     # Drones with zero desired force must not be clipped because other drones have non-zero force.
     controller = parametrize(force_torque2rotor_vel, drone)
-    force = np.array([[0.0], [0.2]])
+    thrust_min = load_fn_params(force_torque2rotor_vel, drone)["thrust_min"]
+    force = np.array([[0.0], [8 * thrust_min]])
     torque = np.zeros((2, 3))
     rotor_vel_batch = controller(force, torque)
     rotor_vel_single = controller(force[0], torque[0])
