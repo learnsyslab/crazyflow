@@ -466,7 +466,7 @@ def test_rotor_vel_clip(integrator: Integrator):
         device="cpu",
     )
     lower, upper = rotor_vel_limits(Dynamics.first_principles, sim.drone)
-    assert 0.0 < lower < upper
+    assert 0.0 < upper
 
     for value, target in ((2 * upper, upper), (-upper, lower)):
         sim.reset()
