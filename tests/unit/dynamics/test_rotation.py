@@ -247,14 +247,12 @@ def test_rpy2matrix_symbolic():
 @pytest.mark.parametrize("seq", ["xyz", "zyx", "zxz", "XYZ", "ZYX", "ZXZ"])
 @pytest.mark.parametrize("degrees", [False, True])
 def test_quat2euler_symbolic(seq: str, degrees: bool):
-    rot = R.random(100)
+    rot = R.random(100, rng=0)
     quat = cs.MX.sym("quat", 4)
     quat2euler = cs.Function("quat2euler", [quat], [rotation.cs_quat2euler(quat, seq, degrees)])
-    period = 360.0 if degrees else 2 * np.pi
     for q, euler_scipy in zip(rot.as_quat(), rot.as_euler(seq, degrees=degrees)):
         euler_cs = np.array(quat2euler(q)).flatten()
-        diff = (euler_cs - euler_scipy + period / 2) % period - period / 2  # Wrap to [-p/2, p/2)
-        assert np.allclose(diff, 0.0, atol=tol), "Symbolic quat->euler differs from scipy."
+        assert np.allclose(euler_cs, euler_scipy, atol=tol), "Symbolic quat->euler differs."
     lock = [0.0, np.pi] if seq[0] == seq[2] else [np.pi / 2, -np.pi / 2]
     rot = R.from_euler(seq, [[0.3, angle, 0.4] for angle in lock])
     with pytest.warns(UserWarning, match="Gimbal lock"):
