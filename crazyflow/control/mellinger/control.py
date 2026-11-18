@@ -142,6 +142,8 @@ def state2attitude(
     # maps thrust -> PWM -> rescaled thrust.
     thrust = pwm2force(mass_thrust * current_thrust, thrust_max * 4, pwm_max)
     command_rpyt = xp.concat((command_RPY, thrust[..., None]), axis=-1)
+    # l. 325 [controllerMellingerReset]
+    pos_err_i = xp.where((current_thrust > 0)[..., None], pos_err_i, 0.0)
     return command_rpyt, pos_err_i
 
 
@@ -407,6 +409,7 @@ def _attitude2force_torque(
     # l. 297 ff
     torque_pwm = xp.clip(torque_pwm, -torque_pwm_max, torque_pwm_max)
     torque_pwm = xp.where((force_des > 0)[..., None], torque_pwm, 0.0)
+    rot_err_i = xp.where((force_des > 0)[..., None], rot_err_i, 0.0)
     force_des_pwm = force2pwm(force_des / 4, thrust_max, pwm_max)
     pwms = force_torque_pwms2pwms(force_des_pwm, torque_pwm, mixing_matrix)
     # We assume battery compensation is perfect. Motors below pwm_min are turned off. See

@@ -136,7 +136,6 @@ def test_params(drone: Drone):
         np.testing.assert_allclose(state_params["mass"], ctrl.mass, rtol=1e-6)
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
 def test_state2attitude(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray):
     """Compare thrust, desired z axis and position integrators for state commands."""
@@ -172,7 +171,6 @@ def test_state2attitude(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, .
     np.testing.assert_allclose(pos_err_i, [ref.i_error_x, ref.i_error_y, ref.i_error_z], atol=1e-6)
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_attitude_cmds())
 def test_attitude2force_torque(
     state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray
@@ -212,7 +210,7 @@ def test_attitude2force_torque(
 @pytest.mark.xfail(
     strict=True,
     reason="TODO: Report the firmware levelling upside down in body rate mode once its z thrust "
-    "target turns negative, and reset the integrators at zero thrust as the firmware",
+    "target turns negative",
 )
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_body_rate_cmds())
 def test_body_rate2force_torque(
