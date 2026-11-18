@@ -24,15 +24,6 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 
-@pytest.fixture(scope="module")
-def ref() -> cf.controllerMellinger_t:
-    """Create the firmware controller with the cf2x_L250 gains."""
-    ctrl = cf.controllerMellinger_t()
-    cf.controllerMellingerInit(ctrl)
-    ctrl.kd_z = 0.5  # TODO: Remove once cf2x_L250 uses the firmware kd_z, see test_params
-    return ctrl
-
-
 def _vector(bound: float, dim: int = 3) -> st.SearchStrategy[NDArray]:
     """Draw float32 vectors of size dim within the bound."""
     return hnp.arrays(np.float32, dim, elements={"min_value": -bound, "max_value": bound})
@@ -83,7 +74,6 @@ def _body_rate_cmds(draw: st.DrawFn) -> NDArray:
 
 
 def _reference_step(
-    ctrl: cf.controllerMellinger_t,
     setpoint: cf.setpoint_t,
     pos: NDArray,
     vel: NDArray,
@@ -93,8 +83,10 @@ def _reference_step(
     rot_err_i: NDArray,
     prev_ang_vel: NDArray,
     prev_ang_vel_des: NDArray,
-) -> cf.control_t:
-    """Run one firmware controller step from the given state and carry-over."""
+) -> tuple[cf.control_t, cf.controllerMellinger_t]:
+    """Run one step of a new firmware controller from the given state and integrators."""
+    ctrl = cf.controllerMellinger_t()
+    cf.controllerMellingerInit(ctrl)
     ctrl.i_error_x, ctrl.i_error_y, ctrl.i_error_z = pos_err_i.tolist()
     # The firmware runs in the legacy Crazyflie frame with a flipped pitch axis
     ctrl.i_error_m_x, ctrl.i_error_m_y, ctrl.i_error_m_z = (rot_err_i * [1, -1, 1]).tolist()
@@ -110,10 +102,9 @@ def _reference_step(
     sensors.gyro.x, sensors.gyro.y, sensors.gyro.z = np.rad2deg(ang_vel).tolist()
     out = cf.control_t()
     cf.controllerMellinger(ctrl, out, setpoint, sensors, state, 0)  # 0 to step the controller
-    return out
+    return out, ctrl
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: The Crazyflies use kd_z = 0.5, the firmware 0.4")
 @pytest.mark.parametrize(
     "drone", [Drone.cf2x_L250, Drone.cf2x_P250, Drone.cf2x_T350, Drone.cf21B_500]
 )
@@ -147,12 +138,7 @@ def test_params(drone: Drone):
 
 @pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
-def test_state2attitude(
-    ref: cf.controllerMellinger_t,
-    state: tuple[NDArray, ...],
-    ctrl_state: tuple[NDArray, ...],
-    cmd: NDArray,
-):
+def test_state2attitude(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray):
     """Compare thrust, desired z axis and position integrators for state commands."""
     pos, vel, quat, _ = state
     state2attitude = parametrize(control.state2attitude, Drone.cf2x_L250)
@@ -176,7 +162,7 @@ def test_state2attitude(
     rate = setpoint.attitudeRate
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
-    out = _reference_step(ref, setpoint, *state, *ctrl_state)
+    out, ref = _reference_step(setpoint, *state, *ctrl_state)
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     z_axis, ref_z_axis = R.from_euler("xyz", rpyt[:3]).as_matrix()[:, 2], ref.z_axis_desired
     np.testing.assert_allclose(z_axis, [ref_z_axis.x, ref_z_axis.y, ref_z_axis.z], atol=1e-6)
@@ -189,10 +175,7 @@ def test_state2attitude(
 @pytest.mark.xfail(strict=True, reason="TODO: Reset the integrators at zero thrust as the firmware")
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_attitude_cmds())
 def test_attitude2force_torque(
-    ref: cf.controllerMellinger_t,
-    state: tuple[NDArray, ...],
-    ctrl_state: tuple[NDArray, ...],
-    cmd: NDArray,
+    state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray
 ):
     """Compare thrust, torques and attitude integrators for attitude commands."""
     _, _, quat, ang_vel = state
@@ -215,7 +198,7 @@ def test_attitude2force_torque(
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeAbs
     # Crazyflow does not allow controllers to switch mode in between, so attitude_rate must be zero
-    out = _reference_step(ref, setpoint, *state, *ctrl_state[:3], np.zeros(3, np.float32))
+    out, ref = _reference_step(setpoint, *state, *ctrl_state[:3], np.zeros(3, np.float32))
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # Zero thrust turns off torques. If the firmware and crazyflow controller disagree within
     # numerical noise, the torque contribution can still lead to significant differences. We hence
@@ -233,10 +216,7 @@ def test_attitude2force_torque(
 )
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_body_rate_cmds())
 def test_body_rate2force_torque(
-    ref: cf.controllerMellinger_t,
-    state: tuple[NDArray, ...],
-    ctrl_state: tuple[NDArray, ...],
-    cmd: NDArray,
+    state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray
 ):
     """Compare thrust, torques and attitude integrators for body rate commands."""
     _, _, quat, ang_vel = state
@@ -258,7 +238,7 @@ def test_body_rate2force_torque(
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[:3]).tolist()
     setpoint.thrust = float(force2pwm(cmd[3] / 4, params["thrust_max"], params["pwm_max"]))
     setpoint.mode.roll = setpoint.mode.pitch = setpoint.mode.yaw = cf.modeVelocity
-    out = _reference_step(ref, setpoint, *state, *ctrl_state)
+    out, ref = _reference_step(setpoint, *state, *ctrl_state)
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
     assume(abs(out.thrust) > 1)
@@ -292,12 +272,7 @@ def test_mixer(thrust: NDArray, torque: NDArray):
     "and previous body rate setpoint",
 )
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
-def test_end_to_end(
-    ref: cf.controllerMellinger_t,
-    state: tuple[NDArray, ...],
-    ctrl_state: tuple[NDArray, ...],
-    cmd: NDArray,
-):
+def test_end_to_end(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray):
     """Compare the rotor velocities for state commands."""
     pos, vel, quat, ang_vel = map(jnp.asarray, state)
     pos_err_i, rot_err_i, prev_ang_vel, _ = map(jnp.asarray, ctrl_state)
@@ -325,7 +300,7 @@ def test_end_to_end(
     rate = setpoint.attitudeRate
     rate.roll, rate.pitch, rate.yaw = np.rad2deg(cmd[13:16]).tolist()
     setpoint.mode.x = setpoint.mode.y = setpoint.mode.z = setpoint.mode.yaw = cf.modeAbs
-    out = _reference_step(ref, setpoint, *state, *ctrl_state)
+    out, _ = _reference_step(setpoint, *state, *ctrl_state)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
     assume(abs(out.thrust) > 1)
     uncapped, capped = cf.motors_thrust_uncapped_t(), cf.motors_thrust_pwm_t()
