@@ -255,18 +255,18 @@ def test_quat2euler_symbolic(seq: str, degrees: bool):
         euler_cs = np.array(quat2euler(q)).flatten()
         diff = (euler_cs - euler_scipy + period / 2) % period - period / 2  # Wrap to [-p/2, p/2)
         assert np.allclose(diff, 0.0, atol=tol), "Symbolic quat->euler differs from scipy."
+    lock = [0.0, np.pi] if seq[0] == seq[2] else [np.pi / 2, -np.pi / 2]
+    rot = R.from_euler(seq, [[0.3, angle, 0.4] for angle in lock])
+    with pytest.warns(UserWarning, match="Gimbal lock"):
+        reference = rot.as_euler(seq, degrees=degrees)
+    for q, euler_scipy in zip(rot.as_quat(), reference):
+        euler_cs = np.array(quat2euler(q)).flatten()
+        assert np.allclose(euler_cs, euler_scipy, atol=tol), "Symbolic quat->euler differs at lock."
 
 
 @pytest.mark.unit
 def test_symbolic_function_names_unique():
-    fns = [
-        rotation.cs_ang_vel2rpy_rates,
-        rotation.cs_rpy_rates2ang_vel,
-        rotation.cs_ang_vel_deriv2rpy_rates_deriv,
-        rotation.cs_rpy_rates_deriv2ang_vel_deriv,
-        rotation.cs_quat2matrix_func,
-        rotation.cs_rpy2matrix_func,
-    ]
-    names = [fn.name() for fn in fns]
+    names = [fn.name() for fn in vars(rotation).values() if isinstance(fn, cs.Function)]
+    assert names, "No CasADi functions found in the rotation module."
     # Duplicate names produce conflicting C symbols when generating code for several functions
     assert len(set(names)) == len(names), f"CasADi function names are not unique: {names}"
