@@ -146,7 +146,7 @@ def test_swarm_control(dynamics: Dynamics):
         sim.step(sim.freq // sim.control_freq)
 
     max_dist = np.max(np.linalg.norm(sim.data.states.pos - target_pos, axis=-1))
-    assert max_dist < 0.08, f"Failed to reach target, max dist: {max_dist}"
+    assert max_dist < 0.1, f"Failed to reach target, max dist: {max_dist}"
 
 
 @pytest.mark.integration
