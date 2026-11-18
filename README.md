@@ -1,4 +1,10 @@
-![Crazyflow Logo](https://github.com/learnsyslab/crazyflow/raw/main/docs/img/logo.png)
+<p align="center">
+  <img src="https://github.com/learnsyslab/crazyflow/raw/main/docs/img/logo.svg" alt="Crazyflow Logo" width="300"><br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/learnsyslab/crazyflow/raw/main/docs/img/logo_text_white.svg">
+    <img src="https://github.com/learnsyslab/crazyflow/raw/main/docs/img/logo_text_black.svg" alt="Crazyflow" width="500">
+  </picture>
+</p>
 --------------------------------------------------------------------------------
 <div align="center">
 
