@@ -164,7 +164,6 @@ def attitude2force_torque(
     int_err_max: Array,
     torque_pwm_max: Array,
     thrust_max: float,
-    pwm_min: float,
     pwm_max: float,
     L: float,
     thrust2torque: float,
@@ -192,7 +191,6 @@ def attitude2force_torque(
         int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
         torque_pwm_max: Maximum torque in PWM.
         thrust_max: Maximum thrust in N.
-        pwm_min: Minimum PWM value.
         pwm_max: Maximum PWM value.
         L: Distance from the center of the quadrotor to the center of the rotor in m.
         thrust2torque: Conversion factor (m).
@@ -220,7 +218,6 @@ def attitude2force_torque(
         int_err_max=int_err_max,
         torque_pwm_max=torque_pwm_max,
         thrust_max=thrust_max,
-        pwm_min=pwm_min,
         pwm_max=pwm_max,
         L=L,
         thrust2torque=thrust2torque,
@@ -244,7 +241,6 @@ def body_rate2force_torque(
     int_err_max: Array,
     torque_pwm_max: Array,
     thrust_max: float,
-    pwm_min: float,
     pwm_max: float,
     L: float,
     thrust2torque: float,
@@ -280,7 +276,6 @@ def body_rate2force_torque(
         int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
         torque_pwm_max: Maximum torque in PWM.
         thrust_max: Maximum thrust in N.
-        pwm_min: Minimum PWM value.
         pwm_max: Maximum PWM value.
         L: Distance from the center of the quadrotor to the center of the rotor in m.
         thrust2torque: Conversion factor (m).
@@ -313,7 +308,6 @@ def body_rate2force_torque(
         int_err_max=int_err_max,
         torque_pwm_max=torque_pwm_max,
         thrust_max=thrust_max,
-        pwm_min=pwm_min,
         pwm_max=pwm_max,
         L=L,
         thrust2torque=thrust2torque,
@@ -339,7 +333,6 @@ def _attitude2force_torque(
     int_err_max: Array,
     torque_pwm_max: Array,
     thrust_max: float,
-    pwm_min: float,
     pwm_max: float,
     L: float,
     thrust2torque: float,
@@ -369,7 +362,6 @@ def _attitude2force_torque(
         int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
         torque_pwm_max: Maximum torque in PWM.
         thrust_max: Maximum thrust in N.
-        pwm_min: Minimum PWM value.
         pwm_max: Maximum PWM value.
         L: Distance from the center of the quadrotor to the center of the rotor in m.
         thrust2torque: Conversion factor (m).
@@ -414,11 +406,6 @@ def _attitude2force_torque(
     rot_err_i = xp.where((force_des > 0)[..., None], rot_err_i, 0.0)
     force_des_pwm = force2pwm(force_des / 4, thrust_max, pwm_max)
     pwms = force_torque_pwms2pwms(force_des_pwm, torque_pwm, mixing_matrix)
-    # We assume battery compensation is perfect. Motors below pwm_min are turned off. See
-    # https://github.com/bitcraze/crazyflie-firmware/blob/d794c5ca081d19aa1e1bbcb6fd4a3711784fb8b1/src/drivers/src/motors.c#L199-L202
-    pwms = xp.where(pwms < pwm_min, 0.0, pwms)
-    excess = xp.clip(xp.max(pwms, axis=-1, keepdims=True) - pwm_max, min=0.0)
-    pwms = xp.clip(pwms - excess, min=0.0)
 
     # Info: The Mellinger controller in the firmware ends here. However, we enforce a standardized
     # interface in the simulation from states -> attitude -> force_torque. We therefore need this
@@ -488,7 +475,8 @@ def force_torque2rotor_vel(
     assert force.shape[-1] == 1, f"Force must have shape (..., 1), but has {force.shape}"
     torque_forces = (torque * xp.asarray([1 / L, 1 / L, 1 / thrust2torque])) @ mixing_matrix
     motor_forces = (torque_forces + force) / 4
-    # Clip motor forces on the thrust instead of PWM level.
+    # Clip motor forces on the thrust instead of PWM level. Motors below thrust_min are turned off,
+    # see https://github.com/bitcraze/crazyflie-firmware/blob/d794c5ca081d19aa1e1bbcb6fd4a3711784fb8b1/src/drivers/src/motors.c#L199-L202
     motor_forces = xp.where(motor_forces < thrust_min, 0.0, motor_forces)
     excess = xp.clip(xp.max(motor_forces, axis=-1, keepdims=True) - thrust_max, min=0.0)
     motor_forces = xp.clip(motor_forces - excess, min=0.0)
