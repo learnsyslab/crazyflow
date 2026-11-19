@@ -845,8 +845,8 @@ def rotor_vel_limits(dynamics: Dynamics, drone: Drone) -> tuple[float, float]:
     params = load_dynamics_params(dynamics, drone)
     thrust_min, thrust_max = float(params["thrust_min"]), float(params["thrust_max"])
     if dynamics == Dynamics.first_principles:
-        rpm = motor_force2rotor_vel(np.asarray([thrust_min, thrust_max]), params["rpm2thrust"])
-        return float(rpm[0]), float(rpm[1])
+        rpm_max = motor_force2rotor_vel(np.asarray(thrust_max), params["rpm2thrust"])
+        return 0.0, float(rpm_max)
     return 4 * thrust_min, 4 * thrust_max
 
 
