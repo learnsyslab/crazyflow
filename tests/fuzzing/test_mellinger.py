@@ -15,10 +15,11 @@ from hypothesis import strategies as st
 from hypothesis.extra import numpy as hnp
 from scipy.spatial.transform import Rotation as R
 
-from crazyflow.control import load_fn_params, load_params, parametrize
+from crazyflow.control import Control, load_fn_params, load_params, parametrize
 from crazyflow.control.mellinger import control
 from crazyflow.control.transform import force2pwm, motor_force2rotor_vel, pwm2force
 from crazyflow.drones import Drone
+from crazyflow.sim import Sim
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -240,8 +241,9 @@ def test_body_rate2force_torque(
     np.testing.assert_allclose(thrust, out.thrust, atol=1)
     # See test_attitude2force_torque for why we assume a minimum thrust for torque comparison
     assume(abs(out.thrust) > 1)
-    # The yaw is undefined at 90 degrees pitch, and both controllers level at the current yaw
-    assume(abs(R.from_quat(quat).as_matrix()[2, 0]) < 1 - 1e-6)
+    # The yaw is undefined at 90 degrees pitch
+    pitch = R.from_quat(quat).as_euler("xyz", suppress_warnings=True)[1]
+    assume(abs(pitch) < np.pi / 2 - 1e-3)
     np.testing.assert_allclose(torque, [out.roll, out.pitch, out.yaw], atol=2)
     ref_rot_err_i = [ref.i_error_m_x, -ref.i_error_m_y, ref.i_error_m_z]
     np.testing.assert_allclose(rot_err_i, ref_rot_err_i, atol=1e-6)
@@ -264,24 +266,41 @@ def test_mixer(thrust: NDArray, torque: NDArray):
     np.testing.assert_allclose(motors, [m.m1, m.m2, m.m3, m.m4], atol=3)
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: Use the current and previous body rate setpoint")
+@pytest.fixture(scope="module")
+def sim() -> Sim:
+    """Simulate one cf2x_L250 with the state controller at the firmware's controller rate."""
+    sim = Sim(drone=Drone.cf2x_L250, control=Control.state, state_freq=cf.ATTITUDE_RATE)
+    sim.step()  # Compile outside the examples to stay within the hypothesis deadline
+    return sim
+
+
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
-def test_end_to_end(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray):
-    """Compare the rotor velocities for state commands."""
-    pos, vel, quat, ang_vel = map(jnp.asarray, state)
-    pos_err_i, rot_err_i, prev_ang_vel, _ = map(jnp.asarray, ctrl_state)
-    # Jitting the module functions keeps JAX's compilation cache across examples
-    state2attitude = parametrize(jax.jit(control.state2attitude), Drone.cf2x_L250, xp=jnp)
-    attitude2force_torque = parametrize(
-        jax.jit(control.attitude2force_torque), Drone.cf2x_L250, xp=jnp
+def test_end_to_end(
+    sim: Sim, state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, ...], cmd: NDArray
+):
+    """Compare the rotor velocities of a simulated state control step."""
+    # The setpoint yaw is undefined at 90 degrees pitch
+    pitch_des = R.from_quat(cmd[9:13]).as_euler("xyz", suppress_warnings=True)[1]
+    assume(abs(pitch_des) < np.pi / 2 - 1e-3)
+    pos, vel, quat, ang_vel = jax.device_put([x[None, None] for x in state], sim.device)
+    pos_err_i, rot_err_i, prev_ang_vel, prev_ang_vel_des = jax.device_put(
+        [x[None, None] for x in ctrl_state], sim.device
     )
-    force_torque2rotor_vel = parametrize(
-        jax.jit(control.force_torque2rotor_vel), Drone.cf2x_L250, xp=jnp
+    sim.reset()
+    data = sim.data
+    controls = sim.data.controls
+    data = data.replace(states=data.states.replace(pos=pos, vel=vel, quat=quat, ang_vel=ang_vel))
+    controls = controls.replace(state=data.controls.state.replace(pos_err_i=pos_err_i))
+    controls = controls.replace(
+        attitude=data.controls.attitude.replace(
+            rot_err_i=rot_err_i, prev_ang_vel=prev_ang_vel, ang_vel_des=prev_ang_vel_des
+        )
     )
+    sim.data = data.replace(controls=controls)
+    sim.state_control(jax.device_put(cmd[None, None], sim.device))
+    sim.step()
+    rotor_vel = sim.data.controls.rotor_vel[0, 0]
     params = load_params("mellinger", Drone.cf2x_L250)["core"]
-    rpyt, _ = state2attitude(pos, quat, vel, jnp.asarray(cmd), pos_err_i, cf.ATTITUDE_RATE)
-    force, torque, _ = attitude2force_torque(quat, ang_vel, rpyt, prev_ang_vel, rot_err_i)
-    rotor_vel = force_torque2rotor_vel(force, torque)
     setpoint = cf.setpoint_t()
     sp_pos = setpoint.position
     sp_pos.x, sp_pos.y, sp_pos.z = cmd[:3].tolist()
