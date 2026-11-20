@@ -87,7 +87,7 @@ Crazyflow is a research simulator for quadrotors that runs millions of independe
 
 <b>Watch the full narrated supplementary video:</b>
 
-[YouTube](https://www.youtube.com/watch?v=2ffWvhSSEAE){ .md-button .md-button--primary target="_blank" rel="noopener" }
+[YouTube](https://www.youtube.com/watch?v=P725lGp5RnU){ .md-button .md-button--primary target="_blank" rel="noopener" }
 
 </div>
 
