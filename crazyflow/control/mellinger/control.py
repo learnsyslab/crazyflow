@@ -100,7 +100,7 @@ def state2attitude(
     )
     # l. 178 Rate-controlled YAW is moving YAW angle setpoint
     # => only one case here, since the setpoint is always in absolute mode
-    desired_yaw = R.from_quat(setpoint_quat).as_euler("xyz")[..., 2]
+    desired_yaw = R.from_quat(setpoint_quat).as_euler("xyz", suppress_warnings=True)[..., 2]
     # l. 189 Z-Axis [zB]
     rot = R.from_quat(quat).as_matrix()
     z_axis = rot[..., -1]  # 3rd column or roation matrix is z axis
@@ -132,7 +132,9 @@ def state2attitude(
     #
     # safety: assume_valid is okay here because we just constructed the rotation matrix from
     # orthonormal vectors
-    command_RPY = R.from_matrix(matrix, assume_valid=True).as_euler("xyz", degrees=False)
+    command_RPY = R.from_matrix(matrix, assume_valid=True).as_euler(
+        "xyz", degrees=False, suppress_warnings=True
+    )
     # l. 283 [control_thrust]
     # The firmware returns thrust in PWM, but we want to stay in SI units. The conversion from
     # thrust to PWM uses a mass_thrust parameter, which is a constant converting thrust values to
@@ -285,7 +287,7 @@ def body_rate2force_torque(
     xp = array_namespace(quat)
     # l. 215 ff Without a position or attitude setpoint, the firmware levels the drone at the
     # current yaw
-    yaw = R.from_quat(quat).as_euler("xyz", degrees=False)[..., 2]
+    yaw = R.from_quat(quat).as_euler("xyz", degrees=False, suppress_warnings=True)[..., 2]
     rpy_des = xp.stack((xp.zeros_like(yaw), xp.zeros_like(yaw), yaw), axis=-1)
     ang_vel_des = cmd[..., :3]
     prev_ang_vel_des = ang_vel_des if prev_cmd is None else prev_cmd[..., :3]
