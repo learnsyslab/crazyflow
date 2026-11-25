@@ -6,17 +6,17 @@ Crazyflow has two renderers. MuJoCo renders the simulated geometry, and gaussian
 
 ## MuJoCo rendering
 
-Rendering RGB-D images, changing materials at runtime, raycasting depth, drawing trajectories, and configuring the viewer camera. See [MuJoCo Rendering](../user-guide/mujoco-rendering.md) for the rendering modes and cameras.
+Capturing viewer images, RGB-D cameras, raycasting depth, drawing trajectories, and configuring the viewer camera. See [Rendering](../user-guide/rendering.md) for the rendering modes and cameras.
 
-### Cameras and RGBD
+### Viewer captures
 
 --8<-- example "examples/rendering/cameras.py" media="plot,output"
 
 ---
 
-### LED deck and materials
+### RGB-D camera
 
---8<-- example "examples/rendering/led_deck.py" media="video" cam_config="distance=1.6 elevation=-45 lookat=0.5,0.5,1.4"
+--8<-- example "examples/rendering/rgbd_camera.py" media="plot"
 
 ---
 
@@ -40,7 +40,7 @@ Rendering RGB-D images, changing materials at runtime, raycasting depth, drawing
 
 ## Gaussian splat rendering
 
-Viewing the simulation as gaussian splats, rendering RGB-D images from the drone cameras, and differentiating through the renderer. The examples download the demo splats from the [amacati/splats](https://huggingface.co/datasets/amacati/splats) dataset on first run. See [Gaussian Splat Rendering](../user-guide/splat-rendering.md) for the setup.
+Viewing the simulation as gaussian splats, rendering RGB-D images from the drone cameras, and differentiating through the renderer. The examples download the demo splats from the [amacati/splats](https://huggingface.co/datasets/amacati/splats) dataset on first run. See [Rendering](../user-guide/rendering.md) for the setup.
 
 ### Splat viewer
 

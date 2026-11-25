@@ -14,8 +14,9 @@ This section is auto-generated from the Crazyflow source code using [mkdocstring
 | `crazyflow.sim.sharding` | Placement of the simulation data on multiple devices |
 | `crazyflow.dynamics` | `Dynamics` enum and dynamics implementations |
 | `crazyflow.sim.integration` | `Integrator` enum, Euler, RK4, and symplectic Euler |
-| `crazyflow.sim.sensors` | Raycast depth (`sensors.depth`) and gaussian splat RGB (`sensors.splat`) sensors |
-| `crazyflow.sim.splat` | Gaussian splat plugin: `attach_splats` and the web-based `SplatViewer` |
+| `crazyflow.sim.sensors` | Raycast depth (`sensors.depth`), RGB-D (`sensors.rgbd`) and gaussian splat RGB-D (`sensors.splat`) sensors |
+| `crazyflow.sim.splat` | Gaussian splat plugin: `attach_splats` |
+| `crazyflow.sim.viser_viewer` | Web-based viewer |
 | `crazyflow.control` | `Control` enum |
 | `crazyflow.control.mellinger` | Mellinger controller data and parameters |
 | `crazyflow.envs` | Gymnasium vectorized environments |

@@ -24,7 +24,9 @@ dependencies = [
     "jax>=0.7.0,!=0.10.2", # 0.10.2 XLA:GPU miscompiles for larger swarms. See https://github.com/jax-ml/jax/issues/39157
     "mujoco>=4.0.0",
     "mujoco-mjx>=4.0.0",
-    "gymnasium[mujoco]>=1.4.0",
+    "gymnasium>=1.4.0",
+    "mjviser>=0.0.17",
+    "viser>=1.1.1",
     "imageio",
     "einops",
     "flax",
@@ -38,7 +40,8 @@ requires-python = ">=3.12"
 [project.optional-dependencies]
 gpu = ["jax[cuda12]"]
 benchmark = ["fire", "matplotlib", "pandas", "pyinstrument"]
-splats = ["splax[viewer]>=0.2.4"]
+rgbd = ["warp-lang>=1.18.0"]
+splats = ["splax>=0.2.4"]
 
 [project.urls]
 Homepage = "https://github.com/learnsyslab/crazyflow"
@@ -164,11 +167,11 @@ pip = "*"
 ruff = "*"
 
 [tool.pixi.pypi-dependencies]
-crazyflow = { path = "./", editable = true }
+crazyflow = { path = "./", editable = true, extras = ["rgbd"] }
 
 # splax requires CUDA jax, which has no osx-arm64 wheels, so splats are linux-only by default
 [tool.pixi.target.linux-64.pypi-dependencies]
-splax = { version = ">=0.2.4", extras = ["viewer"] }
+splax = ">=0.2.4"
 
 # Experimental JAX backend for Apple Silicon GPUs (Metal)
 [tool.pixi.target.osx-arm64.pypi-dependencies]
@@ -236,6 +239,7 @@ mkdocs-literate-nav = ">=0.6.0"
 mkdocs-section-index = ">=0.3.0"
 mkdocs-charts-plugin = ">=0.0.10"
 imageio-ffmpeg = "*"
+playwright = "*"  # For headless rendering
 
 # Headless OpenGL for rendering during the docs build
 [tool.pixi.feature.docs.target.linux-64.dependencies]
@@ -251,8 +255,9 @@ __EGL_VENDOR_LIBRARY_DIRS = "/usr/share/glvnd/egl_vendor.d:$CONDA_PREFIX/share/g
 MUJOCO_GL = "${MUJOCO_GL:-cgl}"
 
 [tool.pixi.feature.docs.tasks]
-docs-build = { cmd = "properdocs build --strict", description = "Build docs" }
-docs-serve = { cmd = "properdocs serve --livereload", description = "Serve docs locally" }
+docs-browser = { cmd = "playwright install chromium --only-shell", description = "Install a headless browser for docs videos" }
+docs-build = { cmd = "properdocs build --strict", depends-on = ["docs-browser"], description = "Build docs" }
+docs-serve = { cmd = "properdocs serve --livereload", depends-on = ["docs-browser"], description = "Serve docs locally" }
 
 [tool.pixi.feature.dist.pypi-dependencies]
 build = "*"

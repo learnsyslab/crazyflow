@@ -268,3 +268,9 @@
 .example-media-grid figure {
   margin: 0;
 }
+
+/* Material hides theme-specific images, plots or videos */
+[data-md-color-scheme="slate"] video[src$="#only-light"],
+[data-md-color-scheme="default"] video[src$="#only-dark"] {
+  display: none;
+}

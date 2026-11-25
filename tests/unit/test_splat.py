@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import jax
 import numpy as np
 import pytest
+from conftest import skip_if_headless
 from scipy.spatial.transform import Rotation as R
 
 splax = pytest.importorskip("splax", reason="the splat modules require the optional splats extra")
@@ -21,7 +22,7 @@ from crazyflow.sim.sensors.splat import (  # noqa: E402
     render_splat_rgbd,
     viewmats,
 )
-from crazyflow.sim.splat import SPLATS_KEY, SplatViewer, attach_splats  # noqa: E402
+from crazyflow.sim.splat import SPLATS_KEY, attach_splats  # noqa: E402
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -127,8 +128,6 @@ def test_render_splat_before_attach():
         render_splat_rgbd(sim)
     with pytest.raises(RuntimeError, match="attach_splats"):
         build_render_splat_rgbd_fn(sim)
-    with pytest.raises(RuntimeError, match="attach_splats"):
-        SplatViewer(sim)
 
 
 @pytest.mark.unit
@@ -297,14 +296,13 @@ def test_build_render_splat_rgbd_fn(tmp_path: Path):
 
 
 @pytest.mark.unit
+@pytest.mark.render
+@skip_if_headless
 def test_splat_viewer(tmp_path: Path):
-    pytest.importorskip("viser")
-
     _write_splat(tmp_path / "splat.ply")
     sim = Sim(n_drones=2)
     attach_splats(sim, scene=tmp_path / "splat.ply", drone=tmp_path / "splat.ply")
-    viewer = SplatViewer(sim)
+    sim.render()
     sim.step()
-    viewer.update(sim)
-    viewer.close()
+    sim.render()
     sim.close()

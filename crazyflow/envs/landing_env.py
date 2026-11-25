@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-import mujoco
 import numpy as np
 from gymnasium import spaces
 from gymnasium.vector.utils import batch_space
@@ -9,6 +8,7 @@ from jax import Array
 from crazyflow.dynamics import Dynamics
 from crazyflow.envs.drone_env import DroneEnv
 from crazyflow.sim.data import SimState
+from crazyflow.sim.visualize import draw_points
 
 
 class LandingEnv(DroneEnv):
@@ -37,13 +37,7 @@ class LandingEnv(DroneEnv):
         self._goal = self._goal.at[..., 2].set(0.1)  # 10cm above ground
 
     def render(self):
-        if self.sim.viewer is not None:
-            self.sim.viewer.viewer.add_marker(
-                type=mujoco.mjtGeom.mjGEOM_SPHERE,
-                size=np.array([0.02, 0.02, 0.02]),
-                pos=np.array(self._goal[0]),
-                rgba=np.array([1, 0, 0, 0.5]),
-            )
+        draw_points(self.sim, self._goal[0], rgba=np.array([1, 0, 0, 0.5]), size=0.02)
         self.sim.render()
 
     def obs(self) -> dict[str, Array]:

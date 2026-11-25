@@ -67,19 +67,31 @@ def _media(path: str, kinds: list[str], page: Any, files: Any) -> str:
         (file for file in files if file.src_uri.startswith(f"{media_dir(path)}/")),
         key=lambda file: file.src_uri,
     )
+    # Figures with a dark theme version show the one that matches the active theme
+    dark = {
+        file.src_uri.replace("-dark.", "."): file for file in generated if "-dark." in file.name
+    }
     figures, output = [], ""
     for kind in kinds:
         for file in generated:
-            if not file.name.startswith(kind):
+            if not file.name.startswith(kind) or "-dark." in file.name:
                 continue
             url = file.url_relative_to(page.file)
             if kind == "output":  # Embed console output
                 text = _indent(file.content_string)
                 output = f'??? note "Output"\n\n    ```text\n{text}\n    ```\n\n'
-            elif file.src_uri.endswith(".mp4"):  # Embed video output
-                figures.append(f'<video src="{url}" autoplay loop muted playsinline></video>')
-            else:  # Embed figure output
-                figures.append(f'<img src="{url}" alt="Output of {path}">')
+            else:  # Embed video or figure output, once per theme if there is a dark copy
+                if file.src_uri.endswith(".mp4"):
+                    tag = '<video src="{}" autoplay loop muted playsinline></video>'
+                else:
+                    tag = f'<img src="{{}}" alt="Output of {path}">'
+                urls = [url]
+                if file.src_uri in dark:
+                    urls = [
+                        f"{url}#only-light",
+                        f"{dark[file.src_uri].url_relative_to(page.file)}#only-dark",
+                    ]
+                figures.append("".join(tag.format(url) for url in urls))
     if len(figures) == 1:
         return f'<figure class="example-media">\n  {figures[0]}\n</figure>\n\n{output}'
     items = "".join(f"  <figure>\n    {figure}\n  </figure>\n" for figure in figures)

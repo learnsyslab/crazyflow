@@ -1,15 +1,13 @@
-"""Render the simulation as gaussian splats in a web-based viewer.
+"""Show the simulation as gaussian splats in the interactive viewer.
 
-`SplatViewer` serves a web viewer at `http://localhost:8080`. The splats are streamed to the
-browser once, after which `update` only pushes the drone poses, so the viewer runs in real time.
-Requires splax (`pip install "crazyflow[splats]"`).
+The viewer shows attached splats and moves each drone's splat with the drone. Requires splax
+(`pip install "crazyflow[splats]"`).
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import time
 
 os.environ["SCIPY_ARRAY_API"] = "1"
 
@@ -18,7 +16,7 @@ from scipy.spatial.transform import Rotation as R
 from splax.io import fetch
 
 from crazyflow.sim import Sim
-from crazyflow.sim.splat import SplatViewer, attach_splats
+from crazyflow.sim.splat import attach_splats
 
 logger = logging.getLogger(__name__)
 ASSETS_URL = "https://huggingface.co/datasets/amacati/splats/resolve/main"
@@ -36,16 +34,13 @@ def main():
     scene = fetch(f"{ASSETS_URL}/robot_hall.ply")
     drone = fetch(f"{ASSETS_URL}/{sim.drone}.ply")
     attach_splats(sim, scene=scene, drone=drone)
-    viewer = SplatViewer(sim)
+    fps = 50
 
-    for i in range(500):
-        t_start = time.perf_counter()
+    for i in range(int(10 * sim.control_freq)):
         sim.state_control(trajectory(i / sim.control_freq))
         sim.step(sim.freq // sim.control_freq)
-        viewer.update(sim)
-        time.sleep(max(0.0, 1 / sim.control_freq - (time.perf_counter() - t_start)))
-
-    viewer.close()
+        if ((i * fps) % sim.control_freq) < fps:
+            sim.render()
     sim.close()
 
 

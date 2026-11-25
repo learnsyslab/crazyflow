@@ -12,7 +12,6 @@ import jax.numpy as jnp
 import mujoco
 import mujoco.mjx as mjx
 import numpy as np
-from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer
 from jax import Array, Device
 from jax.sharding import NamedSharding, PartitionSpec
 
@@ -40,6 +39,7 @@ from crazyflow.sim.dynamics import (
 from crazyflow.sim.integration import Integrator, euler, rk4, symplectic_euler
 from crazyflow.sim.pipeline import append_fn
 from crazyflow.sim.sharding import WORLD_AXIS, build_sharded_data, build_sharded_mjx_data, placement
+from crazyflow.sim.viser_viewer import ViserViewer
 from crazyflow.utils import grid_2d, pytree_replace, world_mask
 
 if TYPE_CHECKING:
@@ -136,16 +136,15 @@ class Sim:
         self.n_drones = n_drones
         self.freq = freq
         self.max_geom_pairs = -1 if n_drones < 64 else 2 * n_drones
-        self.max_visual_geom = 1000
 
         # Initialize MuJoCo world and data
         self.fused_mjx_model = fused_mjx_model
         self._xml_path = xml_path or Path(__file__).parents[1] / "scene.xml"
         self.drone_path = Path(__file__).parents[1] / f"drones/{drone}.xml"
         self.spec = self.build_mjx_spec()
-        self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
+        self.mj_model, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self._contacts = self.build_contact_fn()
-        self.viewer: MujocoRenderer | None = None
+        self.viewer: ViserViewer | None = None
 
         freqs = (state_freq, attitude_freq, body_rate_freq, force_torque_freq)
         if mesh is None:
@@ -246,63 +245,31 @@ class Sim:
     @requires_mujoco_sync
     def render(
         self,
-        mode: str | None = "human",
-        world: int = 0,
+        world: int | None = None,
         camera: int | str = -1,
         cam_config: dict | None = None,
+        capture: bool = False,
         width: int = 1920,
         height: int = 1080,
     ) -> NDArray | None:
-        """Render one world of the simulation.
+        """Render the simulation in the interactive viewer.
 
         Args:
-            mode: Render mode. ``"human"`` opens an interactive MuJoCo viewer window,
-                ``"rgb_array"``, ``"depth_array"`` and ``"rgbd_tuple"`` return offscreen renderings.
-            world: Index of the world to render.
+            world: Index of the world to render. None keeps the current world.
             camera: Camera name or id. -1 is the global free camera.
-            cam_config: Camera configuration for the MuJoCo viewer.
-            width: Image width for offscreen rendering.
-            height: Image height for offscreen rendering.
+            cam_config: Free camera configuration.
+            capture: Whether to return the rendered image.
+            width: Image width of the capture.
+            height: Image height of the capture.
 
         Returns:
-            The rendered image(s) for the offscreen modes, None for ``"human"``.
+            The captured RGB image with shape (height, width, 3) if capture is set, else None.
         """
         if self.viewer is None:
-            if isinstance(camera, str):
-                cam_id = mujoco.mj_name2id(self.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, camera)
-                assert cam_id > -1, f"Camera name '{camera}' not found in the model."
-            elif isinstance(camera, int):
-                cam_id = camera
-                assert cam_id >= -1, f"camera id must be >=-1, was {cam_id}"
-            else:
-                raise TypeError("camera argument must be integer or string")
-            self.mj_model.vis.global_.offwidth = width
-            self.mj_model.vis.global_.offheight = height
-            self.viewer = MujocoRenderer(
-                self.mj_model,
-                self.mj_data,
-                max_geom=self.max_visual_geom,
-                default_cam_config=cam_config,
-                height=height,
-                width=width,
-                camera_id=cam_id,
-            )
-            # In human mode, cam_id is set to -1, so we force it to the desired value
-            if mode == "human" and cam_id > -1:
-                # Render one frame to force mj to create the viewer
-                self.viewer.render(mode)
-                self.viewer.viewer.cam.fixedcamid = cam_id
-                self.viewer.viewer.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-
-        self.mj_data.qpos[:] = self.mjx_data.qpos[world, :]
-        self.mj_data.mocap_pos[:] = self.mjx_data.mocap_pos[world, :]
-        self.mj_data.mocap_quat[:] = self.mjx_data.mocap_quat[world, :]
-        # mj_forward raises on contacts between two static bodies (e.g. drones welded to the world).
-        # We only need poses, cameras and lights for rendering
-        mujoco.mj_kinematics(self.mj_model, self.mj_data)
-        mujoco.mj_comPos(self.mj_model, self.mj_data)
-        mujoco.mj_camlight(self.mj_model, self.mj_data)
-        return self.viewer.render(mode)
+            self.viewer = ViserViewer(self.mj_model, self.data, camera)
+        return self.viewer.render(
+            self.mjx_data, self.time, world, cam_config, capture, width, height
+        )
 
     def seed(self, seed: int):
         """Set the JAX rng key for the simulation.
@@ -350,48 +317,37 @@ class Sim:
         """Stamp the single attached drone body into ``n_drones`` instances by cloning its XML.
 
         Avoids the O(n_drones^2) cost and per-instance mesh copies of repeated ``attach_body``.
-        Only element ``name``s are re-prefixed ``0:`` -> ``i:``, so meshes and static materials stay
-        shared. Dynamic materials are duplicated per drone.
+        Only element ``name``s are re-prefixed ``0:`` -> ``i:``, so meshes and materials stay
+        shared.
         """
-        # Name prefixes of the drone's "dynamic" materials which get per-copy materials
-        _DYN_MATERIAL = ("0:led",)
         # Absolute meshdir so the serialized mesh file paths resolve when re-parsed from a string.
         spec.meshdir = str((self.drone_path.parent / drone_meshdir).resolve())
         root = ET.fromstring(spec.to_xml())
-        asset = root.find("asset")
         body0 = root.find(f".//body[@name='{drone0_body}']")
         frame = next(p for p in root.iter() if body0 in p)  # the body lives under the attach frame
-        dynamic = [m for m in asset.findall("material") if m.get("name").startswith(_DYN_MATERIAL)]
         for i in range(1, self.n_drones):
             body = copy.deepcopy(body0)
-            for el in body.iter():  # prefix unique names + dynamic-material refs. keep shared refs
+            for el in body.iter():  # prefix unique names, keep shared refs
                 if (name := el.get("name", "")).startswith("0:"):
                     el.set("name", f"{i}:{name[2:]}")
-                if (mat := el.get("material", "")).startswith(_DYN_MATERIAL):
-                    el.set("material", f"{i}:{mat[2:]}")
             frame.append(body)
-            for material in dynamic:
-                clone = copy.deepcopy(material)
-                clone.set("name", f"{i}:{material.get('name')[2:]}")
-                asset.append(clone)
         new_spec = mujoco.MjSpec.from_string(ET.tostring(root, encoding="unicode"))
         new_spec.copy_during_attach = True  # write-only, re-apply after from_string() drops it
         return new_spec
 
-    def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Any, Model, Data]:
+    def build_mjx_model(self, spec: mujoco.MjSpec) -> tuple[Any, Model, Data]:
         """Build the MuJoCo model and data structures for the simulation."""
         mj_model = spec.compile()
         self._unweld_drones(mj_model)
-        mj_data = mujoco.MjData(mj_model)
         mjx_model = mjx.put_model(mj_model, device=self.device, impl="jax")
-        mjx_data = mjx.put_data(mj_model, mj_data, device=self.device, impl="jax")
+        mjx_data = mjx.put_data(mj_model, mujoco.MjData(mj_model), device=self.device, impl="jax")
         if self.mesh is None:
             mjx_data = jax.vmap(lambda _: mjx_data)(jnp.arange(self.n_worlds))
         else:
             # mjx_model has no world axis, so we replicate it to keep it compatible with the mesh
             mjx_model = jax.device_put(mjx_model, NamedSharding(self.mesh, PartitionSpec()))
             mjx_data = build_sharded_mjx_data(mjx_data, self.n_worlds, self.mesh)
-        return mj_model, mj_data, mjx_model, mjx_data
+        return mj_model, mjx_model, mjx_data
 
     def _unweld_drones(self, mj_model: mujoco.MjModel):
         """Relabel each drone as its own weld root so collisions are detected natively.
@@ -539,7 +495,7 @@ class Sim:
             self.viewer.close()
             self.viewer = None
         self.spec.numeric("max_geom_pairs").data = [self.max_geom_pairs]
-        self.mj_model, self.mj_data, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
+        self.mj_model, self.mjx_model, self.mjx_data = self.build_mjx_model(self.spec)
         self._contacts = self.build_contact_fn()
 
     def init_data(

@@ -14,7 +14,7 @@ def main():
     sim = Sim(n_worlds=n_worlds, n_drones=n_drones, dynamics=Dynamics.so_rpy, device="cpu")
     fps = 50
     cmd = np.zeros((sim.n_worlds, sim.n_drones, 4))
-    cmd[..., 3] = sim.data.params.mass[0] * 9.81 * 1.05
+    cmd[..., 3] = sim.data.params.mass[0] * 9.81 * 1.1
     rgbas = np.random.default_rng(0).uniform(0, 1, (n_drones, 4))
     rgbas[..., 3] = 1.0
 
@@ -28,7 +28,7 @@ def main():
         if ((i * fps) % sim.control_freq) < fps:
             lines = np.array(pos)
             for i in range(n_drones):
-                draw_line(sim, lines[:, i, :], rgbas[i, :], start_size=0.3, end_size=3.0)
+                draw_line(sim, lines[:, i, :], rgbas[i, :])
             sim.render()
     sim.close()
 

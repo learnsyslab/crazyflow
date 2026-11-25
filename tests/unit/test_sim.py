@@ -20,7 +20,6 @@ from crazyflow.sim import Dynamics, Sim
 from crazyflow.sim.data import ControlData, SimData
 from crazyflow.sim.integration import Integrator
 from crazyflow.sim.sim import rotor_vel_limits, sync_sim2mjx
-from crazyflow.sim.visualize import change_material
 
 if TYPE_CHECKING:
     from typing import Any
@@ -330,13 +329,14 @@ def test_render_human(device: str):
     sim.viewer.close()
 
 
+@pytest.mark.render
 @skip_if_headless
-def test_render_rgb_array(device: str):
+def test_render_capture(device: str):
     sim = Sim(n_worlds=2, device=device)
-    img = sim.render(mode="rgb_array", width=1024, height=1024)
+    img = sim.render(capture=True, width=320, height=240)
+    sim.close()
     assert isinstance(img, np.ndarray), "Image must be a numpy array"
-    assert img.shape == (1024, 1024, 3), f"Unexpected image shape {img.shape}"
-    # Check if mj_model.vis.global_.offwidth is set correctly
+    assert img.shape == (240, 320, 3), f"Unexpected image shape {img.shape}"
     assert not all(img[0, 0, :] == 0), "Image contains black patches"
     assert not all(img[-1, -1, :] == 0), "Image contains black patches"
 
@@ -607,56 +607,6 @@ def test_scan_results(dynamics: Dynamics):
     assert np.all(pos_loop_steps[..., 2] > 0.1), "Drones should have moved"
     assert np.allclose(pos_scan_steps, pos_loop_steps), "Scan results should be identical"
     sim.close()
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize("drone", ["cf2x_L250", "cf2x_P250", "cf2x_T350", "cf21B_500"])
-@pytest.mark.parametrize("mat_name", ["led_top", "led_bot"])
-def test_change_material(device: str, drone: str, mat_name: str):
-    """change_material should broadcast RGBA/emission and update MuJoCo materials appropriately."""
-    n_drones = 2
-
-    sim = Sim(n_drones=n_drones, drone=drone, device=device)
-
-    drone_ids = np.array([0, 1], dtype=int)
-    # Distinct values per drone to assert that each material gets its own value
-    rgba = np.stack([0.42 * np.ones(4), 0.73 * np.ones(4)])
-    emission = np.array([0.42, 0.73])
-
-    change_material(sim, mat_name=mat_name, drone_ids=drone_ids, rgba=rgba, emission=emission)
-
-    mj_model = sim.mj_model
-    mat0 = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"0:{mat_name}")
-    mat1 = mujoco.mj_name2id(mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"1:{mat_name}")
-    assert mat0 != mat1, "drones must not share the same material asset"
-    np.testing.assert_allclose(mj_model.mat_rgba[mat0], rgba[0])
-    np.testing.assert_allclose(mj_model.mat_rgba[mat1], rgba[1])
-    assert mj_model.mat_emission[mat0] == pytest.approx(emission[0])
-    assert mj_model.mat_emission[mat1] == pytest.approx(emission[1])
-
-
-@pytest.mark.unit
-def test_change_material_errors(device: str):
-    """Test that change_material raises the expected errors for bad inputs."""
-    n_drones = 2
-    sim = Sim(n_drones=n_drones, device=device)
-
-    drone_ids = np.array([0, 1], dtype=int)
-    rgba = np.ones((n_drones, 4), dtype=float)
-    emission = np.ones((n_drones,), dtype=float)
-
-    with pytest.raises(ValueError):
-        change_material(sim, mat_name="bad_mat", drone_ids=drone_ids, rgba=rgba, emission=emission)
-
-    with pytest.raises(ValueError, match="drone_ids must be 1D array"):
-        change_material(
-            sim, mat_name="led_top", drone_ids=np.array(2, dtype=int), rgba=rgba, emission=emission
-        )
-
-    with pytest.raises(ValueError, match=r"drone_ids must be in range \[0, 1\]"):
-        change_material(
-            sim, mat_name="led_top", drone_ids=np.arange(3, dtype=int), rgba=rgba, emission=emission
-        )
 
 
 @pytest.mark.unit

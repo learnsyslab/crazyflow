@@ -222,7 +222,6 @@ def main() -> None:
 
     # Set up the main sim
     sim = Sim(n_worlds=1, drone=DRONE, dynamics=Dynamics.first_principles, control=Control.attitude)
-    sim.max_visual_geom = 100_000  # To be able to show all rollouts
     sim.reset()
     start_pos = trajectory(0.0)["pos"]
     drone_params = load_params(Dynamics.first_principles, DRONE)
@@ -315,12 +314,12 @@ def main() -> None:
             col_rollouts = np.array([0.25, 0.85, 0.85, 0.18])
             col_hist = np.array([1.0, 0.25, 0.0, 1.0])
             col_pole = np.array([0.9, 0.9, 0.9, 1.0])
-            draw_line(sim, reference, rgba=col_ref, start_size=2.0, end_size=2.0)
+            draw_line(sim, reference, rgba=col_ref)
             for sampled_path in sampled_positions:
-                draw_line(sim, sampled_path, rgba=col_rollouts, start_size=0.15, end_size=0.15)
+                draw_line(sim, sampled_path, rgba=col_rollouts)
             draw_line(sim, best_positions, rgba=col_pred)
             if len(position_history) > 1:
-                draw_line(sim, np.array(position_history), rgba=col_hist, start_size=0.01)
+                draw_line(sim, np.array(position_history), rgba=col_hist)
             for pole in obstacles:
                 pole_top = pole + np.array([0.0, 0.0, OBSTACLE_HEIGHT])
                 draw_capsule(sim, pole, pole_top, radius=OBSTACLE_RADIUS, rgba=col_pole)

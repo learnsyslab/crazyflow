@@ -1,14 +1,13 @@
 """Gaussian splat support built on [splax](https://github.com/learnsyslab/splax).
 
-This module owns the splat plugin state and its visualization.
-[attach_splats][crazyflow.sim.splat.attach_splats] loads 3D gaussian splatting ``.ply`` files and
-stores them in the simulation's plugin data, and [SplatViewer][crazyflow.sim.splat.SplatViewer]
-streams the splats to a web-based viewer.
+This module contains the splat plugin state. [attach_splats][crazyflow.sim.splat.attach_splats]
+loads 3D gaussian splatting ``.ply`` files and stores them in the simulation's plugin data. The
+interactive viewer of ``sim.render()`` shows attached splats.
 
 The batched RGB camera sensor that renders splats lives in [crazyflow.sim.sensors.splat][].
 
-Splat files must be aligned to the simulation frames. The viewer renders in the browser and works on
-any device. Camera sensors rasterize significantly faster on the GPU.
+Splat files must be aligned to the simulation frames. Camera sensors rasterize significantly faster
+on the GPU.
 """
 
 from __future__ import annotations
@@ -18,20 +17,16 @@ from typing import TYPE_CHECKING, Any, Callable, ParamSpec, TypeVar
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 import splax
 import warp as wp
 from flax.struct import dataclass, field
-from splax.viewer import Viewer
 
-from crazyflow.sim.sim import requires_mujoco_sync
 from crazyflow.utils import CORE_NDIM_KEY
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from jax import Array
-    from numpy.typing import NDArray
 
     from crazyflow.sim.sim import Sim
 
@@ -115,58 +110,3 @@ def attach_splats(sim: Sim, scene: Path | None = None, drone: Path | None = None
     splats = jax.device_put(SplatData(*arrays, slices=slices), sim.device)
     sim.data = sim.data.replace(plugins=sim.data.plugins | {SPLATS_KEY: splats})
     sim.build_default_data()
-
-
-class SplatViewer:
-    """Web-based gaussian splat viewer.
-
-    Starts a ``splax.viewer.Viewer`` (viser web server) and uploads all attached splats once.
-    [update][crazyflow.sim.splat.SplatViewer.update] then only pushes the current drone poses, so
-    the viewer runs at real-time rates on any device. The viewer is owned by its creator and is
-    independent of ``sim.render()``.
-
-    Args:
-        sim: The simulation to visualize. Requires
-            [attach_splats][crazyflow.sim.splat.attach_splats] to have been called.
-        port: Port of the web server.
-    """
-
-    def __init__(self, sim: Sim, port: int = 8080):
-        if SPLATS_KEY not in sim.data.plugins:
-            raise RuntimeError("No splats attached to this simulation, call attach_splats first")
-        splats = sim.data.plugins[SPLATS_KEY]
-        self.viewer = Viewer(port=port)
-        n_splats = splats.slices[0][0] if splats.slices else splats.means.shape[0]
-        if n_splats > 0:
-            scene = jax.tree.map(lambda x: x[:n_splats], splats)
-            self.viewer.add_splats("scene", *scene.params)
-        for i, (start, stop) in enumerate(splats.slices):
-            drone = jax.tree.map(lambda x, a=start, b=stop: x[a:b], splats)
-            self.viewer.add_splats(f"{i}:drone", *drone.params)
-        self._n_drones = len(splats.slices)
-
-    def update(self, sim: Sim, world: int = 0):
-        """Push the current drone poses of one world to the viewer.
-
-        Args:
-            sim: The simulation to visualize.
-            world: Index of the world whose drone poses are shown.
-        """
-        if self._n_drones == 0:
-            return
-        pos, quat = self._drone_mocap_poses(sim, world)
-        for i in range(self._n_drones):
-            self.viewer.update_pose(f"{i}:drone", pos[i], quat[i])
-
-    def close(self):
-        """Shut down the web server."""
-        self.viewer.close()
-
-    @staticmethod
-    @requires_mujoco_sync
-    def _drone_mocap_poses(sim: Sim, world: int) -> tuple[NDArray, NDArray]:
-        """Drone mocap positions and wxyz quaternions of one world, synced with the MuJoCo data."""
-        ids = sim.data.core.drone_mocap_ids
-        pos = np.asarray(sim.mjx_data.mocap_pos[world, ids])
-        quat = np.asarray(sim.mjx_data.mocap_quat[world, ids])  # MuJoCo quats are already wxyz
-        return pos, quat

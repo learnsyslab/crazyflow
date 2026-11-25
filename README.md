@@ -44,7 +44,7 @@ for _ in range(100):
 - **First-principles dynamics** — dynamics using first-principles equations and parameters identified from real-world measurements
 - **Abstracted dynamics** — simplified dynamics in three flavors fitted from real flight data
 - **Modular pipelines** — step and reset are tuples of plain JAX functions; insert anything, anywhere
-- **MuJoCo integration** — onscreen and offscreen rendering, raycasting, and contact detection via MJX
+- **MuJoCo integration** — interactive browser viewer, raycasting, and contact detection via MJX
 
 ## Supported drones
 

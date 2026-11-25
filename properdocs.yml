@@ -74,8 +74,7 @@ nav:
     - Pipelines: user-guide/pipelines.md
     - The world axis: user-guide/world-axis.md
     - Sharding: user-guide/sharding.md
-    - MuJoCo Rendering: user-guide/mujoco-rendering.md
-    - Gaussian Splat Rendering: user-guide/splat-rendering.md
+    - Rendering: user-guide/rendering.md
     - MuJoCo Integration: user-guide/mujoco.md
     - Gymnasium Environments: user-guide/gymnasium-envs.md
   - Examples:

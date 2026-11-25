@@ -1,7 +1,7 @@
-"""Render RGB-D images offscreen from the drone's FPV camera.
+"""Capture RGB images of the viewer from the drone's FPV camera.
 
-Offscreen rendering returns RGB-D images on every frame. The FPV camera (`fpv_cam`) is attached to
-the drone and moves with it. Other cameras are selected by name or id in `sim.render`.
+`sim.render(capture=True)` returns the image the browser shows. The FPV camera (`fpv_cam`) is
+attached to the drone and moves with it. Other cameras are selected by name or id in `sim.render`.
 
 Run with `--plot` to animate the images or `--save` to save them as cameras.gif, which requires
 matplotlib from the `tests` environment.
@@ -70,7 +70,7 @@ def add_smiley(sim: Sim):
 
 
 def main(plot: bool = False, save: bool = False):
-    """Render RGB-D images from the fpv camera and optionally animate or save them."""
+    """Capture RGB images from the fpv camera and optionally animate or save them."""
     # Setup sim
     sim = Sim(
         n_drones=1,
@@ -95,49 +95,40 @@ def main(plot: bool = False, save: bool = False):
         sim.step(sim.freq // fps)
 
         t1 = time.perf_counter()
-        # mode: Either "human" for the regular window, "rgb_array" for an RGB array,
-        #       "depth_array" for a depth array, or "rgbd_tuple" for both at the same time.
         # camera: The name or id of the camera. The names are specified in the corresponding
         #         xml file in crazyflow/drones. For example, "0:fpv_cam" is the first-person view
         #         camera of the first drone, "0:track_cam" is the tracking camera of the first
         #         drone. Id -1 is the global camera.
-        rgbd = sim.render(
-            width=resolution[0], height=resolution[1], mode="rgbd_tuple", camera="0:fpv_cam"
+        rgb = sim.render(
+            camera="0:fpv_cam", capture=True, width=resolution[0], height=resolution[1]
         )
         t2 = time.perf_counter()
         timings.append(t2 - t1)
-        if rgbd is not None:
-            frames.append(rgbd)
+        frames.append(rgb)
 
     sim.close()
 
     t_mean = np.mean(timings)
     print(f"Average render time {t_mean * 1000:.2f}ms, eqivalent to {1 / t_mean:.2f}fps")
-    print("For more optimized depth rendering, check out the raycasting.py example.")
+    print("For batched depth rendering, check out the raycasting.py example.")
     if plot or save:
         plot_results(frames, fps, show=plot, save=save)
 
 
-def plot_results(frames: list[tuple[np.ndarray, np.ndarray]], fps: int, show: bool, save: bool):
-    """Animate the RGB and depth frames and optionally save them as cameras.gif."""
+def plot_results(frames: list[np.ndarray], fps: int, show: bool, save: bool):
+    """Animate the RGB frames and optionally save them as cameras.gif."""
     import matplotlib.pyplot as plt
     from matplotlib import animation
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    im1 = ax1.imshow(frames[0][0])
-    ax1.set_title("RGB")
-    ax1.axis("off")
-    im2 = ax2.imshow(frames[0][1], cmap="viridis")
-    ax2.set_title("Depth")
-    ax2.axis("off")
+    fig, ax = plt.subplots(figsize=(5, 4))
+    im = ax.imshow(frames[0])
+    ax.set_title("FPV camera")
+    ax.axis("off")
     fig.tight_layout()
 
     def update_frame(i: int):  # noqa: ANN202
-        rgb, depth = frames[i]
-        im1.set_data(rgb)
-        im2.set_data(depth)
-        im2.set_clim(np.nanmin(depth), np.nanmax(depth))
-        return im1, im2
+        im.set_data(frames[i])
+        return (im,)
 
     anim = animation.FuncAnimation(
         fig, update_frame, frames=len(frames), interval=1000 / fps, blit=True, repeat=False

@@ -218,13 +218,12 @@ pos_w0_d1 = sim.data.states.pos[0, 1]  # (3,)
 
 ## Rendering
 
-`sim.render()` opens an interactive MuJoCo viewer or returns an image array for offscreen rendering.
+`sim.render()` opens an interactive viewer in the browser and can return its image.
 
 <!-- notest: requires rendering -->
 ```{ .python notest }
-sim.render()                          # interactive window, world 0
-sim.render(mode="rgb_array")          # returns (H, W, 3) uint8
-sim.render(mode="depth_array")        # returns (H, W) float32
+sim.render()                          # browser viewer
+sim.render(capture=True)              # returns (H, W, 3) uint8
 sim.render(world=1, camera="front")   # different world or named camera
 sim.close()                           # close the viewer
 ```

@@ -9,7 +9,6 @@ Crazyflow maintains two parallel representations at all times:
 | Object | Type | Purpose |
 |---|---|---|
 | `sim.mj_model` | `mujoco.MjModel` | Reference model, used for GUI rendering |
-| `sim.mj_data` | `mujoco.MjData` | Scratch MuJoCo data buffer, only used to initialise MJX |
 | `sim.mjx_model` | `mjx.Model` | JAX pytree of the model (static, shared across worlds) |
 | `sim.mjx_data` | `mjx.Data` | JAX pytree of the scene state, batched over `n_worlds` |
 
@@ -106,7 +105,7 @@ These run only once per render or contact call, regardless of how many dynamics 
 for i in range(10):
     sim.step(5)                       # JAX dynamics only, mjx_synced = False
     if i % 5 == 0:
-        sim.render(mode="rgb_array")  # syncs once: kinematics + camlight + collision
+        sim.render()  # syncs once: kinematics + camlight + collision
 ```
 
 ## Advanced: the sync flag and avoiding redundant MJX calls
@@ -119,7 +118,7 @@ This means the order of calls matters. Grouping all rendering and contact querie
 ```{ .python notest }
 sim.step(5)
 contacts = sim.contacts()     # sync runs here
-sim.render(mode="rgb_array")  # flag already set, no second sync
+sim.render()                  # flag already set, no second sync
 ```
 
 Interleaving a step between them forces two syncs:
@@ -128,7 +127,7 @@ Interleaving a step between them forces two syncs:
 ```{ .python notest }
 contacts = sim.contacts()     # sync runs here
 sim.step(5)                   # flag cleared
-sim.render(mode="rgb_array")  # sync runs again
+sim.render()                  # sync runs again
 ```
 
 ## Advanced: fusing mjx_data into a contact check function

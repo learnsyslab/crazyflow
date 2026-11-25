@@ -80,7 +80,7 @@ class FigureEightEnv(DroneEnv):
     def render(self):
         idx = (self.steps + self.sample_offsets[None, ...]) % self.trajectory.shape[0]
         next_trajectory = self.trajectory[idx, ...]
-        draw_line(self.sim, next_trajectory[0], start_size=3.0, end_size=3.0)
+        draw_line(self.sim, next_trajectory[0])
         draw_points(self.sim, next_trajectory[0], rgba=np.array([1.0, 0, 0, 1]), size=0.01)
         self.sim.render()
 

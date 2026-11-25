@@ -97,4 +97,4 @@ Pure, batched, array-API functions with no dependency on `Sim`.
 `attach_splats` performs no calibration. Both `.ply` files must already sit in the simulator's
 frames, the scene in the MuJoCo world frame at metric scale and the drone in its body frame. An
 uncalibrated splat looks correct alone but does not match the simulated geometry. See
-[`splat-rendering.md`](docs/user-guide/splat-rendering.md).
+[`rendering.md`](docs/user-guide/rendering.md).

@@ -11,16 +11,19 @@ import io
 import itertools
 import logging
 import sys
+import webbrowser
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import imageio_ffmpeg
 import jax
 import matplotlib.pyplot as plt
-import mujoco
 import numpy as np
 from matplotlib import animation
+from matplotlib.text import Text
+from playwright.sync_api import sync_playwright
 
 from crazyflow.sim import Sim
 
@@ -30,10 +33,23 @@ CRF = "28"
 # The initial free camera of the interactive viewer
 CAM_CONFIG = {"lookat": [0.0, 0.0, 0.0], "distance": 2.0, "azimuth": 90.0, "elevation": -45.0}
 MAX_SVG_BYTES = 500_000
+# Hardware WebGL where available, software WebGL on runners without a GPU
+BROWSER_ARGS = [
+    "--use-angle=vulkan",
+    "--enable-features=Vulkan",
+    "--ignore-gpu-blocklist",
+    "--enable-unsafe-swiftshader",
+]
+# Colors of the dark docs theme. Videos cannot be transparent, so they get the page background
+DARK_BACKGROUND, DARK_FOREGROUND = "#1e2129", "#d5d7e2"
 
 
 class Video:
-    """H.264 video of every second frame of an example, which renders at 50 fps."""
+    """H.264 video of every second frame of an example.
+
+    Examples are expected to run at 50 fps. Finishing the video also saves its middle frame as
+    ``still-<name>.png`` for the user guide.
+    """
 
     def __init__(self, path: Path):
         """Create the video, the file is written on the first frame."""
@@ -42,8 +58,8 @@ class Video:
         self.n_frames = 0
         self.t = None
 
-    def add(self, t: float | None, render: Callable[[], np.ndarray]) -> bool:
-        """Render and write a frame if the video needs it, checking the fps at sim time ``t``."""
+    def due(self, t: float | None = None) -> bool:
+        """Count a frame of the example and return whether the video records it."""
         if t is not None:
             dt = t - self.t if self.t is not None else 0.0
             assert dt <= 0 or np.isclose(dt, 1 / EXAMPLE_FPS, atol=1e-4), (
@@ -51,9 +67,11 @@ class Video:
             )
             self.t = t
         self.n_frames += 1
-        if (self.n_frames - 1) % (EXAMPLE_FPS // FPS):
-            return False
-        frame = np.ascontiguousarray(render())
+        return (self.n_frames - 1) % (EXAMPLE_FPS // FPS) == 0
+
+    def write(self, frame: np.ndarray):
+        """Write a frame, opening the file on the first one."""
+        frame = np.ascontiguousarray(frame)
         if self.writer is None:
             self.writer = imageio_ffmpeg.write_frames(
                 str(self.path),
@@ -66,30 +84,98 @@ class Video:
             )
             self.writer.send(None)
         self.writer.send(frame)
-        return True
 
-    def close(self):
-        """Finish writing the video."""
-        if self.writer is not None:
-            self.writer.close()
+    def finish(self):
+        """Finish writing the video and save its still."""
+        if self.writer is None:
+            return
+        self.writer.close()
+        n_frames, _ = imageio_ffmpeg.count_frames_and_secs(str(self.path))
+        reader = imageio_ffmpeg.read_frames(str(self.path))
+        width, height = next(reader)["size"]
+        frame = next(itertools.islice(reader, n_frames // 2, None))
+        reader.close()
+        still = np.frombuffer(frame, np.uint8).reshape(height, width, 3)
+        plt.imsave(self.path.with_name(f"still-{self.path.stem}.png"), still)
+
+
+@contextlib.contextmanager
+def dark_theme(fig: plt.Figure) -> Generator[None]:
+    """Restyle a figure for the dark docs theme while the context is active."""
+    texts = {text: text.get_color() for text in fig.findobj(Text)}
+    spines = {spine: spine.get_edgecolor() for ax in fig.axes for spine in ax.spines.values()}
+    faces = {artist: artist.get_facecolor() for artist in (fig, *fig.axes)}
+    for text in texts:
+        text.set_color(DARK_FOREGROUND)
+    for spine in spines:
+        spine.set_edgecolor(DARK_FOREGROUND)
+    for artist in faces:
+        artist.set_facecolor(DARK_BACKGROUND)
+    for ax in fig.axes:
+        ax.tick_params(colors=DARK_FOREGROUND)
+    yield
+    for text, color in texts.items():
+        text.set_color(color)
+    for spine, color in spines.items():
+        spine.set_edgecolor(color)
+    for artist, color in faces.items():
+        artist.set_facecolor(color)
+    for ax in fig.axes:
+        ax.tick_params(axis="x", colors=plt.rcParams["xtick.color"])
+        ax.tick_params(axis="y", colors=plt.rcParams["ytick.color"])
+
+
+class FigureVideo(animation.AbstractMovieWriter):
+    """A movie writer that saves a figure as both light and dark videos."""
+
+    def __init__(self, fig: plt.Figure, path: Path):
+        """Initialize the video writers."""
+        super().__init__()
+        self.fig = fig
+        self.light = Video(path.with_suffix(".mp4"))
+        self.dark = Video(path.with_name(f"{path.name}-dark.mp4"))
+
+    def setup(self, fig: plt.Figure, outfile: str, dpi: float | None = None):
+        """Do nothing, the videos open on their first frame."""
+
+    def grab_frame(self, **savefig_kwargs: Any):
+        """Record the current state of the figure in both themes."""
+        if self.light.due():
+            self.light.write(self._draw())
+        if self.dark.due():
+            self.dark.write(self._draw_dark())
+
+    def finish(self):
+        """Finish writing both videos."""
+        self.light.finish()
+        self.dark.finish()
+
+    def _draw(self) -> np.ndarray:
+        self.fig.canvas.draw()
+        return np.asarray(self.fig.canvas.buffer_rgba())[..., :3]
+
+    def _draw_dark(self) -> np.ndarray:
+        with dark_theme(self.fig):
+            return self._draw()
 
 
 def save_figure(fig: plt.Figure, path: Path, anim: animation.FuncAnimation | None):
-    """Save an animation as mp4 and a figure as svg, or as png if the svg is too large."""
+    """Save an animation as mp4 and a figure as svg, or png if the svg is too large.
+
+    Also saves a copy with a ``-dark`` suffix for the dark docs theme.
+    """
     if anim is not None:
-        anim.save(
-            path.with_suffix(".mp4"),
-            writer="ffmpeg",
-            codec="h264",
-            extra_args=["-crf", CRF, "-movflags", "+faststart"],
-        )
+        anim.save(path.with_suffix(".mp4"), writer=FigureVideo(fig, path))
         return
-    svg = io.BytesIO()
-    fig.savefig(svg, format="svg")
-    if svg.tell() <= MAX_SVG_BYTES:
-        path.with_suffix(".svg").write_bytes(svg.getvalue())
-    else:
-        fig.savefig(path.with_suffix(".png"), dpi=150)
+    themes = {path.name: contextlib.nullcontext(), f"{path.name}-dark": dark_theme(fig)}
+    for name, theme in themes.items():
+        with theme:
+            svg = io.BytesIO()
+            fig.savefig(svg, format="svg", transparent=True)
+            if svg.tell() <= MAX_SVG_BYTES:
+                path.with_name(f"{name}.svg").write_bytes(svg.getvalue())
+            else:
+                fig.savefig(path.with_name(f"{name}.png"), dpi=150, transparent=True)
 
 
 def parse_cam_config(text: str) -> dict[str, float | list[float]]:
@@ -112,45 +198,43 @@ def capture(
 ):
     """Run the example and save the requested kinds of media to ``out``."""
     plt.switch_backend("Agg")
-    plt.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
     sim_render = Sim.render
     func_animation_init = animation.FuncAnimation.__init__
     videos: list[Video] = []
-    figure_videos: dict[plt.Figure, Video] = {}
+    figure_videos: dict[plt.Figure, FigureVideo] = {}
     animations = {}
     plot_ids = itertools.count(1)
 
     def render(
         sim: Sim,
-        mode: str | None = "human",
-        world: int = 0,
+        world: int | None = None,
         camera: int | str = -1,
         cam_config: dict | None = None,
+        capture: bool = False,
         width: int = 1920,
         height: int = 1080,
     ) -> np.ndarray | None:
-        if mode != "human":
-            return sim_render(sim, mode, world, camera, cam_config, width, height)
+        if capture:  # The example uses the images itself
+            return sim_render(sim, world, camera, cam_config, capture, width, height)
         if "video" not in kinds:
             return None
         if docs_camera is not None:
             camera = docs_camera
         elif docs_cam_config:
             camera = -1
-        cam_config = CAM_CONFIG | (cam_config or {}) | (docs_cam_config or {})
+        if camera == -1:
+            cam_config = CAM_CONFIG | (cam_config or {}) | (docs_cam_config or {})
         if sim.viewer is None:
             videos.append(Video(out / f"video-{len(videos) + 1:02d}.mp4"))
+            sim_render(sim, world, camera, cam_config)
+            sim.viewer._speed.value = 1e9  # Record as fast as possible instead of in real time
             if docs_geomgroup is not None:
-                sim_render(sim, "rgb_array", world, camera, cam_config, WIDTH, HEIGHT)
-                sim.viewer.viewer.vopt.geomgroup[:] = [
-                    group in docs_geomgroup for group in range(mujoco.mjNGROUP)
-                ]
-        rendered = videos[-1].add(
-            float(sim.time[world, 0]),
-            lambda: sim_render(sim, "rgb_array", world, camera, cam_config, WIDTH, HEIGHT),
-        )
-        if not rendered:  # Only a render clears the markers, so drop those of skipped frames
-            sim.viewer.viewer._markers.clear()
+                for group, checkbox in sim.viewer.scene._geom_group_checkboxes.items():
+                    checkbox.value = group in docs_geomgroup
+        record = videos[-1].due(float(sim.time[0, 0]))
+        frame = sim_render(sim, world, camera, cam_config, record, WIDTH, HEIGHT)
+        if record:
+            videos[-1].write(frame)
 
     def func_animation(self: animation.FuncAnimation, fig: plt.Figure, *args: Any, **kwargs: Any):
         func_animation_init(self, fig, *args, **kwargs)
@@ -169,9 +253,8 @@ def capture(
         for num in plt.get_fignums():
             fig = plt.figure(num)
             if fig not in figure_videos:
-                figure_videos[fig] = Video(out / f"plot-{next(plot_ids):02d}.mp4")
-            fig.canvas.draw()
-            figure_videos[fig].add(None, lambda: np.asarray(fig.canvas.buffer_rgba())[..., :3])
+                figure_videos[fig] = FigureVideo(fig, out / f"plot-{next(plot_ids):02d}")
+            figure_videos[fig].grab_frame()
 
     sys.argv = [str(example), *(["--plot"] if "plot" in kinds else [])]
     spec = importlib.util.spec_from_file_location("__main__", example)
@@ -186,18 +269,21 @@ def capture(
     logging.getLogger().setLevel(logging.INFO)
     for name in ("jax", "matplotlib"):
         logging.getLogger(name).setLevel(logging.WARNING)
-    try:
+    with sync_playwright() as playwright:
+        page = playwright.chromium.launch(args=BROWSER_ARGS).new_page(
+            viewport={"width": WIDTH, "height": HEIGHT}
+        )
         with (
             contextlib.redirect_stdout(output),
+            patch.object(webbrowser, "open", page.goto),  # Open the viewer in the headless page
             patch.object(Sim, "render", render),
             patch.object(animation.FuncAnimation, "__init__", func_animation),
             patch.object(plt, "show", show),
             patch.object(plt, "pause", pause),
         ):
             spec.loader.exec_module(module)
-    finally:
-        for video in [*videos, *figure_videos.values()]:
-            video.close()
+    for video in [*videos, *figure_videos.values()]:
+        video.finish()
     if "output" in kinds and output.getvalue().strip():
         (out / "output.txt").write_text(output.getvalue())
 
