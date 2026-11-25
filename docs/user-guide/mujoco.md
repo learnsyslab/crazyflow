@@ -1,6 +1,6 @@
 # MuJoCo Integration
 
-Crazyflow focuses on drone dynamics and controllers. However, we still want to provide rendering and collision checking, and to do that we leverage [MuJoCo](https://mujoco.org/) and its JAX port [MJX](https://mujoco.readthedocs.io/en/stable/mjx.html). We keep an MJX representation of the scene in sync with Crazyflow's dynamics state and invoke MJX functions where needed: collision queries, forward kinematics, and sensor rendering. GUI rendering uses the CPU-side MuJoCo renderer directly.
+Crazyflow focuses on drone dynamics and controllers. However, we still want to provide rendering and collision checking, and to do that we leverage [MuJoCo](https://mujoco.org/) and its JAX port [MJX](https://mujoco.readthedocs.io/en/stable/mjx.html). We keep an MJX representation of the scene in sync with Crazyflow's dynamics state and invoke MJX functions where needed: viewers, collision queries, forward kinematics, and sensor rendering.
 
 ## MuJoCo and MJX objects
 
@@ -167,5 +167,5 @@ in_contact = check_contacts(sim.data, sim.mjx_data.mocap_pos)  # shape (n_worlds
 ## Next steps
 
 - [Pipelines](pipelines.md) — inserting custom stages into the step and reset pipelines
-- [Examples](../examples/rendering.md#cameras-and-rgbd) — FPV camera and RGBD rendering
+- [Examples](../examples/rendering.md#rgb-d-camera) — RGB-D camera rendering
 - [Examples](../examples/contacts.md#contact-queries) — contact detection with box collision geometry

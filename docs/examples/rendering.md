@@ -6,7 +6,7 @@ Crazyflow has two renderers. MuJoCo renders the simulated geometry, and gaussian
 
 ## MuJoCo rendering
 
-Capturing viewer images, RGB-D cameras, raycasting depth, drawing trajectories, and configuring the viewer camera. See [Rendering](../user-guide/rendering.md) for the rendering modes and cameras.
+Capturing viewer images, RGB-D cameras, raycasting depth, drawing trajectories, and configuring the viewer camera. See [Rendering](../user-guide/rendering.md) for the viewer and cameras.
 
 ### Viewer captures
 

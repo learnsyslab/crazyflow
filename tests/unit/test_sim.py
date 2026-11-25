@@ -538,12 +538,6 @@ def test_drone_meshes_shared(n_drones: int, fused: bool):
     body = "drone_fused" if fused else "drone"
     ids = {multi.mj_model.body(f"{i}:{body}").id for i in range(n_drones)}
     assert len(ids) == n_drones, "each drone must be a distinct body"
-    # Materials, unlike meshes, are kept per drone so each drone owns a distinct ``{i}:{mat}``
-    mat_ids = {
-        mujoco.mj_name2id(multi.mj_model, mujoco.mjtObj.mjOBJ_MATERIAL, f"{i}:led_bot")
-        for i in range(n_drones)
-    }
-    assert -1 not in mat_ids and len(mat_ids) == n_drones, "each drone needs its own material"
     single.close()
     multi.close()
 

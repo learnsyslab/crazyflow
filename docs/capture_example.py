@@ -208,7 +208,7 @@ def capture(
     def render(
         sim: Sim,
         world: int | None = None,
-        camera: int | str = -1,
+        camera: int | str | None = None,
         cam_config: dict | None = None,
         capture: bool = False,
         width: int = 1920,
@@ -222,7 +222,7 @@ def capture(
             camera = docs_camera
         elif docs_cam_config:
             camera = -1
-        if camera == -1:
+        if camera in (None, -1):
             cam_config = CAM_CONFIG | (cam_config or {}) | (docs_cam_config or {})
         if sim.viewer is None:
             videos.append(Video(out / f"video-{len(videos) + 1:02d}.mp4"))

@@ -44,8 +44,7 @@ def device() -> str:
 
 # Marker for conditional skip in headless environments
 skip_if_headless = pytest.mark.skipif(
-    os.environ.get("DISPLAY") is None,
-    reason="DISPLAY is not set, skipping test in headless environment",
+    os.environ.get("DISPLAY") is None, reason="DISPLAY is not set"
 )
 
 

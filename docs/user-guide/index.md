@@ -10,6 +10,6 @@ In-depth documentation for every part of the simulator.
 - [Adding a drone](adding-drones.md) — the MJCF model and parameter sections that define a platform
 - [Pipelines](pipelines.md) — composable step and reset pipelines, randomization, and disturbances
 - [The world axis](world-axis.md) — which arrays are batched over worlds, and what resets and sharding do with them
-- [Rendering](rendering.md) — rendering modes, cameras, raycasting, and Gaussian splats
+- [Rendering](rendering.md) — the viewer, cameras, raycasting, and Gaussian splats
 - [MuJoCo Integration](mujoco.md) — MJCF scene construction, adding objects, and sync internals
 - [Gymnasium Environments](gymnasium-envs.md) — vectorized environments for RL training

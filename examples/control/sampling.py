@@ -310,13 +310,13 @@ def main() -> None:
 
         if RENDER and ((step * FPS) % CTRL_FREQ) < FPS:
             col_ref = np.array([0.0, 0.1, 1.0, 1.0])
-            col_pred = np.array([0.2, 1.0, 0.2, 0.8])
-            col_rollouts = np.array([0.25, 0.85, 0.85, 0.18])
+            col_pred = np.array([0.2, 1.0, 0.2, 1.0])
+            col_rollouts = np.array([0.25, 0.85, 0.85, 1.0])
             col_hist = np.array([1.0, 0.25, 0.0, 1.0])
             col_pole = np.array([0.9, 0.9, 0.9, 1.0])
             draw_line(sim, reference, rgba=col_ref)
             for sampled_path in sampled_positions:
-                draw_line(sim, sampled_path, rgba=col_rollouts)
+                draw_line(sim, sampled_path, rgba=col_rollouts, thickness=0.002)
             draw_line(sim, best_positions, rgba=col_pred)
             if len(position_history) > 1:
                 draw_line(sim, np.array(position_history), rgba=col_hist)

@@ -17,7 +17,7 @@
     <material name="silver" rgba="0.898 0.898 0.898 1"/>
     <material name="white" rgba="1 1 1 0.3"/>
     <material name="gold" rgba="0.969 0.878 0.6 1"/>
-    <!-- The LED materials are initially transparent and can be changed dynamically -->
+    <!-- The LED materials are transparent, which hides the LEDs -->
     <material name="led_top" rgba="1.0 1.0 1.0 0.0"/>
     <material name="led_bot" rgba="1.0 1.0 1.0 0.0"/>
 

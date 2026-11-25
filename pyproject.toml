@@ -27,6 +27,7 @@ dependencies = [
     "gymnasium>=1.4.0",
     "mjviser>=0.0.17",
     "viser>=1.1.1",
+    "trimesh",
     "imageio",
     "einops",
     "flax",

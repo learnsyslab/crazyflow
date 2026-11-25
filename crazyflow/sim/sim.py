@@ -246,7 +246,7 @@ class Sim:
     def render(
         self,
         world: int | None = None,
-        camera: int | str = -1,
+        camera: int | str | None = None,
         cam_config: dict | None = None,
         capture: bool = False,
         width: int = 1920,
@@ -256,7 +256,7 @@ class Sim:
 
         Args:
             world: Index of the world to render. None keeps the current world.
-            camera: Camera name or id. -1 is the global free camera.
+            camera: Camera name or id. -1 is the global free camera. None keeps the current camera.
             cam_config: Free camera configuration.
             capture: Whether to return the rendered image.
             width: Image width of the capture.
@@ -266,9 +266,9 @@ class Sim:
             The captured RGB image with shape (height, width, 3) if capture is set, else None.
         """
         if self.viewer is None:
-            self.viewer = ViserViewer(self.mj_model, self.data, camera)
+            self.viewer = ViserViewer(self.mj_model, self.data)
         return self.viewer.render(
-            self.mjx_data, self.time, world, cam_config, capture, width, height
+            self.mjx_data, self.time, world, camera, cam_config, capture, width, height
         )
 
     def seed(self, seed: int):

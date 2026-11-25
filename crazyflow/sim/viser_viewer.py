@@ -36,11 +36,10 @@ except ImportError:
 class ViserViewer:
     """Visualize crazyflow in a viser web viewer."""
 
-    def __init__(
-        self, mj_model: mujoco.MjModel, data: SimData, camera: int | str, port: int = 8080
-    ):
+    def __init__(self, mj_model: mujoco.MjModel, data: SimData, port: int = 8080):
         self.server = viser.ViserServer(port=port)
         self.paused, self._advance = False, False
+        self._view = (None, None)  # Last world and camera
         self._clock = (0.0, 0.0, np.nan)  # Wall time, sim time, speed
         self._markers = {"lines": defaultdict(list), "spheres": [], "cylinders": []}
         self._marker_handles = []
@@ -50,7 +49,7 @@ class ViserViewer:
         self._init_body_offsets()
         self._init_splats(data)
         distance = self._frame_drones(data.states.pos[0])
-        self._init_menu(camera, distance, splats=bool(self._splats))
+        self._init_menu(distance, splats=bool(self._splats))
         self._show_meshes(not self._splats)
         self._show_splats(bool(self._splats))
         # Block like a window opening so the sim only starts once everything is ready
@@ -101,6 +100,7 @@ class ViserViewer:
         mjx_data: Data,
         sim_time: NDArray,
         world: int | None,
+        camera: int | str | None,
         cam_config: dict | None,
         capture: bool,
         width: int,
@@ -112,6 +112,7 @@ class ViserViewer:
             mjx_data: MJX data of all worlds.
             sim_time: Simulation time of all worlds, shape (n_worlds, 1).
             world: Index of the world to show. None keeps the world selected in the menu.
+            camera: Camera name or id. -1 is the free camera. None keeps the selected camera.
             cam_config: Free camera configuration.
             capture: Whether to return the rendered image.
             width: Image width of the capture.
@@ -120,9 +121,15 @@ class ViserViewer:
         Returns:
             The captured RGB image with shape (height, width, 3) if capture is set, else None.
         """
-        if world is not None and self.scene.num_envs > 1:  # mjviser has no slider for one world
+        # World and camera only apply when they change to avoid overriding the menu
+        last_world, last_camera = self._view
+        self._view = (world, camera)
+        # mjviser has no world slider for a single world
+        if world not in (None, last_world) and self.scene.num_envs > 1:
             inputs = self.server.gui._gui_input_handle_from_uuid.values()
             next(handle for handle in inputs if handle.label == "Select").value = world
+        if camera not in (None, last_camera):
+            self._cameras.value = self._mj_model.cam(camera).name if camera != -1 else "Free"
         if cam_config is not None:
             self._set_free_camera(**cam_config)
         xpos, xmat, mocap_pos, mocap_quat, qpos, qvel = jax.device_get(
@@ -260,8 +267,8 @@ class ViserViewer:
         self.server.initial_camera.position = center + distance * direction
         return distance
 
-    def _init_menu(self, camera: int | str, distance: float, splats: bool):
-        """Create the mjviser menu with a Controls tab and the hotkeys of the classic viewer."""
+    def _init_menu(self, distance: float, splats: bool):
+        """Create the mjviser menu with a Controls tab and hotkeys."""
         self._menu = self.scene.create_visualization_gui(camera_distance=distance)
         with self._menu.add_tab("Controls", icon=viser.Icon.KEYBOARD):
             self._pause_button = self.server.gui.add_button("Pause", icon=viser.Icon.PLAYER_PAUSE)
@@ -293,7 +300,6 @@ class ViserViewer:
             command = self.server.gui.add_command(label, hotkey=key)
             command.on_trigger(lambda _, action=action: action())
         self._cameras = self.scene._camera_dropdown
-        self._cameras.value = self._mj_model.cam(camera).name if camera != -1 else "Free"
 
     def _draw_splats(self, mocap_pos: NDArray, mocap_quat: NDArray):
         """Move each drone splat to its drone in the shown world."""

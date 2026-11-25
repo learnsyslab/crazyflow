@@ -28,9 +28,8 @@ pixi run -e tests test-docs    # every example in docstrings and docs
 
 Use pixi, not uv. `pixi run <cmd>` resolves task names only, so arbitrary commands need `-e tests`.
 
-- `addopts = "-m 'not render'"` deselects every render test, and `tests/unit/test_visualizations.py`
-  is `@skip_if_headless` without the marker, so it is skipped silently without `DISPLAY`. Rendering
-  regressions pass CI green. Run `-m render` locally with a display.
+- `addopts = "-m 'not render'"` deselects every render test, so rendering regressions pass CI
+  green. Run `-m render` locally with a display.
 - Docs and docstrings are executable. The markdown runner catches exceptions but never compares
   output, so a `print` with the result in a trailing comment proves nothing. Output that must be
   checked goes in a `pycon` fence with `>>>` prompts, which doctest picks up.

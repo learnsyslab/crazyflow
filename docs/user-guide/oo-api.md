@@ -224,7 +224,7 @@ pos_w0_d1 = sim.data.states.pos[0, 1]  # (3,)
 ```{ .python notest }
 sim.render()                          # browser viewer
 sim.render(capture=True)              # returns (H, W, 3) uint8
-sim.render(world=1, camera="front")   # different world or named camera
+sim.render(world=1, camera="0:fpv_cam")   # different world or named camera
 sim.close()                           # close the viewer
 ```
 
