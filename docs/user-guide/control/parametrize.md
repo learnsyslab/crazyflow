@@ -12,8 +12,7 @@ ctrl = parametrize(state2attitude, "cf2x_L250")
 
 # Inspect what was bound
 list(ctrl.keywords.keys())
-# ['mass', 'kp', 'kd', 'ki', 'gravity_vec', 'mass_thrust',
-#  'int_err_max', 'thrust_max', 'pwm_max']
+# ['mass', 'kp', 'kd', 'ki', 'gravity_vec', 'int_err_max']
 ```
 
 ## Overriding parameters at call time

@@ -20,10 +20,11 @@ def test_state_interface(dynamics: Dynamics):
     cmd = np.zeros((1, 1, 16), dtype=np.float32)
     cmd[0, 0, 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[0, 0, 2] = target_height
-    steps = int(2 * sim.control_freq)  # Run simulation for 2 seconds
+    steps = int(2 * sim.control_freq)  # Ramp the target height up over 2 seconds
+    settle_steps = sim.control_freq  # The drone lags the ramp. Give it 1 second to settle
 
-    for i in range(steps):  # Run simulation for 2 seconds
-        cmd[..., 2] = target_height * i / steps  # Linearly interpolate target height
+    for i in range(steps + settle_steps):
+        cmd[..., 2] = target_height * min(i / steps, 1.0)  # Linearly interpolate target height
         sim.state_control(cmd)
         sim.step(sim.freq // sim.control_freq)
 
@@ -69,9 +70,10 @@ def test_attitude_interface(dynamics: Dynamics):
     cmd[0, 0, 9:13] = R.from_euler("z", 0.0).as_quat()
     cmd[0, 0, 2] = 1.0
     steps = int(3 * sim.control_freq)
+    settle_steps = sim.control_freq  # The drone lags the ramp. Give it 1 second to settle
 
-    for i in range(steps):
-        cmd[..., :3] = target_pos * i / steps  # Linearly interpolate target position
+    for i in range(steps + settle_steps):
+        cmd[..., :3] = target_pos * min(i / steps, 1.0)  # Linearly interpolate target position
         pos, vel, quat = sim.data.states.pos, sim.data.states.vel, sim.data.states.quat
         rpyt, pos_err_i = jit_state2attitude(pos, quat, vel, cmd, pos_err_i, ctrl_freq=100)
         sim.attitude_control(rpyt)
@@ -112,9 +114,8 @@ def test_body_rate_interface():
 @pytest.mark.integration
 def test_rotor_vel_interface():
     sim = Sim(dynamics=Dynamics.first_principles, control=Control.rotor_vel)
-    thrust_max = load_fn_params(state2attitude, sim.drone)["thrust_max"]
-    rpm2thrust = load_fn_params(force_torque2rotor_vel, sim.drone)["rpm2thrust"]
-    max_rpm = motor_force2rotor_vel(np.array([thrust_max]), rpm2thrust)[0]
+    params = load_fn_params(force_torque2rotor_vel, sim.drone)
+    max_rpm = motor_force2rotor_vel(np.array([params["thrust_max"]]), params["rpm2thrust"])[0]
 
     sim.data = sim.data.replace(
         states=sim.data.states.replace(pos=sim.data.states.pos.at[..., 2].set(0.5))

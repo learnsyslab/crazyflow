@@ -88,6 +88,8 @@ def _reference_step(
     """Run one step of a new firmware controller from the given state and integrators."""
     ctrl = cf.controllerMellinger_t()
     cf.controllerMellingerInit(ctrl)
+    # The firmware defaults to the mass of a bare drone, crazyflow to the mass of the model
+    ctrl.mass = load_params("mellinger", Drone.cf2x_L250)["core"]["mass"]
     ctrl.i_error_x, ctrl.i_error_y, ctrl.i_error_z = pos_err_i.tolist()
     # The firmware runs in the legacy Crazyflie frame with a flipped pitch axis
     ctrl.i_error_m_x, ctrl.i_error_m_y, ctrl.i_error_m_z = (rot_err_i * [1, -1, 1]).tolist()
@@ -131,10 +133,6 @@ def test_params(drone: Drone):
     np.testing.assert_allclose(state_params["int_err_max"], i_range, rtol=1e-6)
     i_range_m = [ctrl.i_range_m_xy, ctrl.i_range_m_xy, ctrl.i_range_m_z]
     np.testing.assert_allclose(attitude_params["int_err_max"], i_range_m, rtol=1e-6)
-    np.testing.assert_allclose(state_params["mass_thrust"], ctrl.massThrust, rtol=1e-6)
-    # The firmware is built for the Crazyflie 2 without the thrust upgrade kit
-    if drone in (Drone.cf2x_L250, Drone.cf2x_P250):
-        np.testing.assert_allclose(state_params["mass"], ctrl.mass, rtol=1e-6)
 
 
 @given(state=_states(), ctrl_state=_ctrl_states(), cmd=_state_cmds())
@@ -142,14 +140,10 @@ def test_state2attitude(state: tuple[NDArray, ...], ctrl_state: tuple[NDArray, .
     """Compare thrust, desired z axis and position integrators for state commands."""
     pos, vel, quat, _ = state
     state2attitude = parametrize(control.state2attitude, Drone.cf2x_L250)
-    # The firmware outputs thrust and torques in PWM, whereas crazyflow's controller returns them
-    # after mixing and clipping in SI units. To get access to the intermediate PWM values in
-    # crazyflow's controllers, we patch the intermediate functions that get called with the PWM
-    # values and compare their arguments instead of the final output. Monkey-patching is
-    # incompatible with jit, so we use numpy here
-    with patch.object(control, "pwm2force", wraps=control.pwm2force) as spy:
-        rpyt, pos_err_i = state2attitude(pos, quat, vel, cmd, ctrl_state[0], cf.ATTITUDE_RATE)
-    thrust = spy.call_args.args[0]
+    rpyt, pos_err_i = state2attitude(pos, quat, vel, cmd, ctrl_state[0], cf.ATTITUDE_RATE)
+    # The firmware outputs the thrust in PWM, as its fraction of the maximum collective thrust
+    params = load_params("mellinger", Drone.cf2x_L250)["core"]
+    thrust = force2pwm(rpyt[3], 4 * params["thrust_max"], params["pwm_max"])
     setpoint = cf.setpoint_t()
     sp_pos = setpoint.position
     sp_pos.x, sp_pos.y, sp_pos.z = cmd[:3].tolist()
@@ -181,7 +175,11 @@ def test_attitude2force_torque(
     _, rot_err_i, prev_ang_vel, _ = ctrl_state
     params = load_fn_params(control.attitude2force_torque, Drone.cf2x_L250)
     attitude2force_torque = parametrize(control.attitude2force_torque, Drone.cf2x_L250)
-    # See test_state2attitude for why we spy on the intermediate PWM values
+    # The firmware outputs thrust and torques in PWM, whereas crazyflow's controller returns them
+    # after mixing and clipping in SI units. To get access to the intermediate PWM values in
+    # crazyflow's controllers, we patch the intermediate functions that get called with the PWM
+    # values and compare their arguments instead of the final output. Monkey-patching is
+    # incompatible with jit, so we use numpy here
     mixer = control.force_torque_pwms2pwms
     with patch.object(control, "force_torque_pwms2pwms", wraps=mixer) as spy:
         _, _, rot_err_i = attitude2force_torque(quat, ang_vel, cmd, prev_ang_vel, rot_err_i)
@@ -223,7 +221,7 @@ def test_body_rate2force_torque(
     params = load_fn_params(control.body_rate2force_torque, Drone.cf2x_L250)
     body_rate2force_torque = parametrize(control.body_rate2force_torque, Drone.cf2x_L250)
     prev_cmd = np.concatenate((prev_ang_vel_des, cmd[3:]))
-    # See test_state2attitude for why we spy on the intermediate PWM values
+    # See test_attitude2force_torque for why we spy on the intermediate PWM values
     mixer = control.force_torque_pwms2pwms
     with patch.object(control, "force_torque_pwms2pwms", wraps=mixer) as spy:
         _, _, rot_err_i = body_rate2force_torque(

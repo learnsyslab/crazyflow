@@ -44,10 +44,7 @@ def state2attitude(
     kd: Array,
     ki: Array,
     gravity_vec: Array,
-    mass_thrust: float,
     int_err_max: Array,
-    thrust_max: float,
-    pwm_max: float,
 ) -> tuple[Array, Array]:
     """Compute the positional part of the mellinger controller.
 
@@ -70,10 +67,7 @@ def state2attitude(
         ki: Integral gain for the position controller with shape (3,).
         gravity_vec: Gravity vector with shape (3,). We assume gravity to be in the negative z
             direction. E.g., [0, 0, -9.81].
-        mass_thrust: Conversion factor from thrust to PWM.
         int_err_max: Range of the integral error with shape (3,). i_range in the firmware.
-        thrust_max: Maximum thrust in N.
-        pwm_max: Maximum PWM value.
 
     Returns:
         The RPY collective thrust command [rad, rad, rad, N], and the integral error of the position
@@ -136,14 +130,9 @@ def state2attitude(
         "xyz", degrees=False, suppress_warnings=True
     )
     # l. 283 [control_thrust]
-    # The firmware returns thrust in PWM, but we want to stay in SI units. The conversion from
-    # thrust to PWM uses a mass_thrust parameter, which is a constant converting thrust values to
-    # PWMs. This transformation changes the thrust value, because it is fixed to a specific value
-    # instead of dynamically scaling with the mass parameter of the controller! Hence, we include
-    # this conversion here and thus effectively rescale the thrust slightly. The conversion below
-    # maps thrust -> PWM -> rescaled thrust.
-    thrust = pwm2force(mass_thrust * current_thrust, thrust_max * 4, pwm_max)
-    command_rpyt = xp.concat((command_RPY, thrust[..., None]), axis=-1)
+    # The firmware returns the thrust in PWM, as its fraction of the maximum thrust. We stay in SI
+    # units.
+    command_rpyt = xp.concat((command_RPY, current_thrust[..., None]), axis=-1)
     # l. 325 [controllerMellingerReset]
     pos_err_i = xp.where((current_thrust > 0)[..., None], pos_err_i, 0.0)
     return command_rpyt, pos_err_i

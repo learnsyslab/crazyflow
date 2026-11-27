@@ -1,7 +1,6 @@
 [cf2x_L250]
 [cf2x_L250.core]
-mass = 0.029  # The controller is using the wrong mass by default
-mass_thrust = 132000
+mass = 0.0328
 pwm_min = 7000
 pwm_max = 65535
 thrust_min = 0.012817578393224994  # in N per motor
@@ -40,8 +39,7 @@ int_err_max = [1.0, 1.0, 1500.0]
 
 [cf2x_P250]
 [cf2x_P250.core]
-mass = 0.029  # The controller is using the wrong mass by default
-mass_thrust = 132000
+mass = 0.0318
 pwm_min = 7000
 pwm_max = 65535
 thrust_min = 0.012817578393224994  # in N per motor
@@ -80,8 +78,7 @@ int_err_max = [1.0, 1.0, 1500.0]
 
 [cf2x_T350]
 [cf2x_T350.core]
-mass = 0.0325  # The controller is using the wrong mass by default
-mass_thrust = 132000
+mass = 0.0379
 pwm_min = 7000
 pwm_max = 65535
 thrust_min = 0.01922636758983749  # in N per motor
@@ -121,7 +118,7 @@ int_err_max = [1.0, 1.0, 1500.0]
 [cf21B_500]
 [cf21B_500.core]
 gravity_vec = [0.0, 0.0, -9.81]
-mass = 0.0393  # The controller is using the wrong mass by default
+mass = 0.0434
 L = 0.035355
 rpm2thrust = [0.0, -3.133427287299859e-7, 4.407354891648379e-10]
 rpm2torque = [0.0, 1.65886356219615e-9, 2.4693477924534137e-12]
@@ -135,7 +132,6 @@ pwm_min = 7000.0
 pwm_max = 65535.0
 thrust_min = 0.02136263065537499 # in N per motor
 thrust_max = 0.2 # in N per motor
-mass_thrust = 132000
 torque_pwm_max = [32000.0, 32000.0, 32000.0]
 
 [cf21B_500.state2attitude]
@@ -175,7 +171,6 @@ pwm_min = 0
 pwm_max = 1
 thrust_min = 1 # in N per motor
 thrust_max = 12.13 # in N per motor
-mass_thrust = 0.02061006
 torque_pwm_max = [0.4882887, 0.4882887, 0.4882887]
 
 [hb_x500.state2attitude]
